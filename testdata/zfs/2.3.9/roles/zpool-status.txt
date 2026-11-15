@@ -1,0 +1,22 @@
+  pool: fstuitest_g_roles
+ state: ONLINE
+config:
+
+	NAME                                               STATE     READ WRITE CKSUM
+	fstuitest_g_roles                                  ONLINE       0     0     0
+	  raidz1-0                                         ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_g_roles-a.img    ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_g_roles-b.img    ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_g_roles-c.img    ONLINE       0     0     0
+	special	
+	  mirror-1                                         ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_g_roles-s1.img   ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_g_roles-s2.img   ONLINE       0     0     0
+	logs	
+	  /var/tmp/fstui-test/fstuitest_g_roles-log.img    ONLINE       0     0     0
+	cache
+	  /var/tmp/fstui-test/fstuitest_g_roles-cache.img  ONLINE       0     0     0
+	spares
+	  /var/tmp/fstui-test/fstuitest_g_roles-spare.img  AVAIL   
+
+errors: No known data errors

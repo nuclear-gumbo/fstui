@@ -1,0 +1,2035 @@
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.pool_create
+        version = 0x0
+        class = "sysevent.fs.zfs.pool_create"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1532
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "pool version 5000; software version zfs-2.3.9-0-g4c0eb72-dist; uts dev 6.12.116+deb13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.116-1 (2026-11-07) x86_64"
+        history_internal_name = "create"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1533
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@async_destroy=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1534
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@empty_bpobj=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1535
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@lz4_compress=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1536
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@multi_vdev_crash_dump=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1537
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@spacemap_histogram=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1538
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@enabled_txg=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1539
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@hole_birth=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x153a
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@extensible_dataset=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x153b
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@embedded_data=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x153c
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@bookmarks=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x153d
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@filesystem_limits=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x153e
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@large_blocks=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x153f
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@large_dnode=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1540
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@sha512=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1541
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@skein=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1542
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@edonr=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1543
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@userobj_accounting=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1544
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@encryption=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1545
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@project_quota=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1546
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@device_removal=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1547
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@obsolete_counts=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1548
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@zpool_checkpoint=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1549
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@spacemap_v2=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x154a
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@allocation_classes=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x154b
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@resilver_defer=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x154c
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@bookmark_v2=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x154d
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@redaction_bookmarks=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x154e
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@redacted_datasets=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x154f
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@bookmark_written=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1550
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@log_spacemap=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1551
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@livelist=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1552
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@device_rebuild=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1553
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@zstd_compress=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1554
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@draid=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1555
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@zilsaxattr=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1556
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@head_errlog=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1557
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@blake3=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1558
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@block_cloning=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x1559
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@vdev_zaps_v2=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x155a
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@redaction_list_spill=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x155b
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@raidz_expansion=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x155c
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@fast_dedup=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x155d
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@longname=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x155e
+
+Nov 14 2026 10:32:58.677022557	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        history_hostname = "dev"
+        history_internal_str = "feature@large_microzap=enabled"
+        history_internal_name = "set"
+        history_txg = 0x4
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x285a8b5d 
+        eid = 0x155f
+
+Nov 14 2026 10:32:58.697022827	sysevent.fs.zfs.config_sync
+        version = 0x0
+        class = "sysevent.fs.zfs.config_sync"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x6
+        time = 0x6af88d3a 0x298bb96b 
+        eid = 0x1560
+
+Nov 14 2026 10:32:58.697022827	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        history_hostname = "dev"
+        history_dsname = "fstuitest_ev"
+        history_internal_str = "mountpoint=/var/tmp/fstui-test/mnt/fstuitest_ev"
+        history_internal_name = "set"
+        history_dsid = 0x36
+        history_txg = 0x5
+        history_time = 0x6af88d3a
+        time = 0x6af88d3a 0x298bb96b 
+        eid = 0x1561
+
+Nov 14 2026 10:32:59.325031322	sysevent.fs.zfs.scrub_start
+        version = 0x0
+        class = "sysevent.fs.zfs.scrub_start"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        time = 0x6af88d3b 0x135f959a 
+        eid = 0x1562
+
+Nov 14 2026 10:32:59.325031322	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        history_hostname = "dev"
+        history_internal_str = "func=1 mintxg=0 maxtxg=14"
+        history_internal_name = "scan setup"
+        history_txg = 0xe
+        history_time = 0x6af88d3b
+        time = 0x6af88d3b 0x135f959a 
+        eid = 0x1563
+
+Nov 14 2026 10:32:59.381032080	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        history_hostname = "dev"
+        history_internal_str = "errors=0"
+        history_internal_name = "scan done"
+        history_txg = 0x10
+        history_time = 0x6af88d3b
+        time = 0x6af88d3b 0x16b61690 
+        eid = 0x1564
+
+Nov 14 2026 10:32:59.381032080	sysevent.fs.zfs.scrub_finish
+        version = 0x0
+        class = "sysevent.fs.zfs.scrub_finish"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        time = 0x6af88d3b 0x16b61690 
+        eid = 0x1565
+
+Nov 14 2026 10:32:59.405032404	resource.fs.zfs.statechange
+        version = 0x0
+        class = "resource.fs.zfs.statechange"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_state = "OFFLINE" (0x2)
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_laststate = "ONLINE" (0x7)
+        time = 0x6af88d3b 0x18244dd4 
+        eid = 0x1566
+
+Nov 14 2026 10:32:59.413032512	sysevent.fs.zfs.config_sync
+        version = 0x0
+        class = "sysevent.fs.zfs.config_sync"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        time = 0x6af88d3b 0x189e6040 
+        eid = 0x1567
+
+Nov 14 2026 10:33:00.425046199	resource.fs.zfs.statechange
+        version = 0x0
+        class = "resource.fs.zfs.statechange"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_state = "ONLINE" (0x7)
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_laststate = "OFFLINE" (0x2)
+        time = 0x6af88d3c 0x1955b0b7 
+        eid = 0x1568
+
+Nov 14 2026 10:33:00.433046308	sysevent.fs.zfs.vdev_online
+        version = 0x0
+        class = "sysevent.fs.zfs.vdev_online"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_state = "ONLINE" (0x7)
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        time = 0x6af88d3c 0x19cfc324 
+        eid = 0x1569
+
+Nov 14 2026 10:33:00.441046416	sysevent.fs.zfs.resilver_start
+        version = 0x0
+        class = "sysevent.fs.zfs.resilver_start"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        resilver_type = "healing"
+        time = 0x6af88d3c 0x1a49d590 
+        eid = 0x156a
+
+Nov 14 2026 10:33:00.441046416	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        history_hostname = "dev"
+        history_internal_str = "func=2 mintxg=16 maxtxg=18"
+        history_internal_name = "scan setup"
+        history_txg = 0x15
+        history_time = 0x6af88d3c
+        time = 0x6af88d3c 0x1a49d590 
+        eid = 0x156b
+
+Nov 14 2026 10:33:00.457046633	sysevent.fs.zfs.config_sync
+        version = 0x0
+        class = "sysevent.fs.zfs.config_sync"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        time = 0x6af88d3c 0x1b3dfa69 
+        eid = 0x156c
+
+Nov 14 2026 10:33:00.457046633	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        history_hostname = "dev"
+        history_internal_str = "errors=0"
+        history_internal_name = "scan done"
+        history_txg = 0x17
+        history_time = 0x6af88d3c
+        time = 0x6af88d3c 0x1b3dfa69 
+        eid = 0x156d
+
+Nov 14 2026 10:33:00.457046633	sysevent.fs.zfs.resilver_finish
+        version = 0x0
+        class = "sysevent.fs.zfs.resilver_finish"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        resilver_type = "healing"
+        time = 0x6af88d3c 0x1b3dfa69 
+        eid = 0x156e
+
+Nov 14 2026 10:33:02.505074330	sysevent.fs.zfs.pool_export
+        version = 0x0
+        class = "sysevent.fs.zfs.pool_export"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x1
+        pool_context = 0x0
+        time = 0x6af88d3e 0x1e1ad29a 
+        eid = 0x156f
+
+Nov 14 2026 10:33:02.505074330	sysevent.fs.zfs.config_sync
+        version = 0x0
+        class = "sysevent.fs.zfs.config_sync"
+        pool = "fstuitest_ev"
+        pool_guid = 0x0
+        pool_state = 0x5
+        pool_context = 0x0
+        time = 0x6af88d3e 0x1e1ad29a 
+        eid = 0x1570
+
+Nov 14 2026 10:33:02.797078279	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        history_hostname = "dev"
+        history_internal_str = "pool version 5000; software version zfs-2.3.9-0-g4c0eb72-dist; uts dev 6.12.116+deb13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.116-1 (2026-11-07) x86_64"
+        history_internal_name = "open"
+        history_txg = 0x24
+        history_time = 0x6af88d3e
+        time = 0x6af88d3e 0x2f827307 
+        eid = 0x1571
+
+Nov 14 2026 10:33:02.809078440	sysevent.fs.zfs.config_sync
+        version = 0x0
+        class = "sysevent.fs.zfs.config_sync"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        time = 0x6af88d3e 0x30398ea8 
+        eid = 0x1572
+
+Nov 14 2026 10:33:02.809078440	sysevent.fs.zfs.pool_import
+        version = 0x0
+        class = "sysevent.fs.zfs.pool_import"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        time = 0x6af88d3e 0x30398ea8 
+        eid = 0x1573
+
+Nov 14 2026 10:33:02.809078440	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        history_hostname = "dev"
+        history_internal_str = "pool version 5000; software version zfs-2.3.9-0-g4c0eb72-dist; uts dev 6.12.116+deb13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.116-1 (2026-11-07) x86_64"
+        history_internal_name = "import"
+        history_txg = 0x26
+        history_time = 0x6af88d3e
+        time = 0x6af88d3e 0x30398ea8 
+        eid = 0x1574
+
+Nov 14 2026 10:33:02.821078604	sysevent.fs.zfs.config_sync
+        version = 0x0
+        class = "sysevent.fs.zfs.config_sync"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        time = 0x6af88d3e 0x30f0aa4c 
+        eid = 0x1575
+
+Nov 14 2026 10:33:02.849078982	sysevent.fs.zfs.scrub_start
+        version = 0x0
+        class = "sysevent.fs.zfs.scrub_start"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        time = 0x6af88d3e 0x329beac6 
+        eid = 0x1576
+
+Nov 14 2026 10:33:02.849078982	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        history_hostname = "dev"
+        history_internal_str = "func=1 mintxg=0 maxtxg=40"
+        history_internal_name = "scan setup"
+        history_txg = 0x28
+        history_time = 0x6af88d3e
+        time = 0x6af88d3e 0x329beac6 
+        eid = 0x1577
+
+Nov 14 2026 10:33:02.873079306	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605cd5351100401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cd46f27
+        vdev_delta_ts = 0x1a8da4
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x2
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x186f4
+        zio_timestamp = 0x7e605cb9e183
+        zio_delta = 0x1a8da4
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x81a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x20
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x3fe68 
+        bad_range_clears = 0x3fff0 
+        time = 0x6af88d3e 0x340a220a 
+        eid = 0x1578
+
+Nov 14 2026 10:33:02.873079306	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605cd7567500401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cd6957e
+        vdev_delta_ts = 0x1bd5bc
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x4
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x22352
+        zio_timestamp = 0x7e605cbabfc2
+        zio_delta = 0x1bd5bc
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x85a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x22
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x401e8 
+        bad_range_clears = 0x40035 
+        time = 0x6af88d3e 0x340a220a 
+        eid = 0x1579
+
+Nov 14 2026 10:33:02.877079360	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605cd8649300401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cd79845
+        vdev_delta_ts = 0x1c6791
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x5
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x21211
+        zio_timestamp = 0x7e605cbb30b4
+        zio_delta = 0x1c6791
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x87a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x23
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x3ffa2 
+        bad_range_clears = 0x3fefc 
+        time = 0x6af88d3e 0x34472b40 
+        eid = 0x157a
+
+Nov 14 2026 10:33:02.881079414	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605cd97ff700401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cd8aac8
+        vdev_delta_ts = 0x1d048d
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x6
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x212bd
+        zio_timestamp = 0x7e605cbba63b
+        zio_delta = 0x1d048d
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x89a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x24
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x40295 
+        bad_range_clears = 0x4025f 
+        time = 0x6af88d3e 0x34843476 
+        eid = 0x157b
+
+Nov 14 2026 10:33:02.885079469	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605cda90df00401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cd9bb5d
+        vdev_delta_ts = 0x1da804
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x7
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x21fe6
+        zio_timestamp = 0x7e605cbc1359
+        zio_delta = 0x1da804
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x8ba800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x25
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x3ff60 
+        bad_range_clears = 0x40178 
+        time = 0x6af88d3e 0x34c13dad 
+        eid = 0x157c
+
+Nov 14 2026 10:33:02.885079469	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605cd40c2100401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cd33d5a
+        vdev_delta_ts = 0x19c4a3
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x1
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x181e6
+        zio_timestamp = 0x7e605cb978b7
+        zio_delta = 0x19c4a3
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x7fa800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x1f
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x5800 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x352af 
+        bad_range_clears = 0x35136 
+        time = 0x6af88d3e 0x34c13dad 
+        eid = 0x157d
+
+Nov 14 2026 10:33:02.889079523	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605cdba01a00401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cdad0e3
+        vdev_delta_ts = 0x1e52cd
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x8
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x223aa
+        zio_timestamp = 0x7e605cbc7e16
+        zio_delta = 0x1e52cd
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x8da800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x26
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x3fe39 
+        bad_range_clears = 0x40070 
+        time = 0x6af88d3e 0x34fe46e3 
+        eid = 0x157e
+
+Nov 14 2026 10:33:02.893079577	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605cd6548200401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cd582c0
+        vdev_delta_ts = 0x1b313b
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x3
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x242f0
+        zio_timestamp = 0x7e605cba5185
+        zio_delta = 0x1b313b
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x83a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x21
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x4013c 
+        bad_range_clears = 0x3fe82 
+        time = 0x6af88d3e 0x353b5019 
+        eid = 0x157f
+
+Nov 14 2026 10:33:02.893079577	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605cdca87b00401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cdbd8cd
+        vdev_delta_ts = 0x1ee73f
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x9
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x21a18
+        zio_timestamp = 0x7e605cbcf18e
+        zio_delta = 0x1ee73f
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x8fa800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x27
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x3fbe3 
+        bad_range_clears = 0x3ff7d 
+        time = 0x6af88d3e 0x353b5019 
+        eid = 0x1580
+
+Nov 14 2026 10:33:02.897079631	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605cddc10000401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cdce831
+        vdev_delta_ts = 0x1f8b3a
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0xa
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x214be
+        zio_timestamp = 0x7e605cbd5cf7
+        zio_delta = 0x1f8b3a
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x91a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x28
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x400c3 
+        bad_range_clears = 0x401ce 
+        time = 0x6af88d3e 0x3578594f 
+        eid = 0x1581
+
+Nov 14 2026 10:33:02.901079684	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605cdf1aec00401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cde079a
+        vdev_delta_ts = 0x2036a4
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0xb
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x22c13
+        zio_timestamp = 0x7e605cbdd0f6
+        zio_delta = 0x2036a4
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x93a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x29
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x400ae 
+        bad_range_clears = 0x40176 
+        time = 0x6af88d3e 0x35b56284 
+        eid = 0x1582
+
+Nov 14 2026 10:33:02.901079684	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605ce03df500401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605cdf66da
+        vdev_delta_ts = 0x212d28
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0xc
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x27ac5
+        zio_timestamp = 0x7e605cbe39b2
+        zio_delta = 0x212d28
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x95a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x2a
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x40091 
+        bad_range_clears = 0x3fff8 
+        time = 0x6af88d3e 0x35b56284 
+        eid = 0x1583
+
+Nov 14 2026 10:33:02.905079739	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605ce2668d00401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605ce194ce
+        vdev_delta_ts = 0x22573d
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0xe
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x2299f
+        zio_timestamp = 0x7e605cbf3d91
+        zio_delta = 0x22573d
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x99a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x2c
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x4009b 
+        bad_range_clears = 0x400f4 
+        time = 0x6af88d3e 0x35f26bbb 
+        eid = 0x1584
+
+Nov 14 2026 10:33:02.909079793	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605ce1561300401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605ce08087
+        vdev_delta_ts = 0x21d55d
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0xd
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x27682
+        zio_timestamp = 0x7e605cbeab2a
+        zio_delta = 0x21d55d
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x97a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x2b
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x3ffde 
+        bad_range_clears = 0x401ee 
+        time = 0x6af88d3e 0x362f74f1 
+        eid = 0x1585
+
+Nov 14 2026 10:33:02.913079848	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605ce3777600401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605ce2a68e
+        vdev_delta_ts = 0x22e641
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0xf
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x22242
+        zio_timestamp = 0x7e605cbfc04d
+        zio_delta = 0x22e641
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x9ba800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x2d
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x40000 
+        bad_range_clears = 0x4021d 
+        time = 0x6af88d3e 0x366c7e28 
+        eid = 0x1586
+
+Nov 14 2026 10:33:02.913079848	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605ce4869a00401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605ce3b3f4
+        vdev_delta_ts = 0x233c13
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x10
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x21c09
+        zio_timestamp = 0x7e605cc077e1
+        zio_delta = 0x233c13
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x9da800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x2f
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x3fe8d 
+        bad_range_clears = 0x3ff3b 
+        time = 0x6af88d3e 0x366c7e28 
+        eid = 0x1587
+
+Nov 14 2026 10:33:02.917079902	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605ce5900a00401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605ce4c19b
+        vdev_delta_ts = 0x23d0d6
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x11
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x2188e
+        zio_timestamp = 0x7e605cc0f0c5
+        zio_delta = 0x23d0d6
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0x9fa800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x2e
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x3fd65 
+        bad_range_clears = 0x401c5 
+        time = 0x6af88d3e 0x36a9875e 
+        eid = 0x1588
+
+Nov 14 2026 10:33:02.921079956	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605ce69d0600401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605ce5cd66
+        vdev_delta_ts = 0x245828
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x12
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x216cc
+        zio_timestamp = 0x7e605cc1753e
+        zio_delta = 0x245828
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0xa1a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x30
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x3ff64 
+        bad_range_clears = 0x40241 
+        time = 0x6af88d3e 0x36e69094 
+        eid = 0x1589
+
+Nov 14 2026 10:33:02.925080010	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605ce7a53900401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605ce6d6b8
+        vdev_delta_ts = 0x24ec2c
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x13
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x210e6
+        zio_timestamp = 0x7e605cc1ea8c
+        zio_delta = 0x24ec2c
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0xa3a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x31
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x400f3 
+        bad_range_clears = 0x3ffb6 
+        time = 0x6af88d3e 0x372399ca 
+        eid = 0x158a
+
+Nov 14 2026 10:33:02.925080010	ereport.fs.zfs.checksum
+        class = "ereport.fs.zfs.checksum"
+        ena = 0xe605ce8bcbe00401
+        detector = (embedded nvlist)
+                version = 0x0
+                scheme = "zfs"
+                pool = 0x9b872e898f9ded78
+                vdev = 0x88104d502a1e2ee9
+        (end detector)
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        pool_failmode = "wait"
+        vdev_guid = 0x88104d502a1e2ee9
+        vdev_type = "file"
+        vdev_path = "/var/tmp/fstui-test/fstuitest_ev-b.img"
+        vdev_ashift = 0x9
+        vdev_complete_ts = 0x7e605ce7f143
+        vdev_delta_ts = 0x259c8c
+        vdev_read_errors = 0x0
+        vdev_write_errors = 0x0
+        vdev_cksum_errors = 0x14
+        vdev_delays = 0x0
+        dio_verify_errors = 0x0
+        parent_guid = 0x3294de6375b2e2dd
+        parent_type = "mirror"
+        vdev_spare_paths = 
+        vdev_spare_guids = 
+        zio_err = 0x34
+        zio_flags = 0x3000b0 [SCRUB SCAN_THREAD CANFAIL DONT_QUEUE DONT_PROPAGATE]
+        zio_stage = 0x1000000 [CHECKSUM_VERIFY]
+        zio_pipeline = 0x5e00000 [VDEV_IO_START VDEV_IO_DONE VDEV_IO_ASSESS CHECKSUM_VERIFY DONE]
+        zio_delay = 0x220f7
+        zio_timestamp = 0x7e605cc254b7
+        zio_delta = 0x259c8c
+        zio_priority = 0x4 [SCRUB]
+        zio_offset = 0xa5a800
+        zio_size = 0x20000
+        zio_objset = 0x36
+        zio_object = 0x2
+        zio_level = 0x0
+        zio_blkid = 0x34
+        cksum_algorithm = "fletcher4"
+        bad_ranges = 0x0 0x20000 
+        bad_ranges_min_gap = 0x8
+        bad_range_sets = 0x3fec6 
+        bad_range_clears = 0x402d8 
+        time = 0x6af88d3e 0x372399ca 
+        eid = 0x158b
+
+Nov 14 2026 10:33:03.017081254	sysevent.fs.zfs.history_event
+        version = 0x0
+        class = "sysevent.fs.zfs.history_event"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        history_hostname = "dev"
+        history_internal_str = "errors=0"
+        history_internal_name = "scan done"
+        history_txg = 0x2a
+        history_time = 0x6af88d3f
+        time = 0x6af88d3f 0x104a3a6 
+        eid = 0x158c
+
+Nov 14 2026 10:33:03.017081254	sysevent.fs.zfs.scrub_finish
+        version = 0x0
+        class = "sysevent.fs.zfs.scrub_finish"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        time = 0x6af88d3f 0x104a3a6 
+        eid = 0x158d
+
+Nov 14 2026 10:33:03.037081524	sysevent.fs.zfs.config_sync
+        version = 0x0
+        class = "sysevent.fs.zfs.config_sync"
+        pool = "fstuitest_ev"
+        pool_guid = 0x9b872e898f9ded78
+        pool_state = 0x0
+        pool_context = 0x0
+        time = 0x6af88d3f 0x235d1b4 
+        eid = 0x158e
+

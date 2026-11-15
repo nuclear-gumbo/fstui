@@ -1,0 +1,21 @@
+# Catppuccin: Mocha on dark terminals, Latte on light ones.
+# Latte's yellow and peach reach under 3:1 on its own background; warn
+# uses peach, the darker of the two.
+name: catppuccin
+source: Catppuccin palette (MIT), https://github.com/catppuccin/palette
+dark:
+  background: "#1e1e2e"
+  accent: "#89b4fa"
+  ok: "#a6e3a1"
+  warn: "#f9e2af"
+  error: "#f38ba8"
+  muted: "#9399b2"
+  border: "#45475a"
+light:
+  background: "#eff1f5"
+  accent: "#1e66f5"
+  ok: "#40a02b"
+  warn: "#fe640b"
+  error: "#d20f39"
+  muted: "#6c6f85"
+  border: "#bcc0cc"

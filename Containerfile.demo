@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The demo image: fstui-demo on recorded OpenZFS output, as an
+# unprivileged user with a writable home so Settings can save. busybox
+# gives a shell for `podman run -it --rm <image> sh`.
+#
+# Build bin/fstui-demo first (make build-demo), then:
+#   podman build -f Containerfile.demo -t fstui-demo .
+
+FROM docker.io/library/busybox:1.38.0-musl@sha256:80e38f9a1b39188b8bdb28879178edb322a4402b081a9aedda1924609decd6f6
+
+ARG VERSION=devel
+COPY bin/fstui-demo /bin/fstui
+RUN adduser -D -u 1000 -h /home/demo -g "fstui demo" demo && \
+    mkdir -p /home/demo/.config/fstui /tmp && \
+    chown -R demo:demo /home/demo && chmod 1777 /tmp
+
+USER 1000:1000
+WORKDIR /home/demo
+ENV HOME=/home/demo USER=demo TERM=xterm-256color
+
+LABEL org.opencontainers.image.title="fstui demo" \
+      org.opencontainers.image.description="fstui on recorded OpenZFS output, without ZFS" \
+      org.opencontainers.image.source="https://github.com/nuclear-gumbo/fstui" \
+      org.opencontainers.image.licenses="GPL-3.0-or-later" \
+      org.opencontainers.image.version="${VERSION}"
+
+CMD ["/bin/fstui"]

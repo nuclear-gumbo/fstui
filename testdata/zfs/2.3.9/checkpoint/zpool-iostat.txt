@@ -1,0 +1,4 @@
+fstuitest_g_ckpt	47345664	455970816	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+mirror-0	47345664	455970816	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_ckpt-a.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_ckpt-b.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-

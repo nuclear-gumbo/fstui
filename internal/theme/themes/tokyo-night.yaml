@@ -1,0 +1,19 @@
+# Tokyo Night: Night on dark terminals, Day on light ones.
+name: tokyo-night
+source: Tokyo Night by folke (Apache-2.0), https://github.com/folke/tokyonight.nvim
+dark:
+  background: "#1a1b26"
+  accent: "#7aa2f7"
+  ok: "#9ece6a"
+  warn: "#e0af68"
+  error: "#f7768e"
+  muted: "#737aa2"
+  border: "#414868"
+light:
+  background: "#e1e2e7"
+  accent: "#2e7de9"
+  ok: "#587539"
+  warn: "#8c6c3e"
+  error: "#f52a65"
+  muted: "#6172b0"
+  border: "#a1a6c5"

@@ -1,0 +1,13 @@
+# Nord has no light variant; on light terminals fstui's default light
+# colours apply. Muted text uses frost nord9: the comment colour nord3 is
+# under 2:1 on nord0.
+name: nord
+source: Nord by Arctic Ice Studio (MIT), https://github.com/nordtheme/nord
+dark:
+  background: "#2e3440"
+  accent: "#88c0d0"
+  ok: "#a3be8c"
+  warn: "#ebcb8b"
+  error: "#bf616a"
+  muted: "#81a1c1"
+  border: "#4c566a"

@@ -1,0 +1,5 @@
+fstuitest_g_degraded	231424	1476163584	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+raidz1-0	231424	1476163584	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_deg-a.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_deg-b.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_deg-c.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-

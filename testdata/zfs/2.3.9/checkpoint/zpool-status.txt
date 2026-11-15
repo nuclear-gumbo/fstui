@@ -1,0 +1,12 @@
+  pool: fstuitest_g_ckpt
+ state: ONLINE
+checkpoint: created Fri Nov 13 11:00:42 2026, consumes 32.1M
+config:
+
+	NAME                                            STATE     READ WRITE CKSUM
+	fstuitest_g_ckpt                                ONLINE       0     0     0
+	  mirror-0                                      ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_g_ckpt-a.img  ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_g_ckpt-b.img  ONLINE       0     0     0
+
+errors: No known data errors

@@ -1,0 +1,50 @@
+History for 'fstuitest_g_degraded':
+2026-11-12.23:41:10 [txg:4] create pool version 5000; software version zfs-2.3.9-0-g4c0eb72-dist; uts dev 6.12.116+deb13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.116-1 (2026-11-07) x86_64
+2026-11-12.23:41:10 [txg:4] set feature@async_destroy=enabled
+2026-11-12.23:41:10 [txg:4] set feature@empty_bpobj=enabled
+2026-11-12.23:41:10 [txg:4] set feature@lz4_compress=enabled
+2026-11-12.23:41:10 [txg:4] set feature@multi_vdev_crash_dump=enabled
+2026-11-12.23:41:10 [txg:4] set feature@spacemap_histogram=enabled
+2026-11-12.23:41:10 [txg:4] set feature@enabled_txg=enabled
+2026-11-12.23:41:10 [txg:4] set feature@hole_birth=enabled
+2026-11-12.23:41:10 [txg:4] set feature@extensible_dataset=enabled
+2026-11-12.23:41:10 [txg:4] set feature@embedded_data=enabled
+2026-11-12.23:41:10 [txg:4] set feature@bookmarks=enabled
+2026-11-12.23:41:10 [txg:4] set feature@filesystem_limits=enabled
+2026-11-12.23:41:10 [txg:4] set feature@large_blocks=enabled
+2026-11-12.23:41:10 [txg:4] set feature@large_dnode=enabled
+2026-11-12.23:41:10 [txg:4] set feature@sha512=enabled
+2026-11-12.23:41:10 [txg:4] set feature@skein=enabled
+2026-11-12.23:41:10 [txg:4] set feature@edonr=enabled
+2026-11-12.23:41:10 [txg:4] set feature@userobj_accounting=enabled
+2026-11-12.23:41:10 [txg:4] set feature@encryption=enabled
+2026-11-12.23:41:10 [txg:4] set feature@project_quota=enabled
+2026-11-12.23:41:10 [txg:4] set feature@device_removal=enabled
+2026-11-12.23:41:10 [txg:4] set feature@obsolete_counts=enabled
+2026-11-12.23:41:10 [txg:4] set feature@zpool_checkpoint=enabled
+2026-11-12.23:41:10 [txg:4] set feature@spacemap_v2=enabled
+2026-11-12.23:41:10 [txg:4] set feature@allocation_classes=enabled
+2026-11-12.23:41:10 [txg:4] set feature@resilver_defer=enabled
+2026-11-12.23:41:10 [txg:4] set feature@bookmark_v2=enabled
+2026-11-12.23:41:10 [txg:4] set feature@redaction_bookmarks=enabled
+2026-11-12.23:41:10 [txg:4] set feature@redacted_datasets=enabled
+2026-11-12.23:41:10 [txg:4] set feature@bookmark_written=enabled
+2026-11-12.23:41:10 [txg:4] set feature@log_spacemap=enabled
+2026-11-12.23:41:10 [txg:4] set feature@livelist=enabled
+2026-11-12.23:41:10 [txg:4] set feature@device_rebuild=enabled
+2026-11-12.23:41:10 [txg:4] set feature@zstd_compress=enabled
+2026-11-12.23:41:10 [txg:4] set feature@draid=enabled
+2026-11-12.23:41:10 [txg:4] set feature@zilsaxattr=enabled
+2026-11-12.23:41:10 [txg:4] set feature@head_errlog=enabled
+2026-11-12.23:41:10 [txg:4] set feature@blake3=enabled
+2026-11-12.23:41:10 [txg:4] set feature@block_cloning=enabled
+2026-11-12.23:41:10 [txg:4] set feature@vdev_zaps_v2=enabled
+2026-11-12.23:41:10 [txg:4] set feature@redaction_list_spill=enabled
+2026-11-12.23:41:10 [txg:4] set feature@raidz_expansion=enabled
+2026-11-12.23:41:10 [txg:4] set feature@fast_dedup=enabled
+2026-11-12.23:41:10 [txg:4] set feature@longname=enabled
+2026-11-12.23:41:10 [txg:4] set feature@large_microzap=enabled
+2026-11-12.23:41:10 [txg:5] set fstuitest_g_degraded (54) mountpoint=/var/tmp/fstui-test/mnt/fstuitest_g_degraded
+2026-11-12.23:41:10 zpool create -O mountpoint=/var/tmp/fstui-test/mnt/fstuitest_g_degraded fstuitest_g_degraded raidz1 /var/tmp/fstui-test/fstuitest_g_deg-a.img /var/tmp/fstui-test/fstuitest_g_deg-b.img /var/tmp/fstui-test/fstuitest_g_deg-c.img
+2026-11-12.23:41:10 zpool offline fstuitest_g_degraded /var/tmp/fstui-test/fstuitest_g_deg-b.img
+

@@ -1,0 +1,4 @@
+fstuitest_g_scrub	134565888	368750592	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+mirror-0	134565888	368750592	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_sc-a.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_sc-b.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-

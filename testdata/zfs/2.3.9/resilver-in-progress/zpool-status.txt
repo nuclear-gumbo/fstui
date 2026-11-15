@@ -1,0 +1,19 @@
+  pool: fstuitest_g_resilver
+ state: ONLINE
+status: One or more devices is currently being resilvered.  The pool will
+	continue to function, possibly in a degraded state.
+action: Wait for the resilver to complete.
+  scan: resilver in progress since Thu Nov 12 23:41:23 2026
+	0B / 128M scanned, 0B / 128M issued
+	0B resilvered, 0.00% done, no estimated completion time
+config:
+
+	NAME                                            STATE     READ WRITE CKSUM
+	fstuitest_g_resilver                            ONLINE       0     0     0
+	  mirror-0                                      ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_g_rs-a.img    ONLINE       0     0     0
+	    replacing-1                                 ONLINE       0     0     0
+	      /var/tmp/fstui-test/fstuitest_g_rs-b.img  ONLINE       0     0     0
+	      /var/tmp/fstui-test/fstuitest_g_rs-c.img  ONLINE       0     0     0
+
+errors: No known data errors

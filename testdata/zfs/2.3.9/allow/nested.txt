@@ -1,0 +1,15 @@
+---- Permissions on fstuitest_allow/home/sub -------------------------
+Local permissions:
+	user nobody userprop
+---- Permissions on fstuitest_allow/home -----------------------------
+Create time permissions:
+	destroy
+Local permissions:
+	group users destroy
+Descendent permissions:
+	everyone @backup
+Local+Descendent permissions:
+	user dev create,mount,snapshot
+---- Permissions on fstuitest_allow ----------------------------------
+Permission sets:
+	@backup hold,send,snapshot

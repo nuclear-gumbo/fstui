@@ -1,0 +1,30 @@
++-\x1b[1mpools\x1b[m----------------------------------------++-\x1b[1mfstuitest_g…\x1b[m|\x1b[1m Topology \x1b[m|\x1b[2m Capacity \x1b[m|\x1b[2m Properties \x1b[m|\x1b[2m Features \x1b[m|\x1b[2m History \x1b[m|+
+|\x1b[2m  NAME               HEALTH     USE       FRAG\x1b[m||ONLINE  ..........................  0%  158 KiB of 810 MiB            |
+|> \x1b[1mfstuitest_g_roles\x1b[m  ONLINE      0%         0%||\x1b[2mfrag \x1b[m0%  \x1b[2mdedup \x1b[m1.00x  \x1b[2mscrub \x1b[mnever  \x1b[2merrors \x1b[m0                           |
+|                                              ||                                                                      |
+|                                              ||\x1b[2mNAME                                        STATE     READ WRITE CKSUM\x1b[m|
+|                                              ||fstuitest_g_roles                           ONLINE  \x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[2m     0\x1b[m|
+|                                              ||  raidz1-0                                  ONLINE  \x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[2m     0\x1b[m|
+|                                              ||\x1b[1m>   …mp/fstui-test/fstuitest_g_roles-a.img  ONLINE  \x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[m|
+|                                              ||    …mp/fstui-test/fstuitest_g_roles-b.img  ONLINE  \x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[2m     0\x1b[m|
+|                                              ||    …mp/fstui-test/fstuitest_g_roles-c.img  ONLINE  \x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[2m     0\x1b[m|
+|                                              ||\x1b[1mspecial\x1b[m                                                               |
+|                                              ||  mirror-1                                  ONLINE  \x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[2m     0\x1b[m|
+|                                              ||    …p/fstui-test/fstuitest_g_roles-s1.img  ONLINE  \x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[2m     0\x1b[m|
+|                                              ||    …p/fstui-test/fstuitest_g_roles-s2.img  ONLINE  \x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[2m     0\x1b[m|
+|                                              ||\x1b[1mlogs\x1b[m                                                                  |
+|                                              ||  …mp/fstui-test/fstuitest_g_roles-log.img  ONLINE  \x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[2m     0\x1b[m|
+|                                              ||\x1b[1mcache\x1b[m                                                                 |
+|                                              ||  …/fstui-test/fstuitest_g_roles-cache.img  ONLINE  \x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[2m     0\x1b[m|
+|                                              ||\x1b[1mspares\x1b[m                                                                |
+|                                              ||  …/fstui-test/fstuitest_g_roles-spare.img  AVAIL   \x1b[2m     0\x1b[m\x1b[2m     0\x1b[m\x1b[2m     0\x1b[m|
+|                                              ||                                                                      |
+|                                              ||                                                                      |
+|                                              ||                                                                      |
+|                                              ||                                                                      |
+|                                              ||                                                                      |
+|                                              ||                                                                      |
+|                                              ||                                                                      |
+|                                              ||                                                                      |
+|                                              ||                                                                      |
++----------------------------------------------++----------------------------------------------------------------------+

@@ -1,0 +1,15 @@
+  pool: fstuitest_g_scrub
+ state: ONLINE
+  scan: scrub paused since Thu Nov 12 23:41:21 2026
+	scrub started on Thu Nov 12 23:41:15 2026
+	0B / 128M scanned, 0B / 128M issued
+	0B repaired, 0.00% done
+config:
+
+	NAME                                          STATE     READ WRITE CKSUM
+	fstuitest_g_scrub                             ONLINE       0     0     0
+	  mirror-0                                    ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_g_sc-a.img  ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_g_sc-b.img  ONLINE       0     0     0
+
+errors: No known data errors

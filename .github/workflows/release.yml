@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# A pushed tag vX.Y.Z publishes release X.Y.Z: the static binary, the
+# source with its Go dependencies for offline builds, SHA256SUMS, and the
+# demo image on ghcr.io. CHANGELOG.md must have a dated section for X.Y.Z;
+# its text becomes the release notes.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Check the version
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          grep -q "^## \[$version\] - [0-9]" CHANGELOG.md ||
+            { echo "::error::CHANGELOG.md has no dated section for $version"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - name: Build
+        run: |
+          make build build-demo VERSION="$VERSION"
+          got=$(bin/fstui --version | head -n 1)
+          [ "$got" = "fstui $VERSION" ] || { echo "::error::binary says '$got'"; exit 1; }
+          mkdir dist stage
+          cp bin/fstui "dist/fstui-$VERSION-linux-amd64"
+          git archive --prefix="fstui-$VERSION/" HEAD | tar -x -C stage
+          (cd "stage/fstui-$VERSION" && go mod vendor)
+          tar -C stage -c --sort=name --owner=0 --group=0 --numeric-owner \
+            --mtime="@$(git log -1 --format=%ct)" "fstui-$VERSION" | xz -9 > "dist/fstui-$VERSION.tar.xz"
+          (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
+          awk -v v="$VERSION" '/^## \[/ { on = index($0, "## [" v "]") == 1; next }
+            /^\[[^]]*\]: / { next } on && (NF || text) { text = 1; print }' CHANGELOG.md > notes.md
+          test -s notes.md
+      - name: Check the source tarball builds offline
+        run: |
+          mkdir check
+          tar -xJf "dist/fstui-$VERSION.tar.xz" -C check
+          cd "check/fstui-$VERSION"
+          GOPROXY=off GOFLAGS="-mod=vendor -trimpath" make build VERSION="$VERSION"
+          got=$(bin/fstui --version | head -n 1)
+          [ "$got" = "fstui $VERSION" ] || { echo "::error::tarball build says '$got'"; exit 1; }
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "fstui $VERSION" \
+            --notes-file notes.md dist/*
+      - name: Publish the demo image
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          image=ghcr.io/$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')/fstui-demo
+          docker build -f Containerfile.demo --build-arg VERSION="$VERSION" \
+            -t "$image:$VERSION" -t "$image:latest" .
+          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$image:$VERSION"
+          docker push "$image:latest"
+          docker logout ghcr.io

@@ -1,0 +1,82 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+version: "2"
+
+run:
+  # Lint the integration tests as well; the tag only adds files.
+  build-tags:
+    - fstui_integration
+
+linters:
+  # standard = errcheck, govet, ineffassign, staticcheck, unused
+  default: standard
+  enable:
+    - depguard
+    - dupl
+    - errorlint
+    - exhaustive
+    - forcetypeassert
+    - forbidigo
+    - funlen
+    - gocognit
+    - gosec
+    - nilerr
+    - revive
+    - unparam
+    - wrapcheck
+  settings:
+    depguard:
+      rules:
+        # Only internal/execute may start processes.
+        exec:
+          files:
+            - "$all"
+            - "!**/internal/execute/*.go"
+            # Test-only pool harness; see its package comment.
+            - "!**/internal/testpool/*.go"
+          deny:
+            - pkg: os/exec
+              desc: only internal/execute may start processes
+        # The pool harness creates and destroys pools; it must never be
+        # linked into fstui.
+        testpool:
+          files:
+            - "$all"
+            - "!$test"
+          deny:
+            - pkg: github.com/nuclear-gumbo/fstui/internal/testpool
+              desc: only tests may use the pool harness
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: ^(os\.StartProcess|syscall\.(Exec|ForkExec|StartProcess))$
+          msg: only internal/execute may start processes, and it uses os/exec
+    wrapcheck:
+      # Errors from fstui's own packages already carry their context; the
+      # check is for errors crossing in from the standard library and
+      # third-party modules.
+      ignore-package-globs:
+        - github.com/nuclear-gumbo/fstui/*
+    dupl:
+      # The default of 150 tokens lets large copies through; parser and view
+      # code is where near-duplicates would build up.
+      threshold: 100
+    funlen:
+      # Functions over ~60 lines need a written reason (a nolint comment).
+      lines: 60
+      statements: -1
+    gocognit:
+      # Default 30 is permissive; 20 forces splitting before code gets hard
+      # to test.
+      min-complexity: 20
+  exclusions:
+    rules:
+      # Tests return errors from helpers directly; wrapping adds noise, and
+      # table-driven tests are long and repetitive. Tests build
+      # fixtures with system-like permissions on purpose and are not shipped,
+      # so gosec's file-permission and conversion rules do not apply.
+      - path: _test\.go
+        linters: [wrapcheck, dupl, funlen, gosec]
+
+formatters:
+  enable:
+    - gofumpt

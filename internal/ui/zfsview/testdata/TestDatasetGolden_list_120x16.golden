@@ -1,0 +1,16 @@
++-\x1b[1mdatasets\x1b[m-------------------------------------++-\x1b[1mfstuitest_g_healt…\x1b[m|\x1b[1m Capacity \x1b[m|\x1b[2m Properties \x1b[m|\x1b[2m Snapshots \x1b[m|\x1b[2m Permissions \x1b[m|+
+|\x1b[2m  NAME                          USED     AVAIL\x1b[m||\x1b[2mmounted at \x1b[m/var/tmp/fstui-test/mnt/fstuitest_g_healthy                |
+|> \x1b[1mv fstuitest_g_healthy\x1b[m     24.6 MiB   327 MiB||\x1b[2mused \x1b[m24.6 MiB  \x1b[2mavailable \x1b[m327 MiB  \x1b[2mreferenced \x1b[m25.0 KiB  \x1b[2mratio \x1b[m1.00x  \x1b[2me…\x1b[m|
+|      clone                      0 B   327 MiB||                                                                      |
+|    v home                  24.1 MiB  75.9 MiB||used          24.6 MiB  \x1b[2m\x1b[m\x1b[2m++++++++++++++++++++++++++\x1b[m\x1b[2m\x1b[m                    |
+|        user                16.0 MiB  75.9 MiB||  data        25.0 KiB  # \x1b[2musedbydataset: freed if the dataset were de…\x1b[m|
+|      locked                98.0 KiB   327 MiB||  snapshots        0 B  \x1b[2m=\x1b[m \x1b[2musedbysnapshots: freed only by destroying a…\x1b[m|
+|      secret                98.0 KiB   327 MiB||  children    24.5 MiB  \x1b[2m+\x1b[m \x1b[2musedbychildren: held by datasets below it\x1b[m   |
+|      vol                   12.0 KiB   327 MiB||  reservation      0 B  \x1b[2m.\x1b[m \x1b[2musedbyrefreservation: reserved and not yet …\x1b[m|
+|                                              ||                                                                      |
+|                                              ||written       25.0 KiB  \x1b[2mwritten since the most recent snapshot\x1b[m        |
+|                                              ||available      327 MiB                                                |
+|                                              ||referenced    25.0 KiB                                                |
+|                                              ||compression      1.00x                                                |
+|                                              ||                                                                      |
++----------------------------------------------++----------------------------------------------------------------------+

@@ -1,0 +1,16 @@
++-\x1b[1mfstuitest_g_healthy/home\x1b[m|\x1b[1m Capacity \x1b[m|\x1b[2m Properties \x1b[m|\x1b[2m Snapshots \x1b[m|\x1b[2m Permissions \x1b[m|----------------------+
+|\x1b[2mmounted at \x1b[m/var/tmp/fstui-test/mnt/fstuitest_g_healthy/home                                       |
+|\x1b[2mused \x1b[m24.1 MiB  \x1b[2mavailable \x1b[m75.9 MiB  \x1b[2mreferenced \x1b[m8.0 MiB  \x1b[2mratio \x1b[m1.00x  \x1b[2mencryption \x1b[moff                |
+|                                                                                                  |
+|used          24.1 MiB  #########\x1b[2m\x1b[m\x1b[2m+++++++++++++++++\x1b[m\x1b[2m\x1b[m                                                |
+|  data         8.0 MiB  # \x1b[2musedbydataset: freed if the dataset were destroyed\x1b[m                      |
+|  snapshots   14.0 KiB  \x1b[2m=\x1b[m \x1b[2musedbysnapshots: freed only by destroying all its snapshots\x1b[m             |
+|  children    16.0 MiB  \x1b[2m+\x1b[m \x1b[2musedbychildren: held by datasets below it\x1b[m                               |
+|  reservation      0 B  \x1b[2m.\x1b[m \x1b[2musedbyrefreservation: reserved and not yet written\x1b[m                      |
+|                                                                                                  |
+|written            0 B  \x1b[2mwritten since the most recent snapshot\x1b[m                                    |
+|available     75.9 MiB                                                                            |
+|referenced     8.0 MiB                                                                            |
+|compression      1.00x                                                                            |
+|                                                                                                  |
++--------------------------------------------------------------------------------------------------+

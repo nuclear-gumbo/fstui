@@ -1,0 +1,19 @@
+# Gruvbox: the dark and light palettes, medium contrast.
+name: gruvbox
+source: gruvbox by morhetz (MIT/X11), https://github.com/morhetz/gruvbox
+dark:
+  background: "#282828"
+  accent: "#83a598"
+  ok: "#b8bb26"
+  warn: "#fabd2f"
+  error: "#fb4934"
+  muted: "#928374"
+  border: "#665c54"
+light:
+  background: "#fbf1c7"
+  accent: "#076678"
+  ok: "#79740e"
+  warn: "#b57614"
+  error: "#9d0006"
+  muted: "#7c6f64"
+  border: "#bdae93"

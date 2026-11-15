@@ -1,0 +1,3 @@
+---- Permissions on fstuitest_allow ----------------------------------
+Permission sets:
+	@backup hold,send,snapshot

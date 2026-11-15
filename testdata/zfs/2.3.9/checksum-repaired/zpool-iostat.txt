@@ -1,0 +1,4 @@
+fstuitest_g_cksum	100990464	402326016	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+mirror-0	100990464	402326016	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_ck-a.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_ck-b.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-

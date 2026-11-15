@@ -1,0 +1,13 @@
+fstuitest_g_roles	192000	1979519488	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+raidz1-0	0	1476395008	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_roles-a.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_roles-b.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_roles-c.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+
+mirror-1	192000	503124480	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_roles-s1.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+/var/tmp/fstui-test/fstuitest_g_roles-s2.img	0	0	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+
+/var/tmp/fstui-test/fstuitest_g_roles-log.img	0	503316480	0	0	0	0	-	-	-	-	-	-	-	-	-	-	-
+
+/var/tmp/fstui-test/fstuitest_g_roles-cache.img	1536	532150272	0	1	0	2042	-	36864	-	36864	-	-	-	1920	-	-	-

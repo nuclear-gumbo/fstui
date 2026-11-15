@@ -1,0 +1,2 @@
+fstuitest_g_healthy/home@daily-1	keep	1794548467
+fstuitest_g_healthy/home@daily-2	tag[1m	1794548467
