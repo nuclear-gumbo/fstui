@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest a feature or a change to an existing one.
+labels: ["feature request"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do?
+      description: The task, and why fstui does not cover it today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How fstui could do it. Optional.
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Distribution, OpenZFS version (`zfs version`), and `fstui --version`.
