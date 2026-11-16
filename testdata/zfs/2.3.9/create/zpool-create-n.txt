@@ -1,0 +1,8 @@
+would create 'fstuitest_cn' with the following layout:
+
+	fstuitest_cn
+	  mirror
+	    /var/tmp/fstui-test/fstuitest_cn-a.img
+	    /var/tmp/fstui-test/fstuitest_cn-b.img
+	logs
+	  /var/tmp/fstui-test/fstuitest_cn-c.img

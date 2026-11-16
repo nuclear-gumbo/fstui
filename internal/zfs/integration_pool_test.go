@@ -71,9 +71,16 @@ func TestIntegrationTrimInitializeClear(t *testing.T) {
 	p := testpool.New(t, "", 1)
 	b, pl, _, _ := writeSetup(t)
 	ctx := t.Context()
+	// Each change waits for the one before to end: the re-check before a
+	// change compares the devices' trim and initialize states, and a
+	// trim that finishes in between rightly refuses the next one.
+	waitFor := map[mutate.Op]string{mutate.ErrorScrub: "scrub", mutate.TrimStart: "trim", mutate.InitializeStart: "initialize"}
 	for _, op := range []mutate.Op{mutate.ErrorScrub, mutate.TrimStart, mutate.InitializeStart, mutate.PoolClear} {
 		pn, err := b.PoolChange(ctx, op, p.Name)
 		mustRun(t, pl, pn, err)
+		if w := waitFor[op]; w != "" {
+			p.Wait(w)
+		}
 	}
 	a, err := b.R.PoolActivity(ctx, p.Name)
 	if err != nil || len(a.Devices) != 1 || a.Devices[0].Init == "" {

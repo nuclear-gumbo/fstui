@@ -368,7 +368,8 @@ func (d *Dashboard) arcPanel(disp ui.Display, width, height int) string {
 	return strings.Join(lines, "\n")
 }
 
-// scansPanel lists running scrubs and resilvers with their progress.
+// scansPanel lists running scrubs, resilvers, RAIDZ expansions and vdev
+// removals with their progress.
 func (d *Dashboard) scansPanel(disp ui.Display) string {
 	var lines []string
 	now := d.opts.Now()
@@ -376,9 +377,15 @@ func (d *Dashboard) scansPanel(disp ui.Display) string {
 		if sc := o.Status.Scan; sc != nil && sc.State == "SCANNING" {
 			lines = append(lines, lipgloss.NewStyle().Bold(true).Render(o.Pool.Name.String())+sp+scanLine(*sc, now, disp.Exact))
 		}
+		if o.Status.Expanding() {
+			lines = append(lines, lipgloss.NewStyle().Bold(true).Render(o.Pool.Name.String())+sp+expandLine(o.Status, now, disp.Exact))
+		}
+		if o.Status.Removing() {
+			lines = append(lines, lipgloss.NewStyle().Bold(true).Render(o.Pool.Name.String())+sp+removeLine(o.Status, now, disp.Exact))
+		}
 	}
 	if len(lines) == 0 {
-		return disp.Palette.Style(theme.Muted).Render("No scrub or resilver running.")
+		return disp.Palette.Style(theme.Muted).Render("Nothing running: no scrub, resilver, expansion or removal.")
 	}
 	return strings.Join(lines, "\n")
 }

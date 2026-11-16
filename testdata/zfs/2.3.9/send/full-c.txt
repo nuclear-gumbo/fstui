@@ -1,0 +1,2 @@
+full	fstuitest_send/data@s1	33885040
+size	33885040

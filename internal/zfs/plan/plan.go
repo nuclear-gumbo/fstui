@@ -19,6 +19,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/nuclear-gumbo/fstui/internal/disks"
 	"github.com/nuclear-gumbo/fstui/internal/execute"
 	"github.com/nuclear-gumbo/fstui/internal/mutate"
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
@@ -38,6 +39,14 @@ type Reader interface {
 	PoolTopology(ctx context.Context, pool string) (zfs.PoolStatus, error)
 	ARCLimits() (zfs.ARCLimits, error)
 	Modprobe() (content []byte, exists bool, err error)
+	CreateDryRun(ctx context.Context, opts, operands []string) (termtext.Text, error)
+	PoolNames(ctx context.Context) ([]string, error)
+	AddDryRun(ctx context.Context, opts, operands []string) (termtext.Text, error)
+	PoolProperties(ctx context.Context, pool name.Pool) (zfs.Pool, error)
+	PoolObjects(ctx context.Context, pool name.Pool) ([]zfs.Dataset, error)
+	RemoveDryRun(ctx context.Context, pool, vdev string) (termtext.Text, error)
+	Importable(ctx context.Context, dirs []string) ([]zfs.Importable, error)
+	CompatibleFeatures(value string) (allowed map[string]bool, ok bool, err error)
 }
 
 // Builder builds plans against the system r reads.
@@ -49,6 +58,9 @@ type Builder struct {
 	// Permits reads the user's delegated permissions on a dataset; nil
 	// as root. Changes that create something check its parent with it.
 	Permits func(ctx context.Context, ds string) (map[string]bool, error)
+	// Devices lists the block devices a new pool may be built on; nil
+	// where pool creation is not available (no lsblk).
+	Devices func(ctx context.Context) ([]disks.Device, error)
 }
 
 // checkParent blocks p when the user lacks a delegated permission on
@@ -73,7 +85,7 @@ func (b Builder) checkParent(ctx context.Context, p *mutate.Plan, parent string,
 }
 
 // unmountedNote is what an unprivileged create or clone does.
-const unmountedNote = "it is not mounted: on Linux only root mounts"
+func unmountedNote(ds string) string { return ds + " is not mounted: on Linux only root mounts" }
 
 // unmountedMessage is what zfs 2.3.9 prints when it made a filesystem
 // for a user who cannot mount it, exiting 1.
@@ -172,11 +184,6 @@ func (b Builder) Build(ctx context.Context, op mutate.Op, params map[string]stri
 		return b.Mount(ctx, p["dataset"])
 	case mutate.Unmount:
 		return b.Unmount(ctx, p["dataset"], p["force"] == "true")
-	case mutate.ScrubStart, mutate.ScrubPause, mutate.ScrubResume, mutate.ScrubStop, mutate.ErrorScrub,
-		mutate.TrimStart, mutate.InitializeStart, mutate.PoolClear:
-		return b.PoolChange(ctx, op, p["pool"])
-	case mutate.DeviceOnline, mutate.DeviceOffline, mutate.DeviceClear:
-		return b.DeviceChange(ctx, op, p["pool"], p["device"])
 	case mutate.VolumeCreate:
 		return b.VolumeCreate(ctx, p["dataset"], p["size"], p["sparse"] == "true", p["block"])
 	case mutate.VolumeResize:
@@ -189,6 +196,36 @@ func (b Builder) Build(ctx context.Context, op mutate.Op, params map[string]stri
 		return b.ARCPersist(ctx, p["max"], p["min"])
 	case mutate.KeyLoad, mutate.KeyChange:
 		return nil, mutate.ErrSecretNotSaved
+	}
+	return b.buildPool(ctx, op, p)
+}
+
+// buildPool rebuilds the changes to pools and their devices.
+func (b Builder) buildPool(ctx context.Context, op mutate.Op, p map[string]string) (*mutate.Plan, error) {
+	switch op { //nolint:exhaustive // the rest are Build's
+	case mutate.ScrubStart, mutate.ScrubPause, mutate.ScrubResume, mutate.ScrubStop, mutate.ErrorScrub,
+		mutate.TrimStart, mutate.InitializeStart, mutate.PoolClear:
+		return b.PoolChange(ctx, op, p["pool"])
+	case mutate.DeviceOnline, mutate.DeviceOffline, mutate.DeviceClear, mutate.DeviceDetach:
+		return b.DeviceChange(ctx, op, p["pool"], p["device"])
+	case mutate.DeviceAttach, mutate.DeviceReplace:
+		return b.DeviceNew(ctx, op, NewDeviceSpec{Pool: p["pool"], Device: p["device"], New: p["new"], Overwrite: p["overwrite"] == "true"})
+	case mutate.PoolCreate:
+		return b.PoolCreate(ctx, poolSpecFromParams(p))
+	case mutate.PoolAdd:
+		return b.PoolAdd(ctx, addSpecFromParams(p))
+	case mutate.CheckpointTake, mutate.CheckpointDiscard, mutate.CheckpointRewind, mutate.CheckpointLook:
+		return b.Checkpoint(ctx, op, p["pool"])
+	case mutate.VdevRemove:
+		return b.VdevRemove(ctx, p["pool"], p["device"])
+	case mutate.VdevRemoveCancel:
+		return b.VdevRemoveCancel(ctx, p["pool"])
+	case mutate.PoolExport:
+		return b.PoolExport(ctx, p["pool"])
+	case mutate.PoolImport:
+		return b.PoolImport(ctx, importSpecFromParams(p))
+	case mutate.PoolUpgrade:
+		return b.PoolUpgrade(ctx, p["pool"])
 	}
 	return nil, fmt.Errorf("fstui cannot build %s plans yet", op)
 }

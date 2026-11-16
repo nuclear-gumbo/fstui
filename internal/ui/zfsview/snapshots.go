@@ -24,6 +24,7 @@ import (
 type SnapshotSource interface {
 	AllSnapshots(ctx context.Context) ([]zfs.Dataset, error)
 	Differ
+	Sender
 }
 
 // allSnapshots is the global list's poller type; distinct from the other
@@ -40,6 +41,7 @@ type Snapshots struct {
 	sortBy  int
 	reverse bool
 	now     func() time.Time
+	order   derived[listKey, []zfs.Dataset]
 }
 
 // NewSnapshots returns the global Snapshots view.
@@ -61,7 +63,7 @@ func (v *Snapshots) Name() string { return "Snapshots" }
 
 // Keys implements ui.Screen.
 func (v *Snapshots) Keys() []key.Binding {
-	return append([]key.Binding{keys.Get(keys.Diff), keys.Get(keys.Mark), keys.Get(keys.ClearMarks), keys.Get(keys.Sort), keys.Get(keys.Reverse), keys.Get(keys.Refresh)}, listKeys()...)
+	return append([]key.Binding{keys.Get(keys.SendSize), keys.Get(keys.Diff), keys.Get(keys.Mark), keys.Get(keys.ClearMarks), keys.Get(keys.Sort), keys.Get(keys.Reverse), keys.Get(keys.Refresh)}, listKeys()...)
 }
 
 // Nested implements ui.Screen.
@@ -122,6 +124,8 @@ func (v *Snapshots) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 		clear(v.marked)
 	case key.Matches(k, keys.Get(keys.Diff)) && len(v.poll.data) > 0:
 		return v, openDiff(v.src, v.sorted()[v.cursor.i].Name)
+	case key.Matches(k, keys.Get(keys.SendSize)) && len(v.poll.data) > 0:
+		return v, openSend(v.src, v.sendSet())
 	}
 	return v, nil
 }
@@ -173,11 +177,28 @@ func (v *Snapshots) Status() ui.Status {
 	return st
 }
 
+// sendSet is what e estimates: the marked snapshots, or the one under
+// the cursor when none is marked.
+func (v *Snapshots) sendSet() []zfs.Dataset {
+	if len(v.marked) == 0 {
+		return []zfs.Dataset{v.sorted()[v.cursor.i]}
+	}
+	var out []zfs.Dataset
+	for _, d := range v.poll.data {
+		if v.marked[d.Name] {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
 // sorted is the list in the order shown, which the cursor indexes.
 func (v *Snapshots) sorted() []zfs.Dataset {
-	list := append([]zfs.Dataset(nil), v.poll.data...)
-	(&dsDetail{sortBy: v.sortBy, reverse: v.reverse}).sortSnapshots(list)
-	return list
+	return v.order.get(listKey{v.poll.loaded, len(v.poll.data), v.sortBy, v.reverse}, func() []zfs.Dataset {
+		list := append([]zfs.Dataset(nil), v.poll.data...)
+		(&dsDetail{sortBy: v.sortBy, reverse: v.reverse}).sortSnapshots(list)
+		return list
+	})
 }
 
 // Selection implements ui.Selector: the snapshot under the cursor.

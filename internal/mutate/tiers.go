@@ -65,6 +65,9 @@ const (
 	DeviceOnline
 	DeviceOffline
 	DeviceClear
+	DeviceAttach
+	DeviceDetach
+	DeviceReplace
 	VolumeCreate
 	VolumeResize
 	KeyLoad
@@ -72,6 +75,17 @@ const (
 	KeyChange
 	ARCSet
 	ARCPersist
+	PoolCreate
+	PoolAdd
+	CheckpointTake
+	CheckpointDiscard
+	CheckpointRewind
+	CheckpointLook
+	VdevRemove
+	VdevRemoveCancel
+	PoolExport
+	PoolImport
+	PoolUpgrade
 	opEnd // not an operation: one past the last
 )
 
@@ -123,6 +137,16 @@ var table = map[Op]row{
 	// High when the vdev is left without redundancy (escalation rules).
 	DeviceOffline: {name: "device-offline", base: Medium},
 	DeviceClear:   {name: "device-clear", base: Low},
+	// Attaching and replacing write a new device; detaching leaves a vdev
+	// one copy fewer (High when none is left to spare: RedundancyLoss).
+	DeviceAttach: {name: "device-attach", base: Medium, refine: func(p *Plan) Tier {
+		if p.Params["expand"] == "true" { // a raidz vdev never narrows again
+			return High
+		}
+		return Medium
+	}},
+	DeviceDetach:  {name: "device-detach", base: Medium},
+	DeviceReplace: {name: "device-replace", base: Medium},
 	VolumeCreate:  {name: "volume-create", base: Low},
 	// Growing is Medium; shrinking loses the data past the new size.
 	VolumeResize: {name: "volume-resize", base: Medium, refine: func(p *Plan) Tier {
@@ -139,6 +163,39 @@ var table = map[Op]row{
 	// only under pressure.
 	ARCSet:     {name: "arc-set", base: Medium},
 	ARCPersist: {name: "arc-persist", base: Medium},
+	// The devices' contents are gone, and a wrong device is someone's
+	// data: the pool name is always typed.
+	PoolCreate: {name: "pool-create", base: High},
+	// Log, cache and spare devices can be removed again; a data or special
+	// vdev may never leave the pool, so its name is typed.
+	// A checkpoint holds every block until discarded; discarding ends the
+	// undo; rewinding loses everything written since, so its name is typed.
+	CheckpointTake:    {name: "checkpoint", base: Medium},
+	CheckpointDiscard: {name: "checkpoint-discard", base: Medium},
+	CheckpointRewind:  {name: "checkpoint-rewind", base: High},
+	// Looking exports the pool: every dataset goes away until it is back.
+	CheckpointLook: {name: "checkpoint-look", base: High},
+	// Removing a data, special or dedup vdev leaves a mapping for good;
+	// log, cache and spare devices go without a trace.
+	VdevRemove: {name: "vdev-remove", base: Medium, refine: func(p *Plan) Tier {
+		if c := p.Params["class"]; c == "data" || c == "special" || c == "dedup" {
+			return High
+		}
+		return Medium
+	}},
+	VdevRemoveCancel: {name: "vdev-remove-cancel", base: Medium},
+	// Exporting takes every dataset away from whatever uses it; importing
+	// mounts what the pool holds.
+	PoolExport: {name: "pool-export", base: High},
+	PoolImport: {name: "pool-import", base: Medium},
+	// Features never go back to disabled.
+	PoolUpgrade: {name: "pool-upgrade", base: High},
+	PoolAdd: {name: "pool-add", base: Medium, refine: func(p *Plan) Tier {
+		if p.Params["data"] != "" || p.Params["special"] != "" {
+			return High
+		}
+		return Medium
+	}},
 }
 
 // Properties whose change is Medium: layout properties, and those that affect

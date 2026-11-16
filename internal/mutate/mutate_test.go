@@ -7,6 +7,7 @@ package mutate
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/nuclear-gumbo/fstui/internal/execute"
@@ -147,5 +148,19 @@ func TestRunDryRun(t *testing.T) {
 	rep, err := pl.Run(context.Background(), p)
 	if err != nil || !rep.DryRun || rec.n != 2 {
 		t.Fatalf("Run = %+v, %v, %d records", rep, err, rec.n)
+	}
+}
+
+// A plan that needs a tool fstui did not resolve is refused before its
+// first step, so it cannot stop halfway.
+func TestRunRefusesAMissingTool(t *testing.T) {
+	pl, rec := pipeline(execute.Write)
+	p := &Plan{Op: ARCPersist, Steps: []execute.Argv{{Tool: execute.Tee}, {Tool: execute.Chmod}, {Tool: execute.Tee}}}
+	err := pl.Confirmable(p)
+	if err == nil || !strings.Contains(err.Error(), "needs tee, chmod,") {
+		t.Fatalf("Confirmable = %v", err)
+	}
+	if _, err := pl.Run(context.Background(), p); err == nil || rec.n != 0 {
+		t.Fatalf("Run = %v, %d records", err, rec.n)
 	}
 }

@@ -165,7 +165,7 @@ func (b Builder) ARCPersist(_ context.Context, maxS, minS string) (*mutate.Plan,
 	for _, d := range lineDiff(string(old), next) {
 		affects(p, d)
 	}
-	affects(p, "it applies when the zfs module next loads; if it loads from the initramfs (root on ZFS), rebuild that too (update-initramfs -u on Debian)")
+	affects(p, "the new limits apply when the zfs module next loads; if the module loads from the initramfs (root on ZFS), rebuild that too (update-initramfs -u on Debian)")
 	sum := func(b []byte, ok bool) string {
 		if !ok {
 			return mutate.Absent

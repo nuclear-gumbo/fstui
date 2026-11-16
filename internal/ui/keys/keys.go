@@ -52,6 +52,8 @@ const (
 	NewSnapshot Action = "new_snapshot"
 	// Diff shows what changed since the selected snapshot (read only).
 	Diff Action = "diff"
+	// SendSize estimates a zfs send of the marked snapshots (read only).
+	SendSize Action = "send_size"
 	// Mark and ClearMarks mark items for one change to several.
 	Mark       Action = "mark"
 	ClearMarks Action = "clear_marks"
@@ -98,6 +100,7 @@ var defaults = map[Action]def{
 	WriteMode:   {[]string{"W"}, "write mode on/off"},
 	NewSnapshot: {[]string{"n"}, "new snapshot"},
 	Diff:        {[]string{"="}, "what changed since this snapshot"},
+	SendSize:    {[]string{"e"}, "estimate the send size"},
 	Mark:        {[]string{"m"}, "mark for a change to several"},
 	ClearMarks:  {[]string{"M"}, "clear the marks"},
 

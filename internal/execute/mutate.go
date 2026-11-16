@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -126,6 +127,23 @@ func NewSimulatedMutator(mode *Switch, audit Recorder, simulate func(Argv, []byt
 // mode and recording every step to audit.
 func NewMutator(tools *Tools, mode *Switch, audit Recorder) *Mutator {
 	return &Mutator{tools: tools, mode: mode, audit: audit}
+}
+
+// Unresolved lists the tools steps use that were not resolved at
+// startup, each once: optional tools a system may lack or that failed
+// their ownership check. A simulated mutator runs no tools and needs
+// none.
+func (m *Mutator) Unresolved(steps []Argv) []Tool {
+	if m.simulate != nil {
+		return nil
+	}
+	var out []Tool
+	for _, a := range steps {
+		if _, ok := m.tools.Path(a.Tool); !ok && !slices.Contains(out, a.Tool) {
+			out = append(out, a.Tool)
+		}
+	}
+	return out
 }
 
 // maxMutateOutput bounds what is kept of a step's output.

@@ -10,6 +10,10 @@ import (
 	"slices"
 	"strings"
 
+	"charm.land/lipgloss/v2"
+
+	"github.com/charmbracelet/x/ansi"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
@@ -39,6 +43,9 @@ type Offer struct {
 	// BuildSecret replaces Build for a change that needs a passphrase,
 	// typed into the form's Secret fields.
 	BuildSecret BuildSecret
+	// Open, if set, replaces the form with a modal of its own, given the
+	// function that opens the confirmation (creating a pool).
+	Open func(confirm func(*mutate.Plan, Rebuild) ui.Modal) (ui.Modal, tea.Cmd)
 }
 
 // needs returns a Need for a fixed list of permissions.
@@ -226,6 +233,9 @@ func (m *Menu) choose(i int) (ui.Modal, tea.Cmd) {
 	if o.Disabled != "" || m.checking {
 		return m, nil
 	}
+	if o.Open != nil {
+		return o.Open(m.confirm)
+	}
 	f := NewForm(o.Name, o.Fields, o.Build, m.confirm)
 	if o.BuildSecret != nil {
 		f.withSecret(o.BuildSecret)
@@ -255,7 +265,7 @@ func (m *Menu) Render(d ui.Display, width, height int) string {
 	lines := m.offerLines(d, iw)
 	order := m.order()
 	if len(m.offers) == 0 {
-		lines = append(lines, muted.Render("No changes are offered for this selection yet."))
+		lines = append(lines, muted.Render("Nothing can be changed here."))
 	}
 	if m.checking {
 		lines = append(lines, "", muted.Render("Checking what can be done now…"))
@@ -292,18 +302,36 @@ func (m *Menu) offerLines(d ui.Display, iw int) []string {
 			}
 			lines = append(lines, muted.Render("  Unavailable"))
 		}
-		line := accent.Render(o.Key) + "  " + o.Name
-		if o.Disabled != "" {
-			line = muted.Render(o.Key + "  " + fmt.Sprintf("%-*s", nameCol, o.Name) + "  " + safe(o.Disabled))
-		}
+		mark := "  "
 		if pos == m.cursor {
-			line = "> " + line
-		} else {
-			line = "  " + line
+			mark = "> "
 		}
-		lines = append(lines, fit(line, iw))
+		if o.Disabled == "" {
+			lines = append(lines, fit(mark+accent.Render(o.Key)+"  "+o.Name, iw))
+			continue
+		}
+		lines = append(lines, reasonLines(muted, mark+o.Key+"  "+fmt.Sprintf("%-*s", nameCol, o.Name)+"  ", safe(o.Disabled), iw)...)
 	}
 	return lines
+}
+
+// reasonLines puts why a change is unavailable after head, wrapped in
+// its own column: a reason names the pool or device, and a long device
+// path would otherwise push the point of it off the edge.
+func reasonLines(style lipgloss.Style, head, reason string, iw int) []string {
+	col := lipgloss.Width(head)
+	if iw-col < 20 { // too narrow for a column: cut as before
+		return []string{style.Render(fit(head+reason, iw))}
+	}
+	var out []string
+	for i, l := range strings.Split(ansi.Wrap(reason, iw-col, " /-"), "\n") {
+		lead := head
+		if i > 0 {
+			lead = strings.Repeat(" ", col)
+		}
+		out = append(out, style.Render(lead+l))
+	}
+	return out
 }
 
 // asks says how a change is confirmed: y; y then enter; typing the

@@ -242,3 +242,16 @@ func TestReadRefusesADashOperandWithoutSeparator(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+// Shell output runs as shown: names with spaces, quotes or shell
+// characters are single-quoted, and nothing else is.
+func TestArgvShell(t *testing.T) {
+	a := Argv{Tool: ZFS, Options: []string{"send", "-i", "tank/a b@1"}, Operands: []string{"tank/it's@$x;rm"}}
+	want := `zfs send -i 'tank/a b@1' -- 'tank/it'\''s@$x;rm'`
+	if got := a.Shell(); got != want {
+		t.Errorf("Shell = %s\nwant    %s", got, want)
+	}
+	if got := (Argv{Tool: ZFS, Options: []string{"send", "-c"}, Operands: []string{"tank/a@daily-1"}}).Shell(); got != "zfs send -c -- tank/a@daily-1" {
+		t.Errorf("plain = %s", got)
+	}
+}

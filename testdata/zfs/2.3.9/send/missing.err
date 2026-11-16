@@ -1,0 +1,2 @@
+cannot open 'fstuitest_send/data@nope': dataset does not exist
+exit 1

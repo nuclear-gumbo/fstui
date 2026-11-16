@@ -56,8 +56,115 @@ func (c *Commands) textAnswer(a execute.Argv) ([]byte, bool, error) {
 		})
 	case strings.HasPrefix(cmd, "zfs destroy -n -v -p"):
 		return c.dryDestroy(a)
+	case strings.HasPrefix(cmd, "zfs send -n -P"):
+		return c.drySend(a)
 	}
 	return nil, false, nil
+}
+
+// drySend answers zfs send -n -P from the demo's state, in zfs's format:
+// a full stream is the snapshot's logical size, or with -c or -w the
+// smaller of that and its size on disk; an incremental stream is what
+// each later snapshot wrote, scaled up by its compression ratio unless -c
+// or -w keep it compressed.
+func (c *Commands) drySend(a execute.Argv) ([]byte, bool, error) {
+	st, err := c.load()
+	if err != nil || len(a.Operands) != 1 {
+		return nil, true, err
+	}
+	o := sendArgs(a.Options)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	to, ok := st.entries[a.Operands[0]]
+	if !ok {
+		return nil, true, &partialError{stderr: fmt.Sprintf("cannot open '%s': %s\n", a.Operands[0], missingWhy(a.Operands[0]))}
+	}
+	var out strings.Builder
+	var total uint64
+	if o.from == "" {
+		total = o.size(to, "logicalreferenced")
+		if o.compressed {
+			// The recordings' tiny datasets take more on disk than their
+			// logical size (metadata); a compressed stream is never larger.
+			total = min(total, o.size(to, "referenced"))
+		}
+		fmt.Fprintf(&out, "full\t%s\t%d\n", to.Name, total)
+	} else {
+		total, err = st.sendIncremental(&out, o, to)
+		if err != nil {
+			return nil, true, err
+		}
+	}
+	fmt.Fprintf(&out, "size\t%d\n", total)
+	return []byte(out.String()), true, nil
+}
+
+// sendOpts are the zfs send options the demo's estimate depends on.
+type sendOpts struct {
+	compressed bool   // -c or -w
+	from       string // -i or -I
+	every      bool   // -I
+}
+
+func sendArgs(opts []string) sendOpts {
+	var o sendOpts
+	for i := 0; i < len(opts); i++ {
+		switch opts[i] {
+		case "-c", "-w":
+			o.compressed = true
+		case "-i", "-I":
+			if i+1 < len(opts) {
+				o.from, o.every = opts[i+1], opts[i] == "-I"
+				i++
+			}
+		}
+	}
+	return o
+}
+
+// size is a byte property of e as the stream would carry it.
+func (o sendOpts) size(e *entry, prop string) uint64 {
+	n, _ := strconv.ParseUint(e.get(prop), 10, 64)
+	if !o.compressed && prop == "written" {
+		if r, err := strconv.ParseFloat(strings.TrimSuffix(e.get("compressratio"), "x"), 64); err == nil && r > 1 {
+			n = uint64(float64(n) * r)
+		}
+	}
+	return n
+}
+
+// sendIncremental writes the incremental lines from o.from to to and
+// returns their total.
+func (st *state) sendIncremental(out *strings.Builder, o sendOpts, to *entry) (uint64, error) {
+	ds, _, _ := strings.Cut(to.Name, "@")
+	from := o.from
+	if strings.HasPrefix(from, "@") || strings.HasPrefix(from, "#") {
+		from = ds + from
+	}
+	start, ok := st.entries[from]
+	if !ok {
+		return 0, &partialError{stderr: fmt.Sprintf("cannot open '%s': %s\n", from, missingWhy(from))}
+	}
+	lo, _ := strconv.ParseUint(start.CreateTXG, 10, 64)
+	hi, _ := strconv.ParseUint(to.CreateTXG, 10, 64)
+	prev, sum := from, uint64(0)
+	for _, n := range st.sorted() {
+		e := st.entries[n]
+		txg, _ := strconv.ParseUint(e.CreateTXG, 10, 64)
+		if e.Type != "SNAPSHOT" || !strings.HasPrefix(n, ds+"@") || txg <= lo || txg > hi {
+			continue
+		}
+		sum += o.size(e, "written")
+		if o.every {
+			_, short, _ := strings.Cut(prev, "@")
+			fmt.Fprintf(out, "incremental\t%s\t%s\t%d\n", short, n, o.size(e, "written"))
+			prev = n
+		}
+	}
+	if !o.every {
+		fmt.Fprintf(out, "incremental\t%s\t%s\t%d\n", from, to.Name, sum)
+	}
+	return sum, nil
 }
 
 // rows prints one line per named object, in operand order; lines holds

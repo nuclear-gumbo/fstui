@@ -113,6 +113,29 @@ func (a Argv) String() string {
 	return termtext.New(strings.Join(parts, " ")).Display()
 }
 
+// Shell renders the command for a POSIX shell, to copy and run: every
+// argument that is not made only of characters a shell leaves alone is
+// put in single quotes, with any single quote in it written as '\”.
+// String is for showing a command; Shell is for running it by hand.
+func (a Argv) Shell() string {
+	parts := []string{string(a.Tool)}
+	for _, s := range a.Args() {
+		parts = append(parts, shellQuote(s))
+	}
+	return strings.Join(parts, " ")
+}
+
+// shellSafe are the characters a POSIX shell gives no meaning to in a
+// word. ZFS names may also hold spaces and ':', which are quoted.
+const shellSafe = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@%+=,./_-"
+
+func shellQuote(s string) string {
+	if s != "" && strings.Trim(s, shellSafe) == "" {
+		return s
+	}
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
 // Result is what a finished command produced.
 type Result struct {
 	Stdout   []byte

@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
+
 	"github.com/nuclear-gumbo/fstui/internal/mutate"
 	"github.com/nuclear-gumbo/fstui/internal/ui"
 	"github.com/nuclear-gumbo/fstui/internal/zfs/plan"
@@ -36,7 +38,9 @@ func ZFSOffers(b plan.Builder, now func() time.Time) func(ui.Target) (string, []
 		case "snapshot":
 			return n, snapshotOffers(b, n)
 		case "pool":
-			return n, poolOffers(b, n)
+			return n, append(poolOffers(b, n), createPool(b), importPool(b))
+		case "pools": // no pool imported: a new one, or an import
+			return "pools", []Offer{createPool(b), importPool(b)}
 		case "arc":
 			return "ARC limits", arcOffers(b)
 		case "device":
@@ -195,6 +199,44 @@ func propertyNeed(v map[string]string) []string {
 	return []string{p}
 }
 
+// createPool opens the form for a new pool. It needs root and lsblk.
+func createPool(b plan.Builder) Offer {
+	return withPoolForm(b, Offer{Key: "N", Op: mutate.PoolCreate, Name: "Create a new pool"}, "")
+}
+
+// importPool opens the list of pools zpool import finds. It needs root.
+func importPool(b plan.Builder) Offer {
+	o := Offer{Key: "I", Op: mutate.PoolImport, Name: "Import a pool", Open: func(confirm func(*mutate.Plan, Rebuild) ui.Modal) (ui.Modal, tea.Cmd) {
+		return openImportForm(b, confirm)
+	}}
+	if b.Unprivileged {
+		o.Disabled = "needs root"
+	}
+	return o
+}
+
+// withPoolForm makes o open the pool form, for a new pool or for devices to
+// add to pool, and disables it without root or lsblk.
+func withPoolForm(b plan.Builder, o Offer, pool string) Offer {
+	o.Open = func(confirm func(*mutate.Plan, Rebuild) ui.Modal) (ui.Modal, tea.Cmd) {
+		return openPoolForm(b, pool, confirm)
+	}
+	o.Disabled = inventoryMissing(b)
+	return o
+}
+
+// inventoryMissing is why a change that lists the disks cannot be made:
+// it needs root, and lsblk to list them.
+func inventoryMissing(b plan.Builder) string {
+	switch {
+	case b.Unprivileged:
+		return "needs root"
+	case b.Devices == nil:
+		return "needs lsblk to list the disks, and fstui did not find it"
+	}
+	return ""
+}
+
 // poolOffers are the changes to a pool. Pool changes need root; the
 // planner says so for other users.
 func poolOffers(b plan.Builder, pool string) []Offer {
@@ -226,6 +268,61 @@ func poolOffers(b plan.Builder, pool string) []Offer {
 		offer("t", "Trim", mutate.TrimStart),
 		offer("i", "Initialize free space", mutate.InitializeStart),
 		offer("c", "Clear errors", mutate.PoolClear),
+		withPoolForm(b, Offer{Key: "A", Op: mutate.PoolAdd, Name: "Add devices"}, pool),
+		checkpointOffer(b, "C", "Take a checkpoint", mutate.CheckpointTake, pool),
+		checkpointOffer(b, "D", "Discard the checkpoint", mutate.CheckpointDiscard, pool),
+		checkpointOffer(b, "L", "Look at the checkpoint, read-only", mutate.CheckpointLook, pool),
+		checkpointOffer(b, "w", "Rewind to the checkpoint", mutate.CheckpointRewind, pool),
+		cancelRemoval(b, pool),
+		exportOffer(b, pool),
+		upgradeOffer(b, pool),
+	}
+}
+
+// removeOffer removes the device's top-level vdev: a mirror's member
+// takes the whole mirror with it, which the plan's summary names.
+func removeOffer(b plan.Builder, pool, dev string) Offer {
+	build := func(ctx context.Context, _ map[string]string) (*mutate.Plan, error) {
+		return b.VdevRemove(ctx, pool, dev)
+	}
+	return Offer{Key: "R", Name: "Remove from the pool (with its mirror, if any)", Op: mutate.VdevRemove, Build: build, Check: blockedReasons(build)}
+}
+
+func upgradeOffer(b plan.Builder, pool string) Offer {
+	build := func(ctx context.Context, _ map[string]string) (*mutate.Plan, error) { return b.PoolUpgrade(ctx, pool) }
+	return Offer{Key: "u", Name: "Upgrade: enable new features", Op: mutate.PoolUpgrade, Build: build, Check: blockedReasons(build)}
+}
+
+func exportOffer(b plan.Builder, pool string) Offer {
+	build := func(ctx context.Context, _ map[string]string) (*mutate.Plan, error) { return b.PoolExport(ctx, pool) }
+	return Offer{Key: "x", Name: "Export the pool", Op: mutate.PoolExport, Build: build, Check: blockedReasons(build)}
+}
+
+func cancelRemoval(b plan.Builder, pool string) Offer {
+	build := func(ctx context.Context, _ map[string]string) (*mutate.Plan, error) {
+		return b.VdevRemoveCancel(ctx, pool)
+	}
+	return Offer{Key: "X", Name: "Cancel the removal of a vdev", Op: mutate.VdevRemoveCancel, Build: build, Check: blockedReasons(build)}
+}
+
+// checkpointOffer is one checkpoint change; its check is the planner's
+// own reasons, so the menu says why it cannot be done.
+func checkpointOffer(b plan.Builder, key, name string, op mutate.Op, pool string) Offer {
+	build := func(ctx context.Context, _ map[string]string) (*mutate.Plan, error) {
+		return b.Checkpoint(ctx, op, pool)
+	}
+	return Offer{Key: key, Name: name, Op: op, Build: build, Check: blockedReasons(build)}
+}
+
+// blockedReasons checks an offer by planning it: the plan's blocks, or
+// the error, are why it cannot be done now.
+func blockedReasons(build func(context.Context, map[string]string) (*mutate.Plan, error)) func(context.Context) string {
+	return func(ctx context.Context) string {
+		p, err := build(ctx, nil)
+		if err != nil {
+			return err.Error()
+		}
+		return strings.Join(p.Blocked, "; ")
 	}
 }
 
@@ -235,21 +332,21 @@ func deviceOffers(b plan.Builder, pool, dev string) []Offer {
 		build := func(ctx context.Context, _ map[string]string) (*mutate.Plan, error) {
 			return b.DeviceChange(ctx, op, pool, dev)
 		}
-		return Offer{
-			Key: key, Name: name, Op: op, Build: build,
-			Check: func(ctx context.Context) string {
-				p, err := build(ctx, nil)
-				if err != nil {
-					return err.Error()
-				}
-				return strings.Join(p.Blocked, "; ")
-			},
-		}
+		return Offer{Key: key, Name: name, Op: op, Build: build, Check: blockedReasons(build)}
+	}
+	pick := func(key, name string, op mutate.Op) Offer {
+		return Offer{Key: key, Name: name, Op: op, Disabled: inventoryMissing(b), Open: func(confirm func(*mutate.Plan, Rebuild) ui.Modal) (ui.Modal, tea.Cmd) {
+			return openPickForm(b, op, pool, dev, confirm)
+		}}
 	}
 	return []Offer{
 		offer("o", "Bring online", mutate.DeviceOnline),
 		offer("f", "Take offline", mutate.DeviceOffline),
 		offer("c", "Clear its errors", mutate.DeviceClear),
+		pick("a", "Attach a device: mirror it, or widen its raidz", mutate.DeviceAttach),
+		pick("r", "Replace it", mutate.DeviceReplace),
+		offer("d", "Detach it from its mirror", mutate.DeviceDetach),
+		removeOffer(b, pool, dev),
 	}
 }
 

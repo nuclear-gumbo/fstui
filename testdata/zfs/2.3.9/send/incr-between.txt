@@ -1,0 +1,3 @@
+incremental	s1	fstuitest_send/data@s2	16790000
+incremental	s2	fstuitest_send/data@s3	50349808
+size	67139808

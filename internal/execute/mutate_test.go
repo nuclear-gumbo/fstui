@@ -131,3 +131,16 @@ func TestMutateAcceptsADoneMessage(t *testing.T) {
 		t.Fatal("a different message was taken as done")
 	}
 }
+
+// Unresolved names each missing tool once; a simulated mutator needs none.
+func TestUnresolvedTools(t *testing.T) {
+	m := fakeMutator(t, Write, new(recorder))
+	got := m.Unresolved([]Argv{{Tool: fake}, {Tool: Tee}, {Tool: Mv}, {Tool: Tee}})
+	if len(got) != 2 || got[0] != Tee || got[1] != Mv {
+		t.Errorf("Unresolved = %v", got)
+	}
+	sim := NewSimulatedMutator(new(Switch), new(recorder), func(Argv, []byte) (Result, error) { return Result{}, nil })
+	if got := sim.Unresolved([]Argv{{Tool: Tee}}); got != nil {
+		t.Errorf("simulated Unresolved = %v", got)
+	}
+}

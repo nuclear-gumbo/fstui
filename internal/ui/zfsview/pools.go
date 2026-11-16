@@ -319,6 +319,10 @@ const listTop = 2
 // while the pool's detail has the focus, otherwise the pool under the
 // cursor.
 func (p *Pools) Selection() (ui.Target, bool) {
+	if len(p.poll.data) == 0 && !p.poll.loaded.IsZero() && p.poll.lastErr.IsEmpty() {
+		// No pool imported: a new one can still be made.
+		return ui.Target{Backend: "zfs", Kind: "pools", Names: []string{"pools"}}, true
+	}
 	if p.cursor >= len(p.poll.data) {
 		return ui.Target{}, false
 	}

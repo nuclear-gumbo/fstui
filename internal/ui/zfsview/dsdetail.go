@@ -72,6 +72,7 @@ type dsDetail struct {
 	sortBy  int
 	reverse bool
 	started bool // its reads have been started
+	order   derived[listKey, []zfs.Dataset]
 }
 
 func newDSDetail(src DatasetSource, ds name.Dataset, typ zfs.DatasetType, o DatasetsOptions) *dsDetail {
@@ -337,8 +338,11 @@ func (d *dsDetail) snapshotLines(disp ui.Display, now time.Time) []string {
 	case len(d.snaps.data.list) == 0:
 		return []string{fmt.Sprintf("%s has no snapshots.", d.ds)}
 	}
-	list := append([]zfs.Dataset(nil), d.snaps.data.list...)
-	d.sortSnapshots(list)
+	list := d.order.get(listKey{d.snaps.loaded, len(d.snaps.data.list), d.sortBy, d.reverse}, func() []zfs.Dataset {
+		list := append([]zfs.Dataset(nil), d.snaps.data.list...)
+		d.sortSnapshots(list)
+		return list
+	})
 	nameCol := len("SNAPSHOT")
 	for _, s := range list {
 		nameCol = max(nameCol, len(shortSnap(s.Name)))

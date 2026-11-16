@@ -78,6 +78,36 @@ type Pool struct {
 // destroyed and its files deleted when the test finishes.
 func New(t testing.TB, layout string, n int) *Pool {
 	t.Helper()
+	return NewWith(t, nil, layout, n)
+}
+
+// NewWith is New with more zpool create options before the pool name,
+// such as "-d" (every feature disabled) or "-o", "compatibility=...".
+func NewWith(t testing.TB, opts []string, layout string, n int) *Pool {
+	t.Helper()
+	p := setup(t)
+	t.Cleanup(p.destroy)
+	p.makeImages(n)
+	args := []string{
+		"create",
+		// Keep test pools out of /etc/zfs/zpool.cache, so a crash cannot
+		// make the host import them at boot.
+		"-o", "cachefile=none",
+		"-O", "mountpoint=" + filepath.Join(Dir, "mnt", p.Name),
+	}
+	args = append(append(args, opts...), "--", p.Name)
+	if layout != "" {
+		args = append(args, layout)
+	}
+	p.run(execute.Zpool, p.Name, append(args, p.Images...)...)
+	p.created = true
+	return p
+}
+
+// setup checks the caller is root, resolves the tools, names the pool and
+// prepares the directories.
+func setup(t testing.TB) *Pool {
+	t.Helper()
 	if os.Geteuid() != 0 {
 		t.Fatal("testpool: integration tests create pools and must run as root; build them unprivileged and run the binary as root (CONTRIBUTING.md)")
 	}
@@ -95,29 +125,19 @@ func New(t testing.TB, layout string, n int) *Pool {
 			t.Fatal(err)
 		}
 	}
-	t.Cleanup(p.destroy)
+	return p
+}
 
+// makeImages creates the pool's n backing files.
+func (p *Pool) makeImages(n int) {
+	p.t.Helper()
 	for i := range n {
 		img := filepath.Join(Dir, fmt.Sprintf("%s-%d.img", p.Name, i))
 		if err := createSparse(img); err != nil {
-			t.Fatal(err)
+			p.t.Fatal(err)
 		}
 		p.Images = append(p.Images, img)
 	}
-	args := []string{
-		"create",
-		// Keep test pools out of /etc/zfs/zpool.cache, so a crash cannot
-		// make the host import them at boot.
-		"-o", "cachefile=none",
-		"-O", "mountpoint=" + filepath.Join(Dir, "mnt", p.Name),
-		"--", p.Name,
-	}
-	if layout != "" {
-		args = append(args, layout)
-	}
-	p.run(execute.Zpool, p.Name, append(args, p.Images...)...)
-	p.created = true
-	return p
 }
 
 // prepareDir creates dir if it is missing and refuses to use it unless it
@@ -158,6 +178,21 @@ func createSparse(path string) error {
 		return fmt.Errorf("closing %s: %w", path, err)
 	}
 	return nil
+}
+
+// Images makes n sparse backing files and a fresh test pool name, for a
+// test whose code under test creates the pool itself (pool creation).
+// When the test ends, the pool is destroyed if it exists and the files
+// are deleted. Until the pool exists, only Name and Images may be used.
+func Images(t testing.TB, n int) *Pool {
+	t.Helper()
+	p := setup(t)
+	t.Cleanup(p.destroy)
+	t.Cleanup(func() { // runs first: was the pool made?
+		p.created = p.exec(execute.Zpool, p.Name, []string{"list", "-H", "--", p.Name}) == nil
+	})
+	p.makeImages(n)
+	return p
 }
 
 // CreateFilesystem creates the filesystem rel inside the pool, e.g.
@@ -296,4 +331,50 @@ func (p *Pool) destroy() {
 			p.t.Errorf("cleanup: %v", err)
 		}
 	}
+}
+
+// Wait waits for the pool's activities to end, as zpool wait -t takes
+// them: "resilver,replace" for an attach or replace to finish.
+func (p *Pool) Wait(activities string) {
+	p.t.Helper()
+	p.run(execute.Zpool, p.Name, "wait", "-t", activities, "--", p.Name)
+}
+
+// Destroy destroys the pool now, as the cleanup would; a later pool of
+// the same name is destroyed by the cleanup too.
+func (p *Pool) Destroy() {
+	p.t.Helper()
+	p.run(execute.Zpool, p.Name, "destroy", "-f", "--", p.Name)
+}
+
+// AllowedDevices are the real block devices a person listed in
+// testdata/allowed-devices.conf (CONTRIBUTING.md), which
+// scripts/integration.sh passes as FSTUI_ALLOWED_DEVICES. Missing or
+// empty means none, and a test that needs one skips. Only
+// /dev/disk/by-id paths are accepted.
+func AllowedDevices(t testing.TB) []string {
+	t.Helper()
+	path := os.Getenv("FSTUI_ALLOWED_DEVICES")
+	if path == "" {
+		return nil
+	}
+	b, err := os.ReadFile(path) //nolint:gosec // the list a person wrote, named by the test runner
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, line := range strings.Split(string(b), "\n") {
+		line = strings.TrimSpace(line)
+		switch {
+		case line == "" || strings.HasPrefix(line, "#"):
+		case !strings.HasPrefix(line, "/dev/disk/by-id/") || strings.Contains(line, ".."):
+			t.Fatalf("testpool: %s lists %q, which is not a /dev/disk/by-id path", path, line)
+		default:
+			out = append(out, line)
+		}
+	}
+	return out
 }

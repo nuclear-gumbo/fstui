@@ -107,7 +107,7 @@ func (b Builder) SnapshotRename(ctx context.Context, snap, newShort string) (*mu
 		return nil, err
 	}
 	if h := holds[snap]; len(h) > 0 {
-		affects(p, "its holds stay with it: "+strings.Join(h, ", "))
+		affects(p, "the holds on "+snap+" stay with it: "+strings.Join(h, ", "))
 	}
 	if err := b.watch(ctx, p, []string{snap, to.String()}); err != nil {
 		return nil, err
@@ -152,7 +152,7 @@ func (b Builder) Clone(ctx context.Context, snap, newDS string) (*mutate.Plan, e
 	affects(p, "creates "+newDS+" with the contents of "+snap,
 		snap+" cannot be destroyed while "+newDS+" exists, unless "+newDS+" is promoted")
 	if b.Unprivileged {
-		affects(p, unmountedNote)
+		affects(p, unmountedNote(newDS))
 	}
 	parent, hasParent := parentOf(newDS)
 	names := []string{snap, newDS}

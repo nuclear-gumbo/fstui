@@ -3,3 +3,6 @@
 /result-*
 *.test
 /fstui
+
+# Real devices a person allows tests to destroy (CONTRIBUTING.md); never committed.
+testdata/allowed-devices.conf

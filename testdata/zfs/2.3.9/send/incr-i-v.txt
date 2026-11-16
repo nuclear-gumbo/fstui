@@ -1,0 +1,2 @@
+send from fstuitest_send/data@s1 to fstuitest_send/data@s3 estimated size is 64.0M
+total estimated size is 64.0M

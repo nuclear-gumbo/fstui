@@ -48,7 +48,7 @@ func zfsScreens(cfg config.Config) (opened, error) {
 	// Optional: without systemctl, scrub timers are not shown; without
 	// tee, cp and mv, ARC limits cannot be changed.
 	tools, err := execute.ResolveOptional([]execute.Tool{execute.ZFS, execute.Zpool},
-		[]execute.Tool{execute.Systemctl, execute.Tee, execute.Cp, execute.Chmod, execute.Mv})
+		[]execute.Tool{execute.Systemctl, execute.Tee, execute.Cp, execute.Chmod, execute.Mv, execute.Lsblk})
 	if err != nil {
 		return opened{}, fmt.Errorf("not running the ZFS tools: %w\n"+
 			"fstui runs zfs and zpool only from /usr/sbin, /usr/bin, /sbin or /bin, and only when "+

@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/ui/keys"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
@@ -289,16 +291,14 @@ func (s *Session) Offered(t ui.Target) []key.Binding {
 	return out
 }
 
-// NoChanges implements ui.Actions.
+// NoChanges implements ui.Actions: why a has nothing to offer here.
 func (s *Session) NoChanges(view string, empty bool) ui.Modal {
+	act := keys.Get(keys.Actions).Help().Key
 	if empty {
-		return NewMessage("nothing selected",
-			view+" has nothing selected, so there is nothing to change yet. Select something with j and k (or the mouse), then press a for its changes or n for a new snapshot.")
+		return NewMessage("nothing selected", "Select an item in "+view+", then press "+act+".")
 	}
 	return NewMessage("no changes in "+strings.ToLower(view),
-		"Nothing in "+view+" can be changed from fstui. Changes are made in Datasets (2), Snapshots (3) and Volumes (4): "+
-			"select a dataset, snapshot or volume there and press a for its changes, or n for a new snapshot. "+
-			"fstui does not add or remove disks yet.")
+		view+" has nothing to change. Changes are in Pools (1), Datasets (2), Snapshots (3), Volumes (4) and ARC (5): select an item there and press "+act+".")
 }
 
 // Confirm opens the preview of p, run through the pipeline; the plan

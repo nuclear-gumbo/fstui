@@ -437,10 +437,10 @@ func sourceText(s zfs.Source) string {
 	case zfs.SourceNone:
 		return ""
 	case zfs.SourceInherited:
-		return "inherited from " + s.From.Display()
+		return "inherited from " + s.From().Display()
 	case zfs.SourceDefault, zfs.SourceLocal, zfs.SourceTemporary, zfs.SourceReceived, zfs.SourceOther:
 	}
-	return strings.ToLower(termtext.New(s.Word).Display())
+	return strings.ToLower(termtext.New(s.Word()).Display())
 }
 
 // scanSummary is the summary's last scan: its kind muted, then its state.

@@ -302,3 +302,28 @@ func TestDemoDiff(t *testing.T) {
 		t.Fatalf("diff = %+v, %v", got, err)
 	}
 }
+
+// The demo answers send size estimates in zfs's format: a full stream,
+// increments between snapshots, and a missing snapshot as zfs refuses it.
+func TestDemoSendEstimate(t *testing.T) {
+	b, _, _ := world(t)
+	r, ok := b.R.(*zfs.Reader)
+	if !ok {
+		t.Fatalf("reader is %T", b.R)
+	}
+	full, err := r.EstimateSend(t.Context(), zfs.SendStep{To: "tank/home@daily-1"}, zfs.SendOptions{})
+	if err != nil || full.Total == 0 || len(full.Streams) != 1 {
+		t.Fatalf("full: %+v, %v", full, err)
+	}
+	comp, err := r.EstimateSend(t.Context(), zfs.SendStep{To: "tank/home@daily-1"}, zfs.SendOptions{Compressed: true})
+	if err != nil || comp.Total > full.Total {
+		t.Errorf("compressed %d is larger than %d (%v)", comp.Total, full.Total, err)
+	}
+	inc, err := r.EstimateSend(t.Context(), zfs.SendStep{From: "tank/home@daily-1", To: "tank/home@daily-2"}, zfs.SendOptions{})
+	if err != nil || len(inc.Streams) != 1 || inc.Streams[0].From != "tank/home@daily-1" {
+		t.Errorf("incremental: %+v, %v", inc, err)
+	}
+	if _, err := r.EstimateSend(t.Context(), zfs.SendStep{To: "tank/home@nope"}, zfs.SendOptions{}); err == nil {
+		t.Error("a missing snapshot was estimated")
+	}
+}

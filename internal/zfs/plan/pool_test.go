@@ -32,19 +32,19 @@ func TestPoolChangesBlockWhereZpoolWouldRefuse(t *testing.T) {
 		blocked string // "" for not blocked
 	}{
 		{mutate.ScrubStart, idle, ""},
-		{mutate.ScrubStart, running, "is running"},
+		{mutate.ScrubStart, running, "tank has a scrub running"},
 		{mutate.ScrubStart, paused, "resume it"},
-		{mutate.ScrubStart, resilver, "resilver is running"},
-		{mutate.ScrubPause, idle, "no scrub is running"},
+		{mutate.ScrubStart, resilver, "tank has a resilver running"},
+		{mutate.ScrubPause, idle, "tank has no scrub running"},
 		{mutate.ScrubPause, running, ""},
 		{mutate.ScrubResume, paused, ""},
-		{mutate.ScrubResume, running, "no scrub is paused"},
+		{mutate.ScrubResume, running, "tank has no paused scrub"},
 		{mutate.ScrubStop, paused, ""},
 		{mutate.ScrubStop, idle, "no scrub"},
-		{mutate.ErrorScrub, running, "is running"},
+		{mutate.ErrorScrub, running, "tank has a scrub running"},
 		{mutate.TrimStart, idle, ""},
 		{mutate.TrimStart, zfs.Activity{Devices: []zfs.DeviceActivity{{Name: "f", TrimNotSupp: true}}}, "supports trim"},
-		{mutate.InitializeStart, zfs.Activity{Devices: []zfs.DeviceActivity{{Name: "f", Init: "ACTIVE"}}}, "already running"},
+		{mutate.InitializeStart, zfs.Activity{Devices: []zfs.DeviceActivity{{Name: "f", Init: "ACTIVE"}}}, "tank is already being initialized"},
 		{mutate.PoolClear, running, ""},
 	}
 	for _, tt := range tests {

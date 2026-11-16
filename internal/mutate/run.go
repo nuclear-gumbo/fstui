@@ -49,8 +49,21 @@ func (pl *Pipeline) Confirmable(p *Plan) error {
 	if len(p.Blocked) > 0 {
 		return fmt.Errorf("blocked: %s", strings.Join(p.Blocked, "; "))
 	}
-	if pl.Mode.Get() == execute.ReadOnly {
+	switch pl.Mode.Get() {
+	case execute.ReadOnly:
 		return ErrReadOnly
+	case execute.Write:
+		// Checked before anything runs: a plan whose later step needs a
+		// missing tool would otherwise stop halfway. A dry run runs
+		// nothing and needs none.
+		if missing := pl.Mutator.Unresolved(p.Steps); len(missing) > 0 {
+			names := make([]string, len(missing))
+			for i, t := range missing {
+				names[i] = string(t)
+			}
+			return fmt.Errorf("blocked: needs %s, which fstui did not find in /usr/sbin, /usr/bin, /sbin or /bin owned by root", strings.Join(names, ", "))
+		}
+	case execute.DryRun:
 	}
 	return nil
 }

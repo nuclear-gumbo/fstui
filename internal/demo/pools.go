@@ -16,8 +16,9 @@ import (
 
 // Pool changes in the demo: a scrub started, paused, resumed or stopped
 // there shows in the pools' status, and clearing errors sets the
-// counts to zero. Trim and initialize are accepted; the recordings do
-// not include their progress.
+// counts to zero. A checkpoint taken or discarded shows in the status.
+// Trim and initialize are accepted; the recordings do not include their
+// progress.
 
 // poolState is what the demo changed about a pool's status.
 type poolState struct {
@@ -25,6 +26,9 @@ type poolState struct {
 	cleared bool
 	offline map[string]bool // devices taken offline (true) or brought back (false)
 	clear   map[string]bool // devices whose errors were cleared
+	// checkpoint replaces checkpoint_stats: a map for one taken, false
+	// for one discarded; nil keeps the recording.
+	checkpoint any
 }
 
 // applyPool carries out a zpool change on the demo's pools.
@@ -72,6 +76,10 @@ func (c *Commands) applyPool(a execute.Argv) (execute.Result, error) {
 		}
 	case "clear":
 		ps.cleared = true
+	case "checkpoint":
+		ps.checkpoint = map[string]any{"state": "EXISTS", "start_time": now, "space": int64(0)}
+	case "checkpoint -d":
+		ps.checkpoint = false
 	case "trim", "initialize":
 	default:
 		return failed(a, fmt.Errorf("%w: %s", errUnsupported, a))
@@ -116,6 +124,12 @@ func (c *Commands) patchStatus(pool string, raw json.RawMessage) (json.RawMessag
 	}
 	if ps.scan != nil {
 		p["scan_stats"] = ps.scan
+	}
+	switch cp := ps.checkpoint.(type) {
+	case map[string]any:
+		p["checkpoint_stats"] = cp
+	case bool:
+		delete(p, "checkpoint_stats")
 	}
 	if ps.cleared {
 		p["error_count"] = 0

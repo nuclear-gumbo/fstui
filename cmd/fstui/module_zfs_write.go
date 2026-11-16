@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/disks"
 	"github.com/nuclear-gumbo/fstui/internal/execute"
 	"github.com/nuclear-gumbo/fstui/internal/ui"
 	"github.com/nuclear-gumbo/fstui/internal/ui/actions"
@@ -24,6 +25,12 @@ import (
 // is offered; otherwise the menu checks the delegated permissions.
 func zfsWrite(r *zfs.Reader, tools *execute.Tools) writeHooks {
 	b := plan.Builder{R: r, Unprivileged: os.Geteuid() != 0}
+	if _, ok := tools.Path(execute.Lsblk); ok {
+		src := disks.Source{
+			Run: execute.NewRunner(tools), ByIDDir: "/dev/disk/by-id", SysBlock: "/sys/class/block", PoolDevices: r.PoolDevices,
+		}
+		b.Devices = src.Devices
+	}
 	if b.Unprivileged {
 		b.Permits = permits(r)
 	}

@@ -1,0 +1,14 @@
+full 9 ms
+full-c 9 ms
+full-Le 9 ms
+incr-i 10 ms
+incr-i-c 10 ms
+incr-between 12 ms
+incr-bookmark 9 ms
+raw 10 ms
+not-raw-encrypted 9 ms
+replicate 12 ms
+replicate-raw 16 ms
+raw-unloaded-key 8 ms
+not-raw-unloaded-key 9 ms
+missing 8 ms

@@ -1,0 +1,19 @@
+  pool: fstuitest_rm
+ state: ONLINE
+remove: Removal of vdev 1 copied 292M in 0h0m, completed on Mon Nov 16 09:15:52 2026
+	840 memory used for removed device mappings
+config:
+
+	NAME                                        STATE     READ WRITE CKSUM
+	fstuitest_rm                                ONLINE       0     0     0
+	  mirror-0                                  ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_rm-a.img  ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_rm-b.img  ONLINE       0     0     0
+	logs	
+	  /var/tmp/fstui-test/fstuitest_rm-e.img    ONLINE       0     0     0
+	cache
+	  /var/tmp/fstui-test/fstuitest_rm-f.img    ONLINE       0     0     0
+	spares
+	  /var/tmp/fstui-test/fstuitest_rm-g.img    AVAIL   
+
+errors: No known data errors

@@ -195,7 +195,7 @@ func TestDatasetGetHealthy(t *testing.T) {
 		byName[d.Name] = d
 	}
 	user := byName["fstuitest_g_healthy/home/user"].Properties
-	if c := user["compression"]; c.Text.Raw() != "zstd" || c.Source.Kind != SourceInherited || c.Source.From.Raw() != "fstuitest_g_healthy/home" {
+	if c := user["compression"]; c.Text.Raw() != "zstd" || c.Source.Kind != SourceInherited || c.Source.From().Raw() != "fstuitest_g_healthy/home" {
 		t.Fatalf("home/user compression = %+v, want zstd inherited from home", c)
 	}
 	note := user["com.example:note"]
@@ -332,5 +332,137 @@ func TestPropertiesWithP(t *testing.T) {
 	}
 	if s := pools[0].Properties["size"]; !s.IsNumber || s.Number == 0 {
 		t.Errorf("pool size = %+v", s)
+	}
+}
+
+// Leaf devices carry their full path, which pool creation compares with
+// the disks it offers.
+func TestPoolStatusDevicePaths(t *testing.T) {
+	sts, err := ParsePoolStatus(golden(t, "roles", "zpool-status.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var paths []string
+	sts[0].Walk(func(v Vdev) {
+		if v.Path != "" {
+			paths = append(paths, v.Path)
+		}
+	})
+	if len(paths) < 6 || !strings.HasPrefix(paths[0], "/var/tmp/fstui-test/") {
+		t.Errorf("paths %v", paths)
+	}
+}
+
+// A RAIDZ expansion in progress and finished, as OpenZFS 2.3.9 reports it.
+func TestPoolStatusExpansion(t *testing.T) {
+	for _, c := range []struct {
+		file, state string
+		running     bool
+	}{{"zpool-status-expanding.json", "SCANNING", true}, {"zpool-status-expanded.json", "FINISHED", false}} {
+		sts, err := ParsePoolStatus(golden(t, "raidz-expand", c.file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		e := sts[0].Expansion
+		if e == nil || e.State != c.state || sts[0].Expanding() != c.running || sts[0].ExpandingName() != "raidz1-0" || e.Reflowed == 0 || e.ToReflow == 0 {
+			t.Errorf("%s: %+v", c.file, e)
+		}
+		if c.running != e.End.IsZero() {
+			t.Errorf("%s: end %v", c.file, e.End)
+		}
+	}
+}
+
+// A vdev removal running, cancelled and finished, as OpenZFS 2.3.9
+// reports it; top-level vdevs carry their sizes.
+func TestPoolStatusRemoval(t *testing.T) {
+	for _, c := range []struct{ file, state, name string }{
+		{"zpool-status-running.json", "SCANNING", "mirror-1"},
+		{"zpool-status-canceled.json", "CANCELED", "mirror-1"},
+		{"zpool-status-done.json", "FINISHED", "vdev 1"},
+	} {
+		sts, err := ParsePoolStatus(golden(t, "remove", c.file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		st := sts[0]
+		if st.Removal == nil || st.Removal.State != c.state || st.RemovingName() != c.name || st.Removing() != (c.state == "SCANNING") {
+			t.Errorf("%s: %+v, name %q", c.file, st.Removal, st.RemovingName())
+		}
+		if top := st.Data.Children[0]; top.Size == 0 || top.Alloc == 0 {
+			t.Errorf("%s: sizes %d/%d", c.file, top.Alloc, top.Size)
+		}
+	}
+}
+
+func TestParseImportable(t *testing.T) {
+	pools, err := ParseImportable(golden(t, "import", "zpool-import-ok.txt"))
+	if err != nil || len(pools) != 2 {
+		t.Fatalf("%d pools, %v", len(pools), err)
+	}
+	if p := pools[1]; p.Name.Raw() != "fstuitest_imp" || p.ID != "4866379416960248110" || p.State != "ONLINE" ||
+		len(p.Devices) != 4 || p.Devices[1].Name.Raw() != "mirror-0" || p.Devices[2].Depth != 2 {
+		t.Errorf("ok: %+v", p)
+	}
+	pools, err = ParseImportable(golden(t, "import", "zpool-import-missing.txt"))
+	if err != nil || len(pools) != 1 {
+		t.Fatalf("%d pools, %v", len(pools), err)
+	}
+	p := pools[0]
+	if p.State != "DEGRADED" || len(p.Status) != 1 || len(p.Action) != 2 || p.Devices[3].State != "UNAVAIL" || p.Devices[3].Note.Raw() != "cannot open" {
+		t.Errorf("missing: %+v", p)
+	}
+	if pools, err := ParseImportable(nil); err != nil || len(pools) != 0 {
+		t.Errorf("none: %v, %v", pools, err)
+	}
+}
+
+func TestCompatibleFeatures(t *testing.T) {
+	r := &Reader{ReadFile: func(p string) ([]byte, error) {
+		switch p {
+		case "/usr/share/zfs/compatibility.d/grub2":
+			return golden(t, "upgrade", "compat-grub2"), nil
+		case "/usr/share/zfs/compatibility.d/openzfs-2.1-linux":
+			return golden(t, "upgrade", "compat-openzfs-2.1-linux"), nil
+		}
+		return nil, os.ErrNotExist
+	}}
+	grub, ok, err := r.CompatibleFeatures("grub2")
+	if err != nil || !ok || !grub["block_cloning"] || grub["encryption"] || len(grub) < 15 {
+		t.Fatalf("grub2: %v, %v, %v", grub, ok, err)
+	}
+	both, _, err := r.CompatibleFeatures("grub2,openzfs-2.1-linux")
+	if err != nil || both["block_cloning"] || !both["lz4_compress"] {
+		t.Errorf("intersection: %v, %v", both, err)
+	}
+	if _, ok, err := r.CompatibleFeatures("off"); ok || err != nil {
+		t.Errorf("off: %v, %v", ok, err)
+	}
+	if none, ok, _ := r.CompatibleFeatures("legacy"); !ok || len(none) != 0 {
+		t.Errorf("legacy: %v", none)
+	}
+	for _, bad := range []string{"../etc/passwd", "missing", "a,,b"} {
+		if _, _, err := r.CompatibleFeatures(bad); err == nil {
+			t.Errorf("%q: no error", bad)
+		}
+	}
+	if got := ParseCompatibility([]byte("# c\na, b\tc # d\n\n")); strings.Join(got, " ") != "a b c" {
+		t.Errorf("parse %q", got)
+	}
+}
+
+// Source keeps one string: the word for an unknown source, the parent
+// for an inherited one.
+func TestSourceWords(t *testing.T) {
+	for word, kind := range sourceWords {
+		if s := parseSource(word, "tank"); s.Kind != kind || s.Word() != word {
+			t.Errorf("%s: %+v, word %q", word, s, s.Word())
+		}
+	}
+	if s := parseSource("INHERITED", "tank/home"); s.From().Raw() != "tank/home" {
+		t.Errorf("inherited from %q", s.From().Raw())
+	}
+	if s := parseSource("SOMETHING", "x"); s.Kind != SourceOther || s.Word() != "SOMETHING" || !s.From().IsEmpty() {
+		t.Errorf("other: %+v", s)
 	}
 }

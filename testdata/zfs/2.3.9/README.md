@@ -24,5 +24,11 @@ Other files:
 - `allow/`: `zfs allow` output for nested delegations, for a pool that only defines a permission set, and for a pool with none.
 - `iostat/four-pools.txt`: `zpool iostat -p -l -v -y 1` for three intervals on four pools, two of them being written.
 - `arcstats/`: `/proc/spl/kstat/zfs/arcstats` without cache devices (`no-l2arc.txt`) and with a 256 MiB file-backed cache device after 200 MiB were written and the pool re-imported (`l2arc.txt`).
+- `send/`: `zfs send -n -P` (full, incremental, `-I`, compressed, raw, from a bookmark, an encrypted dataset with its key loaded and unloaded) and the matching `zfs list`, recorded by `scripts/capture-send.sh`.
+- `create/`: `zpool create -n` for a valid layout and an invalid one.
+- `raidz-expand/`: `zpool status` of a raidz1 of three files during and after `zpool attach` of a fourth (`raidz_expand_stats`). After an expansion ZFS starts a scrub by itself.
+- `remove/`: `zpool status` while a mirror is removed, after `zpool remove -s` cancels it, and after it finished, when the removed vdev is no longer listed and `removing_vdev` no longer indexes a listed vdev. `zpool remove -n` prints only the mapping memory; on a pool with raidz it accepts removing a single-disk vdev that the removal itself refuses.
+- `import/`: `zpool import -d` with two exported pools present (`zpool-import-ok.txt`), with one mirror side and one single-device pool's device missing (`zpool-import-missing.txt`: the mirror is `DEGRADED`, the other pool is not listed), and with nothing to import (`zpool-import-none.stderr`, exit 0). There is no JSON form of this listing.
+- `upgrade/`: the compatibility files `grub2` (a link to `grub2-2.12`) and `openzfs-2.1-linux` from `/usr/share/zfs/compatibility.d`. `zpool upgrade` without a pool lists features that a pool's `compatibility` setting holds back; `zpool upgrade <pool>` does not enable them.
 
 `testdata/systemd/257/list-timers.json` is `systemctl list-timers --all --output=json` with two OpenZFS scrub timers enabled, and `testdata/debian/13/cron.d-zfsutils-linux` is the cron file Debian's zfsutils-linux installs.

@@ -56,7 +56,7 @@ func spareCopies(parent *zfs.Vdev) int {
 	case parent.Type == "raidz" || parent.Type == "draid":
 		// zpool names them raidz1-0, raidz2-1, draid2:4d:6c:0s-0.
 		n := strings.TrimPrefix(strings.TrimPrefix(parent.Name.Raw(), "raidz"), "draid")
-		if p, err := strconv.Atoi(n[:1]); err == nil {
+		if p, err := strconv.Atoi(n[:min(len(n), 1)]); err == nil {
 			return p
 		}
 	}
@@ -95,14 +95,17 @@ func (b Builder) DeviceChange(ctx context.Context, op mutate.Op, pool, dev strin
 	switch op { //nolint:exhaustive // device changes only
 	case mutate.DeviceOnline:
 		p = newPlan(op, "Bring "+show(dev)+" online", []string{dev}, params, argv("online"))
-		affects(p, "the device is used again; a resilver brings it up to date with what was written while it was away")
-		blockIf(p, device.State == "ONLINE", "it is already online")
+		affects(p, show(dev)+" is used again; a resilver brings it up to date with what was written while it was away")
+		blockIf(p, device.State == "ONLINE", show(dev)+" is already online")
 	case mutate.DeviceOffline:
 		p = newPlan(op, "Take "+show(dev)+" offline", []string{dev}, params, argv("offline"))
 		b.offlinePlan(p, device, parent, dev)
+	case mutate.DeviceDetach:
+		p = newPlan(op, "Detach "+show(dev), []string{dev}, params, argv("detach"))
+		detachPlan(p, st, pool, device, parent, dev)
 	case mutate.DeviceClear:
 		p = newPlan(op, "Clear the errors of "+show(dev), []string{dev}, params, argv("clear"))
-		affects(p, fmt.Sprintf("its error counts (read %d, write %d, checksum %d) go back to zero", device.ReadErrors, device.WriteErrors, device.ChecksumErrors))
+		affects(p, fmt.Sprintf("the error counts of %s (read %d, write %d, checksum %d) go back to zero", show(dev), device.ReadErrors, device.WriteErrors, device.ChecksumErrors))
 	default:
 		return nil, fmt.Errorf("%s is not a device change", op)
 	}
@@ -112,14 +115,7 @@ func (b Builder) DeviceChange(ctx context.Context, op mutate.Op, pool, dev strin
 		if err != nil {
 			return nil, err
 		}
-		f := mutate.Fingerprint{pool + " (pool guid)": strconv.FormatUint(st.GUID, 10)}
-		if d, par := findDevice(st, dev); d != nil {
-			f[dev+" (state)"] = d.State
-			if par != nil {
-				f[dev+" (other members not online)"] = strconv.Itoa(missing(par, dev))
-			}
-		}
-		return f, nil
+		return poolDeviceFacts(st, pool, dev), nil
 	}
 	if p.Baseline, err = read(ctx); err != nil {
 		return nil, err
@@ -131,12 +127,12 @@ func (b Builder) DeviceChange(ctx context.Context, op mutate.Op, pool, dev strin
 // offlinePlan says what is left of the vdev's redundancy, and blocks
 // what zpool refuses ("no valid replicas").
 func (b Builder) offlinePlan(p *mutate.Plan, device, parent *zfs.Vdev, dev string) {
-	blockIf(p, device.State == "OFFLINE", "it is already offline")
+	blockIf(p, device.State == "OFFLINE", show(dev)+" is already offline")
 	spare := spareCopies(parent)
 	after := missing(parent, dev)
 	switch {
 	case after > spare:
-		p.Blocked = append(p.Blocked, "the pool's data on "+show(parent.Name.Raw())+" would no longer be readable without it (zpool: no valid replicas)")
+		p.Blocked = append(p.Blocked, "the data on "+show(parent.Name.Raw())+" would no longer be readable without "+show(dev)+" (zpool: no valid replicas)")
 	case after == spare:
 		p.Flags.RedundancyLoss = true
 		affects(p, show(parent.Name.Raw())+" keeps working with no redundancy left: one more failure there loses data")
@@ -144,5 +140,59 @@ func (b Builder) offlinePlan(p *mutate.Plan, device, parent *zfs.Vdev, dev strin
 		affects(p, fmt.Sprintf("%s keeps working; %d more %s can fail there without losing data", show(parent.Name.Raw()), spare-after,
 			plural(spare-after, "device", "devices")))
 	}
-	affects(p, "it stays offline, also after a reboot, until it is brought online")
+	affects(p, show(dev)+" stays offline, also after a reboot, until it is brought online")
+}
+
+// poolDeviceFacts is what a device change depends on: the pool, the
+// device's state, its vdev's members, and whether a checkpoint exists.
+func poolDeviceFacts(st zfs.PoolStatus, pool, dev string) mutate.Fingerprint {
+	f := mutate.Fingerprint{pool + " (pool guid)": strconv.FormatUint(st.GUID, 10), pool + " (checkpoint)": strconv.FormatBool(st.Checkpoint != nil)}
+	if d, par := findDevice(st, dev); d != nil {
+		f[dev+" (state)"] = d.State
+		if par != nil {
+			f[dev+" (vdev members)"] = strconv.Itoa(len(par.Children))
+			f[dev+" (other members not online)"] = strconv.Itoa(missing(par, dev))
+		}
+	}
+	return f
+}
+
+// detachPlan blocks detaching from anything but a mirror or a replacement
+// in progress, and says what is left of the vdev's copies.
+func detachPlan(p *mutate.Plan, st zfs.PoolStatus, pool string, device, parent *zfs.Vdev, dev string) {
+	blockIf(p, st.Checkpoint != nil, show(pool)+" has a checkpoint: discard it first (zpool refuses to detach while one exists)")
+	if parent == nil || (parent.Type != "mirror" && parent.Type != "replacing" && parent.Type != "spare") {
+		blockIf(p, true, show(dev)+" is not a side of a mirror, and only those can be detached; to take a whole vdev out, remove it")
+		return
+	}
+	healthy := 0
+	for _, c := range parent.Children {
+		if c.Name.Raw() != dev && c.State == "ONLINE" {
+			healthy++
+		}
+	}
+	vdev := show(parent.Name.Raw())
+	// zpool lists the device being replaced (or stood in for) first and
+	// the new device or the spare last.
+	last := device.Name.Raw() == parent.Children[len(parent.Children)-1].Name.Raw()
+	switch {
+	case parent.Type == "replacing" && last:
+		affects(p, "the replacement in "+vdev+" is cancelled: the device being replaced stays")
+	case parent.Type == "replacing":
+		blockIf(p, true, show(dev)+" is being replaced: it leaves the pool by itself when the resilver finishes, and before that it may hold the only complete copy")
+	case parent.Type == "spare" && last:
+		affects(p, "the hot spare goes back to the spares; the device it stood in for stays")
+	case parent.Type == "spare":
+		affects(p, "the hot spare takes its place for good")
+	}
+	switch {
+	case healthy == 0:
+		blockIf(p, true, "no other side of "+vdev+" is online: detaching it loses the data there")
+	case healthy == 1 && parent.Type == "mirror":
+		p.Flags.RedundancyLoss = true
+		affects(p, vdev+" is left with one copy and no redundancy: one failure there loses data")
+	case parent.Type == "mirror":
+		affects(p, fmt.Sprintf("%s keeps %d copies", vdev, healthy))
+	}
+	p.Irreversible = []string{show(dev) + " leaves the pool: to use it again it must be attached anew and resilvered in full."}
 }

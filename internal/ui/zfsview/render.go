@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/ui/keys"
+
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
@@ -123,7 +125,8 @@ func (p *Pools) list(d ui.Display, width, height int) string {
 		return "Could not read pools\n" + p.poll.lastErr.Display() +
 			"\n" + muted.Render("fstui retries automatically; r retries now.")
 	case len(p.poll.data) == 0:
-		return "No pools are imported.\n" + muted.Render("zpool import lists pools that can be imported.")
+		act, w := keys.Get(keys.Actions).Help().Key, keys.Get(keys.WriteMode).Help().Key
+		return "No pools are imported.\n" + muted.Render(fmt.Sprintf("In write mode (%s), %s then I imports a pool, %s then N creates one.", w, act, act))
 	}
 	c := layout(p.poll.data, width)
 	block := warningBlock(d, p.visibleWarnings(), width, height)
@@ -287,19 +290,7 @@ func scanParts(o zfs.Overview, now func() time.Time) (word, state string) {
 // deviceErrors sums read, write and checksum errors over every device.
 func deviceErrors(st zfs.PoolStatus) uint64 {
 	var sum uint64
-	var walk func(v zfs.Vdev)
-	walk = func(v zfs.Vdev) {
-		sum += v.ReadErrors + v.WriteErrors + v.ChecksumErrors
-		for _, c := range v.Children {
-			walk(c)
-		}
-	}
-	walk(st.Data)
-	for _, g := range [][]zfs.Vdev{st.Special, st.Dedup, st.Logs, st.Cache, st.Spares} {
-		for _, v := range g {
-			walk(v)
-		}
-	}
+	st.Walk(func(v zfs.Vdev) { sum += v.ReadErrors + v.WriteErrors + v.ChecksumErrors })
 	return sum
 }
 

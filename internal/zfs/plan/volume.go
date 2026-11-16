@@ -98,7 +98,7 @@ func (b Builder) VolumeResize(ctx context.Context, ds, size string) (*mutate.Pla
 	} else {
 		affects(p, "whatever uses the volume (a virtual machine, a filesystem on it) must be told to use the new space")
 	}
-	blockIf(p, bytes == cur, "it is already "+iec(cur))
+	blockIf(p, bytes == cur, show(ds)+" is already "+iec(cur))
 	blockIf(p, blk > 0 && bytes%blk != 0, "the new size must be a multiple of the block size "+iec(blk))
 	return p, b.watchWith(ctx, p, []string{ds}, func(ctx context.Context) (mutate.Fingerprint, error) {
 		g, err := b.R.Get(ctx, []string{ds}, []string{"volsize"})

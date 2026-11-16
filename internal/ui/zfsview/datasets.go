@@ -45,6 +45,7 @@ type Datasets struct {
 	detail    *dsDetail       // the dataset whose detail is shown, if any
 	focus     bool            // keys go to the detail rather than the tree
 	geo       geometry        // layout of the last render, for the mouse
+	tree      derived[listKey, []*node]
 }
 
 // NewDatasets returns the Datasets view reading from src.
@@ -105,7 +106,7 @@ func (v *Datasets) rows() []*node {
 			}
 		}
 	}
-	walk(tree(v.poll.data))
+	walk(v.tree.get(listKey{loaded: v.poll.loaded, n: len(v.poll.data)}, func() []*node { return tree(v.poll.data) }))
 	return out
 }
 

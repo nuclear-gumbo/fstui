@@ -16,8 +16,33 @@ import (
 )
 
 type countingSnapshots struct {
-	fake  *fakeDatasets
-	calls int
+	fake   *fakeDatasets
+	calls  int
+	locked map[string]bool // encrypted datasets whose key is not loaded
+}
+
+// EstimateSend gives fixed sizes: 1000 bytes for a full stream, 100 for
+// an incremental one, half with compression.
+func (c *countingSnapshots) EstimateSend(_ context.Context, s zfs.SendStep, o zfs.SendOptions) (zfs.SendEstimate, error) {
+	n := uint64(1000)
+	if s.From != "" {
+		n = 100
+	}
+	if o.Compressed {
+		n /= 2
+	}
+	return zfs.SendEstimate{Streams: []zfs.SendStream{{From: s.From, To: s.To, Bytes: n}}, Total: n}, nil
+}
+
+func (c *countingSnapshots) Get(_ context.Context, names, _ []string) (map[string]map[string]string, error) {
+	out := map[string]map[string]string{}
+	for _, n := range names {
+		out[n] = map[string]string{"encryption": "off", "keystatus": "-"}
+		if c.locked[n] {
+			out[n] = map[string]string{"encryption": "aes-256-gcm", "keystatus": "unavailable"}
+		}
+	}
+	return out, nil
 }
 
 func (c *countingSnapshots) AllSnapshots(context.Context) ([]zfs.Dataset, error) {

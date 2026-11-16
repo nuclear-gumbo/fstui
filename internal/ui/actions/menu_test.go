@@ -6,9 +6,12 @@ package actions
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"charm.land/lipgloss/v2"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -58,7 +61,7 @@ func TestMenuDisablesWhatIsNotDelegated(t *testing.T) {
 func TestOfferKeysDoNotCollideWithMenuKeys(t *testing.T) {
 	offers := ZFSOffers(plan.Builder{}, time.Now)
 	reserved := map[string]bool{"j": true, "k": true, "q": true, "g": true, "G": true, " ": true}
-	for _, kind := range []string{"filesystem", "volume", "snapshot", "pool", "device", "arc"} {
+	for _, kind := range []string{"filesystem", "volume", "snapshot", "pool", "pools", "device", "arc"} {
 		_, list := offers(ui.Target{Backend: "zfs", Kind: kind, Names: []string{"tank/a@1"}, Parent: "tank"})
 		seen := map[string]string{}
 		for _, o := range list {
@@ -126,5 +129,63 @@ func TestBatchMenuOffersOnlyWhatAppliesToSeveral(t *testing.T) {
 	title, list = ZFSOffers(plan.Builder{}, time.Now)(ui.Target{Backend: "zfs", Kind: "filesystem", Names: []string{"tank/a", "tank/b"}})
 	if title != "2 datasets" || len(list) != 1 || list[0].Op != mutate.SnapshotCreate {
 		t.Fatalf("datasets: %q, %+v", title, list)
+	}
+}
+
+// A long reason wraps in its own column instead of being cut off.
+func TestReasonLinesWrap(t *testing.T) {
+	lines := reasonLines(lipgloss.NewStyle(), "  o  Bring online  ", "/dev/disk/by-id/ata-DEMO_TANK_B is already online", 50)
+	if len(lines) < 2 || !strings.HasSuffix(strings.TrimSpace(lines[len(lines)-1]), "online") {
+		t.Fatalf("lines %q", lines)
+	}
+	for _, l := range lines {
+		if lipgloss.Width(l) > 50 {
+			t.Errorf("%q is wider than 50", l)
+		}
+	}
+	if !strings.HasPrefix(lines[1], strings.Repeat(" ", lipgloss.Width("  o  Bring online  "))) {
+		t.Errorf("continuation not under the reason: %q", lines[1])
+	}
+}
+
+// The message for a view without changes names where changes are, briefly.
+func TestNoChangesMessage(t *testing.T) {
+	out := render((&Session{}).NoChanges("I/O", false))
+	for _, want := range []string{"I/O has nothing to change", "Pools (1)", "ARC (5)", "press a"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "ROADMAP") || strings.Contains(out, "does not") {
+		t.Errorf("stale wording:\n%s", out)
+	}
+}
+
+// docs/keys.md lists every change menu letter with the menu's own name for
+// it, so the reference cannot drift from the menus.
+func TestKeysDocListsEveryOffer(t *testing.T) {
+	doc, err := os.ReadFile("../../../docs/keys.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	offers := ZFSOffers(plan.Builder{}, time.Now)
+	for _, tg := range []ui.Target{
+		{Kind: "pool", Names: []string{"tank"}},
+		{Kind: "pools", Names: []string{"pools"}},
+		{Kind: "device", Names: []string{"/dev/sda"}, Parent: "tank"},
+		{Kind: "filesystem", Names: []string{"tank/a"}},
+		{Kind: "filesystem", Names: []string{"tank/a", "tank/b"}},
+		{Kind: "volume", Names: []string{"tank/v"}},
+		{Kind: "snapshot", Names: []string{"tank/a@1"}},
+		{Kind: "snapshot", Names: []string{"tank/a@1", "tank/a@2"}},
+		{Kind: "arc", Names: []string{"arc"}},
+	} {
+		tg.Backend = "zfs"
+		_, list := offers(tg)
+		for _, o := range list {
+			if row := "| `" + o.Key + "` | " + o.Name + " |"; !strings.Contains(string(doc), row) {
+				t.Errorf("docs/keys.md lacks %q (%s)", row, tg.Kind)
+			}
+		}
 	}
 }

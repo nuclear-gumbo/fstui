@@ -82,6 +82,7 @@ An event filter has a `name` and any of `severity` (one of, or a list of, `info`
 | `write_mode` | `W` | write mode on or off |
 | `new_snapshot` | `n` | new snapshot |
 | `diff` | `=` | what changed since the snapshot |
+| `send_size` | `e` | estimate the size of a `zfs send` |
 | `mark`, `clear_marks` | `m`, `M` | mark items; clear the marks |
 | `filter` | `/` | filter by text |
 | `filter_pool`, `filter_severity`, `filter_class` | `P`, `v`, `c` | Events: next pool, minimum severity, class |

@@ -32,6 +32,79 @@ type outputVersion struct {
 // unmarshals it into v. Numbers decode into the integer types of v, so
 // 64-bit GUIDs are not rounded through float64.
 func decode(data []byte, command string, v any) error {
+	if err := checkVersion(data, command); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(data, v); err != nil {
+		return fmt.Errorf("parsing %s output: %w", command, err)
+	}
+	return nil
+}
+
+// decodeEach checks the document like decode, then decodes the members
+// of its object field one at a time and hands each to fn. Nothing holds
+// the whole document decoded at once, so a listing of many thousands of
+// snapshots needs a fraction of the memory decode would.
+func decodeEach[T any](data []byte, command, field string, fn func(T) error) error {
+	if err := checkVersion(data, command); err != nil {
+		return err
+	}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	if err := expectDelim(dec, '{'); err != nil {
+		return fmt.Errorf("parsing %s output: %w", command, err)
+	}
+	for dec.More() {
+		key, err := dec.Token()
+		if err != nil {
+			return fmt.Errorf("parsing %s output: %w", command, err)
+		}
+		if key != field {
+			var skip json.RawMessage
+			err = dec.Decode(&skip)
+		} else {
+			err = eachMember(dec, fn)
+		}
+		if err != nil {
+			return fmt.Errorf("parsing %s output: %w", command, err)
+		}
+	}
+	return nil
+}
+
+// eachMember decodes the object at dec member by member into fn.
+func eachMember[T any](dec *json.Decoder, fn func(T) error) error {
+	if err := expectDelim(dec, '{'); err != nil {
+		return err
+	}
+	for dec.More() {
+		if _, err := dec.Token(); err != nil { // the member's key, which repeats its name
+			return fmt.Errorf("member name: %w", err)
+		}
+		var v T
+		if err := dec.Decode(&v); err != nil {
+			return fmt.Errorf("member: %w", err)
+		}
+		if err := fn(v); err != nil {
+			return err
+		}
+	}
+	return expectDelim(dec, '}')
+}
+
+func expectDelim(dec *json.Decoder, want json.Delim) error {
+	t, err := dec.Token()
+	if err != nil {
+		return fmt.Errorf("expected %q: %w", want, err)
+	}
+	if d, ok := t.(json.Delim); !ok || d != want {
+		return fmt.Errorf("expected %q, found %v", want, t)
+	}
+	return nil
+}
+
+// checkVersion checks the document's output_version: the command it
+// comes from and a major version fstui reads.
+func checkVersion(data []byte, command string) error {
 	var ov outputVersion
 	if err := json.Unmarshal(data, &ov); err != nil {
 		return fmt.Errorf("parsing %s output: %w", command, err)
@@ -42,9 +115,6 @@ func decode(data []byte, command string, v any) error {
 	}
 	if got.VersMajor != supportedOutputMajor {
 		return fmt.Errorf("parsing %s output: version %d.%d: %w", command, got.VersMajor, got.VersMinor, ErrOutputVersion)
-	}
-	if err := json.Unmarshal(data, v); err != nil {
-		return fmt.Errorf("parsing %s output: %w", command, err)
 	}
 	return nil
 }

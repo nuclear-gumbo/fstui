@@ -142,7 +142,7 @@ func (f *fixture) checkProperties(t *testing.T) {
 	}
 	// testpool creates pools with cachefile=none: a local, non-default value.
 	if c := p.Properties["cachefile"]; c.Text.Raw() != "none" || c.Source.Kind != SourceLocal {
-		t.Errorf("cachefile = %q from %s, want none, LOCAL", c.Text.Raw(), c.Source.Word)
+		t.Errorf("cachefile = %q from %s, want none, LOCAL", c.Text.Raw(), c.Source.Word())
 	}
 	if fe := p.Properties["feature@zpool_checkpoint"]; fe.Text.Raw() != "enabled" {
 		t.Errorf("feature@zpool_checkpoint = %q, want enabled on a new pool", fe.Text.Raw())
@@ -236,8 +236,8 @@ func (f *fixture) checkDatasets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mp := props.Properties["mountpoint"]; mp.Source.Kind != SourceInherited || mp.Source.From.Raw() != f.tp.Name {
-		t.Errorf("mountpoint source = %s from %q, want inherited from the pool", mp.Source.Word, mp.Source.From.Raw())
+	if mp := props.Properties["mountpoint"]; mp.Source.Kind != SourceInherited || mp.Source.From().Raw() != f.tp.Name {
+		t.Errorf("mountpoint source = %s from %q, want inherited from the pool", mp.Source.Word(), mp.Source.From().Raw())
 	}
 	snaps, err := f.r.DatasetSnapshots(t.Context(), home)
 	if err != nil {

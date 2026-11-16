@@ -1,0 +1,1 @@
+invalid vdev specification: raidz1 requires at least 2 devices

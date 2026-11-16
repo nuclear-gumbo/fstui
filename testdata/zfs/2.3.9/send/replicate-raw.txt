@@ -1,0 +1,8 @@
+full	fstuitest_send@all	13424
+full	fstuitest_send/data@s1	33885040
+incremental	s1	fstuitest_send/data@s2	16790000
+incremental	s2	fstuitest_send/data@s3	239344
+incremental	s3	fstuitest_send/data@all	624
+full	fstuitest_send/secret@s1	8455792
+incremental	s1	fstuitest_send/secret@all	624
+size	59384848

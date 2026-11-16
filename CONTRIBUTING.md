@@ -59,6 +59,7 @@ Test pool rules:
 - Test pools are named `fstuitest_*` and live on sparse files under `/var/tmp/fstui-test/`. Test code refuses any other pool.
 - Each test destroys the pools it creates. `sudo make test-clean` removes leftovers.
 - Do not run pool tests in containers. A container shares the host's kernel and pools.
+- No test touches a real block device unless you list its `/dev/disk/by-id` path, one per line, in `testdata/allowed-devices.conf` (ignored by git). `scripts/integration.sh` wipes every listed device before the tests (`wipefs -a` on its partitions and the disk) and refuses to run if one is mounted or in an imported pool. List only a disk whose contents you do not need.
 
 ## Commits
 

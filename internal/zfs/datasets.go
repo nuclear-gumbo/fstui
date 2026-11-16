@@ -117,3 +117,10 @@ func (r *Reader) AllVolumes(ctx context.Context) ([]Dataset, error) {
 	}
 	return ParseDatasetList(out)
 }
+
+// PoolObjects lists every filesystem, volume and snapshot of one pool
+// with when it was created and where it is mounted: what a checkpoint
+// rewind would take away, and whether the pool holds the system's root.
+func (r *Reader) PoolObjects(ctx context.Context, pool name.Pool) ([]Dataset, error) {
+	return r.list(ctx, pool.String(), "filesystem,volume,snapshot", "name,creation,mountpoint,mounted", "-r")
+}

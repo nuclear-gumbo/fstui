@@ -1,0 +1,15 @@
+  pool: fstuitest_rzx
+ state: ONLINE
+  scan: scrub repaired 0B in 00:00:02 with 0 errors on Mon Nov 16 09:04:34 2026
+expand: expanded raidz1-0 copied 1.01G in 00:00:05, on Mon Nov 16 09:04:32 2026
+config:
+
+	NAME                                         STATE     READ WRITE CKSUM
+	fstuitest_rzx                                ONLINE       0     0     0
+	  raidz1-0                                   ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_rzx-a.img  ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_rzx-b.img  ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_rzx-c.img  ONLINE       0     0     0
+	    /var/tmp/fstui-test/fstuitest_rzx-d.img  ONLINE       0     0     0
+
+errors: No known data errors

@@ -16,6 +16,8 @@ import (
 // Vdev is one node of a pool's device tree.
 type Vdev struct {
 	Name           termtext.Text // as zpool prints it: "mirror-0", or a device path
+	Path           string        // a leaf device's full path; empty for groups
+	Alloc, Size    uint64        // bytes allocated and in total, for top-level vdevs
 	Type           string        // root, mirror, raidz, draid, replacing, spare, disk, file, ...
 	Class          string        // normal, special, log, l2cache, spare, dedup
 	State          string        // ONLINE, DEGRADED, FAULTED, OFFLINE, UNAVAIL, REMOVED, AVAIL, INUSE
@@ -52,6 +54,31 @@ type Checkpoint struct {
 	Space uint64    // bytes held only because of the checkpoint
 }
 
+// Expansion is a RAIDZ expansion (zpool-attach(8), OpenZFS 2.3): a
+// device attached to a raidz vdev, whose blocks are copied ("reflowed")
+// across the wider vdev. ZFS starts a scrub when it ends.
+type Expansion struct {
+	Vdev     int    // index of the expanding vdev among the data vdevs
+	State    string // SCANNING, FINISHED
+	Start    time.Time
+	End      time.Time // zero while running
+	ToReflow uint64
+	Reflowed uint64
+	Resilver bool // waiting for a resilver before it goes on
+}
+
+// Removal is a top-level vdev being (or last) removed: its blocks are
+// copied to the other vdevs, and a mapping of where they went stays.
+type Removal struct {
+	Vdev    int    // the vdev's index; after removal it is no longer listed
+	State   string // SCANNING, FINISHED, CANCELED
+	Start   time.Time
+	End     time.Time // zero while running
+	ToCopy  uint64
+	Copied  uint64
+	Mapping uint64 // memory the mapping uses, once finished
+}
+
 // PoolStatus is one pool from "zpool status -j --json-int".
 type PoolStatus struct {
 	Name       name.Pool
@@ -62,6 +89,8 @@ type PoolStatus struct {
 	Action     []termtext.Text // what to do about it
 	Scan       *Scan           // nil if the pool was never scanned
 	Checkpoint *Checkpoint     // nil if the pool has none
+	Expansion  *Expansion      // nil if no raidz vdev was ever expanded
+	Removal    *Removal        // nil if no vdev was ever removed
 	Data       Vdev            // the root of the data vdevs
 	Special    []Vdev
 	Dedup      []Vdev
@@ -72,6 +101,9 @@ type PoolStatus struct {
 
 type jsonVdev struct {
 	Name           string          `json:"name"`
+	Path           string          `json:"path"`
+	Alloc          uint64          `json:"alloc_space"`
+	Size           uint64          `json:"total_space"`
 	VdevType       string          `json:"vdev_type"`
 	Class          string          `json:"class"`
 	State          string          `json:"state"`
@@ -103,6 +135,26 @@ type jsonCheckpoint struct {
 	Space     uint64 `json:"space"`
 }
 
+type jsonExpansion struct {
+	State     string `json:"state"`
+	Vdev      int    `json:"expanding_vdev"`
+	StartTime int64  `json:"start_time"`
+	EndTime   int64  `json:"end_time"`
+	ToReflow  uint64 `json:"to_reflow"`
+	Reflowed  uint64 `json:"reflowed"`
+	Waiting   uint64 `json:"waiting_for_resilver"`
+}
+
+type jsonRemoval struct {
+	State     string `json:"state"`
+	Vdev      int    `json:"removing_vdev"`
+	StartTime int64  `json:"start_time"`
+	EndTime   int64  `json:"end_time"`
+	ToCopy    uint64 `json:"to_copy"`
+	Copied    uint64 `json:"copied"`
+	Mapping   uint64 `json:"mapping_memory"`
+}
+
 type jsonPoolStatus struct {
 	Name       string          `json:"name"`
 	State      string          `json:"state"`
@@ -112,6 +164,8 @@ type jsonPoolStatus struct {
 	Action     string          `json:"action"`
 	ScanStats  *jsonScan       `json:"scan_stats"`
 	Checkpoint *jsonCheckpoint `json:"checkpoint_stats"`
+	Expansion  *jsonExpansion  `json:"raidz_expand_stats"`
+	Removal    *jsonRemoval    `json:"removal_stats"`
 	Vdevs      json.RawMessage `json:"vdevs"`
 	Special    json.RawMessage `json:"special"`
 	Dedup      json.RawMessage `json:"dedup"`
@@ -155,6 +209,20 @@ func (jp jsonPoolStatus) parse() (PoolStatus, error) {
 	}
 	if c := jp.Checkpoint; c != nil {
 		p.Checkpoint = &Checkpoint{State: c.State, Taken: unixTime(c.StartTime), Space: c.Space}
+	}
+	if e := jp.Expansion; e != nil {
+		p.Expansion = &Expansion{
+			Vdev: e.Vdev, State: e.State, Start: unixTime(e.StartTime), ToReflow: e.ToReflow, Reflowed: e.Reflowed, Resilver: e.Waiting != 0,
+		}
+		if e.EndTime != 0 {
+			p.Expansion.End = unixTime(e.EndTime)
+		}
+	}
+	if r := jp.Removal; r != nil {
+		p.Removal = &Removal{Vdev: r.Vdev, State: r.State, Start: unixTime(r.StartTime), ToCopy: r.ToCopy, Copied: r.Copied, Mapping: r.Mapping}
+		if r.EndTime != 0 {
+			p.Removal.End = unixTime(r.EndTime)
+		}
 	}
 	data, err := parseVdevs(jp.Vdevs)
 	if err != nil {
@@ -205,13 +273,60 @@ func parseVdevs(raw json.RawMessage) ([]Vdev, error) {
 			return nil, err
 		}
 		out = append(out, Vdev{
-			Name: termtext.New(jv.Name), Type: jv.VdevType, Class: jv.Class, State: jv.State,
+			Name: termtext.New(jv.Name), Path: jv.Path, Alloc: jv.Alloc, Size: jv.Size, Type: jv.VdevType, Class: jv.Class, State: jv.State,
 			GUID: jv.GUID, ReadErrors: jv.ReadErrors, WriteErrors: jv.WriteErrors,
 			ChecksumErrors: jv.ChecksumErrors, SlowIOs: jv.SlowIOs, SelfHealed: jv.SelfHealed,
 			Children: children,
 		})
 	}
 	return out, nil
+}
+
+// Expanding reports whether a RAIDZ expansion is running.
+func (p PoolStatus) Expanding() bool { return p.Expansion != nil && p.Expansion.State == "SCANNING" }
+
+// Walk calls fn for every vdev of the pool, depth first in the order
+// zpool status lists them: the data tree from its root, then the special,
+// dedup, log, cache and spare vdevs.
+func (p PoolStatus) Walk(fn func(Vdev)) {
+	var walk func(Vdev)
+	walk = func(v Vdev) {
+		fn(v)
+		for _, c := range v.Children {
+			walk(c)
+		}
+	}
+	walk(p.Data)
+	for _, g := range [][]Vdev{p.Special, p.Dedup, p.Logs, p.Cache, p.Spares} {
+		for _, v := range g {
+			walk(v)
+		}
+	}
+}
+
+// Removing reports whether a vdev is being removed.
+func (p PoolStatus) Removing() bool { return p.Removal != nil && p.Removal.State == "SCANNING" }
+
+// RemovingName names the vdev being removed, or whose removal was
+// cancelled ("mirror-1"). Once removed it is no longer listed, and the
+// index may point at a later vdev, so it is named by its number.
+func (p PoolStatus) RemovingName() string {
+	if r := p.Removal; r != nil && r.State != "FINISHED" && r.Vdev >= 0 && r.Vdev < len(p.Data.Children) {
+		return p.Data.Children[r.Vdev].Name.Raw()
+	}
+	if r := p.Removal; r != nil {
+		return fmt.Sprintf("vdev %d", r.Vdev)
+	}
+	return ""
+}
+
+// ExpandingName is the name of the vdev being (or last) expanded, as
+// zpool status names it ("raidz1-0").
+func (p PoolStatus) ExpandingName() string {
+	if e := p.Expansion; e != nil && e.Vdev >= 0 && e.Vdev < len(p.Data.Children) {
+		return p.Data.Children[e.Vdev].Name.Raw()
+	}
+	return "a raidz vdev"
 }
 
 // lines splits OpenZFS's multi-line explanations, which use newlines and

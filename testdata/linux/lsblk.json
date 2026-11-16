@@ -1,0 +1,90 @@
+{
+   "blockdevices": [
+      {
+         "name": "sda",
+         "path": "/dev/sda",
+         "size": 21474836480,
+         "type": "disk",
+         "fstype": null,
+         "mountpoints": [],
+         "pkname": null,
+         "model": "QEMU HARDDISK",
+         "serial": "drive-scsi1",
+         "wwn": null,
+         "rota": false,
+         "ro": false
+      },{
+         "name": "sdb",
+         "path": "/dev/sdb",
+         "size": 34359738368,
+         "type": "disk",
+         "fstype": null,
+         "mountpoints": [],
+         "pkname": null,
+         "model": "QEMU HARDDISK",
+         "serial": "drive-scsi0",
+         "wwn": null,
+         "rota": false,
+         "ro": false,
+         "children": [
+            {
+               "name": "sdb1",
+               "path": "/dev/sdb1",
+               "size": 32550944768,
+               "type": "part",
+               "fstype": "ext4",
+               "mountpoints": [
+                   "/"
+               ],
+               "pkname": "sdb",
+               "model": null,
+               "serial": null,
+               "wwn": null,
+               "rota": false,
+               "ro": false
+            },{
+               "name": "sdb2",
+               "path": "/dev/sdb2",
+               "size": 1024,
+               "type": "part",
+               "fstype": null,
+               "mountpoints": [],
+               "pkname": "sdb",
+               "model": null,
+               "serial": null,
+               "wwn": null,
+               "rota": false,
+               "ro": false
+            },{
+               "name": "sdb5",
+               "path": "/dev/sdb5",
+               "size": 1805647872,
+               "type": "part",
+               "fstype": "swap",
+               "mountpoints": [
+                   "[SWAP]"
+               ],
+               "pkname": "sdb",
+               "model": null,
+               "serial": null,
+               "wwn": null,
+               "rota": false,
+               "ro": false
+            }
+         ]
+      },{
+         "name": "sr0",
+         "path": "/dev/sr0",
+         "size": 792723456,
+         "type": "rom",
+         "fstype": "iso9660",
+         "mountpoints": [],
+         "pkname": null,
+         "model": "QEMU DVD-ROM",
+         "serial": "QM00003",
+         "wwn": null,
+         "rota": true,
+         "ro": true
+      }
+   ]
+}

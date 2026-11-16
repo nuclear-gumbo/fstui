@@ -11,6 +11,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/nuclear-gumbo/fstui/internal/termtext"
 	"github.com/nuclear-gumbo/fstui/internal/ui"
 	"github.com/nuclear-gumbo/fstui/internal/ui/uitest"
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
@@ -378,5 +379,44 @@ func TestSummaryNamesTheScan(t *testing.T) {
 	o := golden(t, "resilver-in-progress")
 	if got := scrubText(o, func() time.Time { return now }); got != "resilver 0%" {
 		t.Errorf("overview column = %q", got)
+	}
+}
+
+func TestExpandLine(t *testing.T) {
+	now := time.Date(2026, 11, 16, 12, 0, 0, 0, time.UTC)
+	st := zfs.PoolStatus{
+		Data:      zfs.Vdev{Children: []zfs.Vdev{{Name: termtext.New("raidz1-0")}}},
+		Expansion: &zfs.Expansion{State: "SCANNING", Start: now.Add(-10 * time.Minute), ToReflow: 4 << 30, Reflowed: 1 << 30},
+	}
+	if got := expandLine(st, now, false); !strings.Contains(got, "Expanding raidz1-0: 1.0 GiB of 4.0 GiB copied") || !strings.Contains(got, "about 30m left") {
+		t.Errorf("running: %q", got)
+	}
+	st.Expansion.State, st.Expansion.End, st.Expansion.Reflowed = "FINISHED", now.Add(-time.Hour), 4<<30
+	if got := expandLine(st, now, false); !strings.HasPrefix(got, "Expanded raidz1-0 1h ago") {
+		t.Errorf("finished: %q", got)
+	}
+}
+
+func TestRemoveLine(t *testing.T) {
+	now := time.Date(2026, 11, 16, 12, 0, 0, 0, time.UTC)
+	st := zfs.PoolStatus{
+		Data:    zfs.Vdev{Children: []zfs.Vdev{{Name: termtext.New("mirror-0")}, {Name: termtext.New("mirror-1")}}},
+		Removal: &zfs.Removal{Vdev: 1, State: "SCANNING", Start: now.Add(-10 * time.Minute), ToCopy: 2 << 30, Copied: 1 << 30},
+	}
+	if got := removeLine(st, now, false); !strings.Contains(got, "Removing mirror-1: 1.0 GiB of 2.0 GiB copied") || !strings.Contains(got, "about 10m left") {
+		t.Errorf("running: %q", got)
+	}
+	st.Removal.State, st.Removal.End = "FINISHED", now.Add(-time.Hour)
+	if got := removeLine(st, now, false); !strings.HasPrefix(got, "Removed vdev 1 1h ago") {
+		t.Errorf("finished: %q", got)
+	}
+}
+
+// A scan without a function name (not seen from zpool, but not ruled
+// out) still reads as a sentence.
+func TestScanLineWithoutFunction(t *testing.T) {
+	now := time.Date(2026, 11, 16, 12, 0, 0, 0, time.UTC)
+	if got := scanLine(zfs.Scan{State: "FINISHED", Start: now.Add(-time.Hour), End: now}, now, false); !strings.HasPrefix(got, "Scan finished") {
+		t.Errorf("%q", got)
 	}
 }

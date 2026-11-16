@@ -53,7 +53,7 @@ func (b Builder) EncryptedCreate(ctx context.Context, ds string, props map[strin
 	p.Summary = "Create encrypted filesystem " + show(ds)
 	p.Params["encrypted"] = "true"
 	p.Stdin, p.Secret = stdin, true
-	affects(p, "its data is encrypted (aes-256-gcm) with a key made from the passphrase")
+	affects(p, "the data of "+show(ds)+" is encrypted (aes-256-gcm) with a key made from the passphrase")
 	p.Irreversible = []string{"Without the passphrase the data cannot be read by anyone, including you."}
 	return p, nil
 }
@@ -77,7 +77,7 @@ func blockNotRoot(p *mutate.Plan, ds string, c cryptFacts) {
 	case c.root == "" || c.root == "-" || c.status == "-":
 		p.Blocked = append(p.Blocked, show(ds)+" is not encrypted")
 	case c.root != ds:
-		p.Blocked = append(p.Blocked, "its key belongs to "+show(c.root)+"; change it there")
+		p.Blocked = append(p.Blocked, "the key of "+show(ds)+" belongs to "+show(c.root)+"; change it there")
 	}
 }
 
@@ -116,7 +116,7 @@ func (b Builder) KeyLoad(ctx context.Context, ds string, secret []byte) (*mutate
 	load.Stdin = true
 	p := newPlan(mutate.KeyLoad, "Load the key of "+show(ds), []string{ds}, map[string]string{"dataset": ds}, load)
 	blockNotRoot(p, ds, c)
-	blockIf(p, c.status == "available", "its key is already loaded")
+	blockIf(p, c.status == "available", "the key of "+show(ds)+" is already loaded")
 	if c.location == "prompt" {
 		if p.Stdin, err = stdinFor(secret); err != nil {
 			return nil, err
@@ -152,7 +152,7 @@ func (b Builder) KeyUnload(ctx context.Context, ds string) (*mutate.Plan, error)
 	}
 	p := newPlan(mutate.KeyUnload, "Unload the key of "+show(ds), []string{ds}, map[string]string{"dataset": ds})
 	blockNotRoot(p, ds, c)
-	blockIf(p, c.status != "available", "its key is not loaded")
+	blockIf(p, c.status != "available", "the key of "+show(ds)+" is not loaded")
 	names, facts, err := b.sharing(ctx, ds)
 	if err != nil {
 		return nil, err
@@ -164,7 +164,7 @@ func (b Builder) KeyUnload(ctx context.Context, ds string) (*mutate.Plan, error)
 		}
 	}
 	p.Steps = append(p.Steps, zfsArgv([]string{"unload-key"}, ds))
-	affects(p, "its data cannot be read until the key is loaded again with the passphrase")
+	affects(p, "the data of "+show(ds)+" cannot be read until the key is loaded again with the passphrase")
 	blockIf(p, b.Unprivileged && len(p.Steps) > 1, "unmounting needs root on Linux; unmount as root first")
 	return p, b.watchKey(ctx, p, ds)
 }
@@ -187,7 +187,7 @@ func (b Builder) KeyChange(ctx context.Context, ds string, secret []byte) (*muta
 		execute.Argv{Tool: execute.ZFS, Options: []string{"change-key", "-o", "keyformat=passphrase", "-o", "keylocation=prompt"}, Operands: []string{ds}, Stdin: true})
 	p.Stdin, p.Secret = stdin, true
 	blockNotRoot(p, ds, c)
-	blockIf(p, c.status != "available", "its key must be loaded to change it")
+	blockIf(p, c.status != "available", "the key of "+show(ds)+" must be loaded to change it")
 	affects(p, "the data is not re-encrypted; only the key that protects it changes")
 	p.Irreversible = []string{"The old passphrase stops working. Without the new one the data cannot be read."}
 	return p, b.watchKey(ctx, p, ds)
@@ -223,10 +223,10 @@ func (b Builder) KeyAvailability(ctx context.Context, ds string) (map[mutate.Op]
 	out := map[mutate.Op]string{mutate.KeyLoad: base, mutate.KeyUnload: base, mutate.KeyChange: base}
 	if base == "" {
 		if c.status == "available" {
-			out[mutate.KeyLoad] = "its key is already loaded"
+			out[mutate.KeyLoad] = "the key of " + show(ds) + " is already loaded"
 		} else {
-			out[mutate.KeyUnload] = "its key is not loaded"
-			out[mutate.KeyChange] = "its key must be loaded to change it"
+			out[mutate.KeyUnload] = "the key of " + show(ds) + " is not loaded"
+			out[mutate.KeyChange] = "the key of " + show(ds) + " must be loaded to change it"
 		}
 	}
 	return out, nil

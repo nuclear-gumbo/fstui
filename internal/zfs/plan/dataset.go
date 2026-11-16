@@ -48,7 +48,7 @@ func (b Builder) DatasetCreate(ctx context.Context, ds string, props map[string]
 	p := newPlan(mutate.DatasetCreate, "Create filesystem "+show(ds), []string{ds}, params, b.unprivilegedCreate(zfsArgv(opts, ds)))
 	affects(p, "creates "+ds)
 	if b.Unprivileged {
-		affects(p, unmountedNote)
+		affects(p, unmountedNote(ds))
 	}
 	for _, o := range opts[1:] {
 		if o != "-o" {
@@ -88,7 +88,7 @@ func (b Builder) DatasetRename(ctx context.Context, ds, to string) (*mutate.Plan
 		return nil, err
 	}
 	if mp := facts[ds]["mountpoint"]; mp != "" && mp != "-" && mp != "none" && mp != "legacy" {
-		affects(p, "it is unmounted and mounted again; an inherited mountpoint moves with the name (now "+mp+")")
+		affects(p, ds+" is unmounted and mounted again; an inherited mountpoint moves with the name (now "+mp+")")
 	}
 	parent, _ := parentOf(to)
 	if err := b.watch(ctx, p, []string{ds, to, parent}); err != nil {

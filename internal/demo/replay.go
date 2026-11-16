@@ -148,6 +148,9 @@ func (c *Commands) answer(a execute.Argv) ([]byte, error) {
 	if out, ok, err := c.textAnswer(a); ok {
 		return out, err
 	}
+	if out, ok := diskAnswer(a); ok {
+		return out, nil
+	}
 	cmd := string(a.Tool) + " " + strings.Join(a.Options, " ")
 	switch {
 	case cmd == "zfs version -j":

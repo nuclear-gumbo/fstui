@@ -1,0 +1,3 @@
+cannot send fstuitest_send@all: encrypted dataset fstuitest_send/secret may not be sent with properties without the raw flag
+warning: cannot send 'fstuitest_send@all': backup failed
+exit 1

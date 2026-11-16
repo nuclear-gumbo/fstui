@@ -32,6 +32,8 @@ const (
 	Cp    Tool = "cp"
 	Chmod Tool = "chmod"
 	Mv    Tool = "mv"
+	// Lsblk lists block devices for pool creation, read only; optional.
+	Lsblk Tool = "lsblk"
 )
 
 // systemDirs are searched in order. PATH from the environment is ignored, so

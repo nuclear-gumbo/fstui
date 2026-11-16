@@ -1,0 +1,19 @@
+  pool: fstuitest_imp2
+    id: 7457260564270057611
+ state: ONLINE
+action: The pool can be imported using its name or numeric identifier.
+config:
+
+	fstuitest_imp2                             ONLINE
+	  /var/tmp/fstui-test/fstuitest_imp-c.img  ONLINE
+
+  pool: fstuitest_imp
+    id: 4866379416960248110
+ state: ONLINE
+action: The pool can be imported using its name or numeric identifier.
+config:
+
+	fstuitest_imp                                ONLINE
+	  mirror-0                                   ONLINE
+	    /var/tmp/fstui-test/fstuitest_imp-a.img  ONLINE
+	    /var/tmp/fstui-test/fstuitest_imp-b.img  ONLINE

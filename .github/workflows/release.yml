@@ -23,6 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0 # tags and history, for the previous release
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -45,8 +46,18 @@ jobs:
           tar -C stage -c --sort=name --owner=0 --group=0 --numeric-owner \
             --mtime="@$(git log -1 --format=%ct)" "fstui-$VERSION" | xz -9 > "dist/fstui-$VERSION.tar.xz"
           (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
-          awk -v v="$VERSION" '/^## \[/ { on = index($0, "## [" v "]") == 1; next }
-            /^\[[^]]*\]: / { next } on && (NF || text) { text = 1; print }' CHANGELOG.md > notes.md
+          # The notes are this version's section and every one since the
+          # previous tag here, so a release that follows versions published
+          # only elsewhere lists their changes too.
+          prev=$(git describe --tags --abbrev=0 "v$VERSION^" 2>/dev/null | sed 's/^v//' || true)
+          awk -v v="$VERSION" -v prev="$prev" '
+            /^## \[/ {
+              if (index($0, "## [" v "]") == 1) { on = 1; next }
+              if (prev != "" && index($0, "## [" prev "]") == 1) { on = 0; done = 1 }
+              if (on && !done) { print ""; print; next }
+            }
+            /^\[[^]]*\]: / { next }
+            on && !done && (NF || text) { text = 1; print }' CHANGELOG.md > notes.md
           test -s notes.md
       - name: Check the source tarball builds offline
         run: |

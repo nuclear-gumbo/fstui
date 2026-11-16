@@ -13,6 +13,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/nuclear-gumbo/fstui/internal/termtext"
 	"github.com/nuclear-gumbo/fstui/internal/theme"
 	"github.com/nuclear-gumbo/fstui/internal/ui"
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
@@ -36,6 +37,12 @@ func (p *Pools) topology(d ui.Display, o zfs.Overview, width int) ([]string, int
 	}
 	if c := st.Checkpoint; c != nil {
 		lines = append(lines, checkpointLine(*c, d.Exact))
+	}
+	if st.Expansion != nil {
+		lines = append(lines, expandLine(st, p.opts.Now(), d.Exact))
+	}
+	if st.Removal != nil {
+		lines = append(lines, removeLine(st, p.opts.Now(), d.Exact))
 	}
 	if sc := st.Scan; sc != nil {
 		lines = append(lines, scanLine(*sc, p.opts.Now(), d.Exact))
@@ -66,21 +73,11 @@ func (p *Pools) topology(d ui.Display, o zfs.Overview, width int) ([]string, int
 // the device tree), in the order the tree shows them.
 func leafNames(st zfs.PoolStatus) []string {
 	var out []string
-	var walk func(v zfs.Vdev)
-	walk = func(v zfs.Vdev) {
+	st.Walk(func(v zfs.Vdev) {
 		if len(v.Children) == 0 && v.Type != "root" {
 			out = append(out, v.Name.Raw())
 		}
-		for _, c := range v.Children {
-			walk(c)
-		}
-	}
-	walk(st.Data)
-	for _, g := range [][]zfs.Vdev{st.Special, st.Dedup, st.Logs, st.Cache, st.Spares} {
-		for _, v := range g {
-			walk(v)
-		}
-	}
+	})
 	return out
 }
 
@@ -92,10 +89,45 @@ func checkpointLine(c zfs.Checkpoint, exact bool) string {
 		c.Taken.Local().Format("2006-01-02 15:04"), ui.Size(c.Space, exact))
 }
 
+// expandLine summarises a RAIDZ expansion as zpool status does.
+func expandLine(st zfs.PoolStatus, now time.Time, exact bool) string {
+	e, vdev := *st.Expansion, termtext.New(st.ExpandingName()).Display()
+	if e.State != "SCANNING" {
+		return fmt.Sprintf("Expanded %s %s ago, copying %s in %s.", vdev, ui.Age(now.Sub(e.End)), ui.Size(e.Reflowed, exact), ui.Age(e.End.Sub(e.Start)))
+	}
+	s := fmt.Sprintf("Expanding %s: %s of %s copied, started %s ago", vdev, ui.Size(e.Reflowed, exact), ui.Size(e.ToReflow, exact), ui.Age(now.Sub(e.Start)))
+	if elapsed := now.Sub(e.Start); e.Reflowed > 0 && e.Reflowed < e.ToReflow && elapsed > 0 {
+		s += ", about " + ui.Age(time.Duration(float64(elapsed)*float64(e.ToReflow-e.Reflowed)/float64(e.Reflowed))) + " left"
+	}
+	if e.Resilver {
+		s += "; waiting for a resilver"
+	}
+	return s + ". A scrub follows it."
+}
+
+// removeLine summarises a vdev removal as zpool status does.
+func removeLine(st zfs.PoolStatus, now time.Time, exact bool) string {
+	r, vdev := *st.Removal, termtext.New(st.RemovingName()).Display()
+	switch r.State {
+	case "SCANNING":
+		s := fmt.Sprintf("Removing %s: %s of %s copied, started %s ago", vdev, ui.Size(r.Copied, exact), ui.Size(r.ToCopy, exact), ui.Age(now.Sub(r.Start)))
+		if elapsed := now.Sub(r.Start); r.Copied > 0 && r.Copied < r.ToCopy && elapsed > 0 {
+			s += ", about " + ui.Age(time.Duration(float64(elapsed)*float64(r.ToCopy-r.Copied)/float64(r.Copied))) + " left"
+		}
+		return s + "."
+	case "CANCELED":
+		return fmt.Sprintf("Removal of %s cancelled %s ago; it stays in the pool.", vdev, ui.Age(now.Sub(r.End)))
+	}
+	return fmt.Sprintf("Removed %s %s ago, copying %s; its table of moved blocks uses %s of memory.", vdev, ui.Age(now.Sub(r.End)), ui.Size(r.Copied, exact), ui.Size(r.Mapping, exact))
+}
+
 // scanLine summarises a scrub or resilver as zpool status does. Progress
 // can pass 100% (zpool-scrub(8)); then no estimate is given.
 func scanLine(sc zfs.Scan, now time.Time, exact bool) string {
-	word := strings.ToUpper(sc.Function[:1]) + strings.ToLower(sc.Function[1:])
+	word := "Scan"
+	if f := sc.Function; f != "" {
+		word = strings.ToUpper(f[:1]) + strings.ToLower(f[1:])
+	}
 	switch {
 	case sc.State == "SCANNING" && sc.Paused:
 		return fmt.Sprintf("%s paused %s ago at %s of %s.", word, ui.Age(now.Sub(sc.PausedAt)), ui.Size(sc.Issued, exact), ui.Size(sc.ToExamine, exact))

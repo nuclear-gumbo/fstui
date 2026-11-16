@@ -100,19 +100,17 @@ func ParseDatasetList(data []byte) ([]Dataset, error) { return parseDatasets(dat
 func ParseDatasetGet(data []byte) ([]Dataset, error) { return parseDatasets(data, "zfs get") }
 
 func parseDatasets(data []byte, command string) ([]Dataset, error) {
-	var doc struct {
-		Datasets map[string]jsonDataset `json:"datasets"`
-	}
-	if err := decode(data, command, &doc); err != nil {
-		return nil, err
-	}
-	out := make([]Dataset, 0, len(doc.Datasets))
-	for _, jd := range doc.Datasets {
+	var out []Dataset
+	err := decodeEach(data, command, "datasets", func(jd jsonDataset) error {
 		d, err := jd.parse()
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", command, err)
+			return fmt.Errorf("%s: %w", command, err)
 		}
 		out = append(out, d)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
@@ -130,7 +128,7 @@ func (jd jsonDataset) parse() (Dataset, error) {
 	if err != nil {
 		return Dataset{}, fmt.Errorf("dataset %s: %w", jd.Name, err)
 	}
-	return Dataset{Name: jd.Name, Type: jd.Type, Pool: pool, CreateTXG: uint64(jd.CreateTXG), Properties: props}, nil
+	return Dataset{Name: jd.Name, Type: DatasetType(intern(string(jd.Type))), Pool: pool, CreateTXG: uint64(jd.CreateTXG), Properties: props}, nil
 }
 
 func validateDatasetName(s string, t DatasetType) error {

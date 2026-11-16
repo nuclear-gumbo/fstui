@@ -42,7 +42,7 @@ func FuzzJSONParsers(f *testing.F) {
 
 func FuzzTextParsers(f *testing.F) {
 	seed(f, "healthy/zpool-history.txt", "zfs-version.txt", "events/induced-v.txt",
-		"allow/nested.txt", "arcstats/l2arc.txt", "iostat/four-pools.txt")
+		"allow/nested.txt", "arcstats/l2arc.txt", "iostat/four-pools.txt", "import/zpool-import-missing.txt")
 	f.Add([]byte("M\t/tank/a\\0040b\t/tank/c\n+\tF\t/x\\0033\n"))
 	f.Add([]byte("destroy\ttank/a@1\nreclaim\t1024\n"))
 	f.Fuzz(func(_ *testing.T, b []byte) {
@@ -53,6 +53,8 @@ func FuzzTextParsers(f *testing.F) {
 		_, _ = ParseAllow(b)
 		_, _, _ = ParseEvents(b)
 		_, _ = ParseVersionText(b)
+		_, _ = ParseSendEstimate(b)
+		_, _ = ParseImportable(b)
 		p := IOStatParser{Sample: func(IOSample) {}}
 		for _, l := range bytes.Split(b, []byte("\n")) {
 			if p.Line(string(l)) != nil {

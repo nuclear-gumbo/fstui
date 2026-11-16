@@ -79,21 +79,11 @@ func (p *Pools) poolWarnings(o zfs.Overview, now time.Time) []warning {
 // ": 1 device OFFLINE".
 func deviceProblems(st zfs.PoolStatus) string {
 	counts := map[string]int{}
-	var walk func(v zfs.Vdev)
-	walk = func(v zfs.Vdev) {
+	st.Walk(func(v zfs.Vdev) {
 		if len(v.Children) == 0 && v.State != "ONLINE" && v.State != "AVAIL" && v.State != "INUSE" {
 			counts[v.State]++
 		}
-		for _, c := range v.Children {
-			walk(c)
-		}
-	}
-	walk(st.Data)
-	for _, g := range [][]zfs.Vdev{st.Special, st.Dedup, st.Logs, st.Cache, st.Spares} {
-		for _, v := range g {
-			walk(v)
-		}
-	}
+	})
 	if len(counts) == 0 {
 		return ""
 	}

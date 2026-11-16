@@ -23,76 +23,76 @@ import (
 type poolChange struct {
 	summary string // with %s for the pool
 	opts    []string
-	outcome []string
-	check   func(zfs.Activity) string // why it cannot be done now, or ""
+	outcome []string                  // with %[1]s for the pool
+	check   func(zfs.Activity) string // why it cannot be done now, with %[1]s for the pool, or ""
 }
 
 var poolChanges = map[mutate.Op]poolChange{
 	mutate.ScrubStart: {
 		summary: "Scrub %s", opts: []string{"scrub"},
 		outcome: []string{
-			"every block in the pool is read and checked against its checksum, and repaired from a good copy where it can be",
-			"other reads and writes are slower until it finishes; it can be paused",
+			"every block in %[1]s is read and checked against its checksum, and repaired from a good copy where there is one",
+			"other reads and writes on %[1]s are slower until the scrub finishes; the scrub can be paused",
 		},
 		check: func(a zfs.Activity) string {
 			switch {
 			case a.ScanState == "paused" && a.ScanKind == "SCRUB":
-				return "a scrub is paused; resume it instead"
+				return "the scrub of %[1]s is paused; resume it instead"
 			case a.Scanning():
-				return "a " + scanWord(a.ScanKind) + " is running; only one scan runs at a time"
+				return "%[1]s has a " + scanWord(a.ScanKind) + " running; only one scan runs at a time"
 			}
 			return ""
 		},
 	},
 	mutate.ScrubPause: {
 		summary: "Pause the scrub of %s", opts: []string{"scrub", "-p"},
-		outcome: []string{"the scrub stops where it is and can be resumed later from there"},
+		outcome: []string{"the scrub of %[1]s stops where it is and can be resumed later from there"},
 		check: func(a zfs.Activity) string {
 			if a.ScanKind != "SCRUB" || a.ScanState != "running" {
-				return "no scrub is running"
+				return "%[1]s has no scrub running"
 			}
 			return ""
 		},
 	},
 	mutate.ScrubResume: {
 		summary: "Resume the scrub of %s", opts: []string{"scrub"},
-		outcome: []string{"the paused scrub carries on from where it stopped"},
+		outcome: []string{"the paused scrub of %[1]s carries on from where it stopped"},
 		check: func(a zfs.Activity) string {
 			if a.ScanKind != "SCRUB" || a.ScanState != "paused" {
-				return "no scrub is paused"
+				return "%[1]s has no paused scrub"
 			}
 			return ""
 		},
 	},
 	mutate.ScrubStop: {
 		summary: "Stop the scrub of %s", opts: []string{"scrub", "-s"},
-		outcome: []string{"the scrub ends; a new one starts from the beginning"},
+		outcome: []string{"the scrub of %[1]s ends; a new one starts from the beginning"},
 		check: func(a zfs.Activity) string {
 			if a.ScanKind != "SCRUB" || !a.Scanning() {
-				return "no scrub is running or paused"
+				return "%[1]s has no scrub running or paused"
 			}
 			return ""
 		},
 	},
 	mutate.ErrorScrub: {
 		summary: "Check the known errors of %s", opts: []string{"scrub", "-e"},
-		outcome: []string{"only the blocks zpool status lists as damaged are read again; much faster than a full scrub"},
+		outcome: []string{"only the blocks zpool status lists as damaged in %[1]s are read again; much faster than a full scrub"},
 		check: func(a zfs.Activity) string {
 			if a.Scanning() {
-				return "a " + scanWord(a.ScanKind) + " is running"
+				return "%[1]s has a " + scanWord(a.ScanKind) + " running"
 			}
 			return ""
 		},
 	},
 	mutate.TrimStart: {
 		summary: "Trim %s", opts: []string{"trim"},
-		outcome: []string{"the devices are told which blocks are free, so SSDs and thin storage can reuse them"},
+		outcome: []string{"the devices of %[1]s are told which blocks are free, so SSDs and thin storage can reuse them"},
 		check: func(a zfs.Activity) string {
 			switch {
 			case a.AnyDevice(func(d zfs.DeviceActivity) bool { return d.Trim == "ACTIVE" }):
-				return "a trim is already running"
+				return "%[1]s is already being trimmed"
 			case len(a.Devices) > 0 && !a.AnyDevice(func(d zfs.DeviceActivity) bool { return !d.TrimNotSupp }):
-				return "none of the devices supports trim"
+				return "none of the devices of %[1]s supports trim"
 			}
 			return ""
 		},
@@ -100,12 +100,12 @@ var poolChanges = map[mutate.Op]poolChange{
 	mutate.InitializeStart: {
 		summary: "Initialize %s", opts: []string{"initialize"},
 		outcome: []string{
-			"a pattern is written to all free space on every device, so later writes are not slowed by first-touch costs (thin disks, cloud volumes)",
-			"other I/O is slower until it finishes",
+			"a pattern is written to all free space on every device of %[1]s, so later writes are not slowed by first-touch costs (thin disks, cloud volumes)",
+			"other I/O on %[1]s is slower until initializing finishes",
 		},
 		check: func(a zfs.Activity) string {
 			if a.AnyDevice(func(d zfs.DeviceActivity) bool { return d.Init == "ACTIVE" }) {
-				return "initializing is already running"
+				return "%[1]s is already being initialized"
 			}
 			return ""
 		},
@@ -113,8 +113,8 @@ var poolChanges = map[mutate.Op]poolChange{
 	mutate.PoolClear: {
 		summary: "Clear the errors of %s", opts: []string{"clear"},
 		outcome: []string{
-			"the read, write and checksum error counts go back to zero, and a device taken out for errors is tried again",
-			"the list of damaged files stays until a scrub finds them repaired",
+			"the read, write and checksum error counts of %[1]s go back to zero, and a device taken out for errors is tried again",
+			"the list of damaged files in %[1]s stays until a scrub finds them repaired",
 		},
 		check: func(zfs.Activity) string { return "" },
 	},
@@ -132,12 +132,20 @@ func (b Builder) PoolAvailability(ctx context.Context, pool string) (map[mutate.
 	}
 	out := make(map[mutate.Op]string, len(poolChanges))
 	for op, c := range poolChanges {
-		out[op] = c.check(a)
+		out[op] = withPool(c.check(a), pool)
 		if b.Unprivileged {
 			out[op] = "pool changes need root"
 		}
 	}
 	return out, nil
+}
+
+// withPool fills a pool change's text in with the pool's name.
+func withPool(text, pool string) string {
+	if text == "" {
+		return ""
+	}
+	return fmt.Sprintf(text, show(pool))
 }
 
 func scanWord(kind string) string {
@@ -161,7 +169,9 @@ func (b Builder) PoolChange(ctx context.Context, op mutate.Op, pool string) (*mu
 	}
 	p := newPlan(op, fmt.Sprintf(c.summary, show(pool)), []string{pool}, map[string]string{"pool": pool},
 		execute.Argv{Tool: execute.Zpool, Options: c.opts, Operands: []string{pool}})
-	affects(p, c.outcome...)
+	for _, o := range c.outcome {
+		affects(p, withPool(o, pool))
+	}
 	if op == mutate.ScrubStop {
 		p.Irreversible = []string{"The progress of this scrub is lost."}
 	}
@@ -182,7 +192,7 @@ func (b Builder) PoolChange(ctx context.Context, op mutate.Op, pool string) (*mu
 		return nil, err
 	}
 	if why := c.check(a); why != "" {
-		p.Blocked = append(p.Blocked, why)
+		p.Blocked = append(p.Blocked, withPool(why, pool))
 	}
 	f, err := read(ctx)
 	if err != nil {

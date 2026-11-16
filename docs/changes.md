@@ -19,9 +19,12 @@ Select something and press `a`. The menu lists the changes possible now, and bel
 | Filesystem (Datasets, 2) | create a snapshot, a filesystem, an encrypted filesystem or a volume below it; rename; set or inherit a property; mount, unmount; load or unload its key, change its passphrase; promote a clone; destroy |
 | Volume (Volumes, 4, or Datasets) | create a snapshot, resize, rename, set or inherit a property, promote, destroy |
 | Snapshot (Snapshots, 3) | hold, release a hold, bookmark, clone, rename, roll back to it, destroy |
-| Pool (Pools, 1) | start, pause, resume or stop a scrub; check known errors only; trim; initialize free space; clear errors |
-| Device (Pools, `enter`, Topology, `j` `k` to a device) | bring online, take offline, clear its errors |
+| Pool (Pools, 1) | start, pause, resume or stop a scrub; check known errors only; trim; initialize free space; clear errors; add devices; take, discard, look at or rewind to a checkpoint; cancel a vdev removal; export; upgrade; create a new pool; import a pool |
+| No pool (Pools, 1, when none is imported) | create a new pool; import a pool |
+| Device (Pools, `enter`, Topology, `j` `k` to a device) | bring online, take offline, clear its errors; attach a device (a mirror, or one more device in a raidz vdev); replace it; detach it from its mirror; remove it from the pool with its vdev |
 | ARC (5) | set its limits now, or keep them after reboot in `/etc/modprobe.d/zfs.conf` |
+
+[keys.md](keys.md#change-menus) lists the menu letters.
 
 In Snapshots and Datasets, `m` marks items and `M` clears the marks. With marks, `a` offers what applies to all of them: hold, release or destroy the marked snapshots, or one snapshot of all the marked datasets.
 
@@ -43,9 +46,26 @@ How much the confirmation asks depends on the risk:
 |---|---|
 | `y` | create a snapshot, start a scrub |
 | `y`, then `enter` | rename, destroy one snapshot, unmount, change a layout property such as recordsize |
-| typing the name | destroy a dataset, destroy several snapshots ("destroy 3 snapshots"), shrink a volume, take the last redundant device offline, roll back past newer snapshots |
+| typing the name | destroy a dataset, destroy several snapshots ("destroy 3 snapshots"), shrink a volume, take the last redundant device offline, roll back past newer snapshots, create a pool, add a data vdev, write over a device that holds something, widen a raidz vdev, remove a data vdev, rewind to a checkpoint, export, upgrade |
 
 Keys pressed in the first moments after the window opens are ignored, so a key meant for the screen before cannot confirm.
+
+## Disks for a new pool or device
+
+Creating a pool, adding devices, attaching and replacing choose devices from a list read with `lsblk`, named by their `/dev/disk/by-id` paths, with size and model. Nothing is opened to build the list. Devices that cannot be used are listed apart with the reason, and no setting overrides it: mounted, active swap, read-only, smaller than 64 MiB, held by device-mapper, md or LVM, in an imported pool, or a disk with partitions (choose a partition instead).
+
+A device that holds something, such as an old pool's label or a filesystem, can be used only with "overwrite" switched on. It is then listed under what the change destroys, `-f` is passed to `zpool`, and the name must be typed. fstui passes `-f` for nothing else; a new data vdev whose redundancy differs from the pool's is refused instead.
+
+The confirmation shows ZFS's own dry run where one exists (`zpool create -n`, `zpool add -n`, `zpool remove -n`) and the usable capacity. Some rules are checked by fstui because the dry run does not: `zpool remove -n` accepts removing a vdev from a pool with raidz vdevs, which the removal itself refuses.
+
+## Checkpoints
+
+A checkpoint keeps the whole pool as it was, so a change to its devices can be undone. While one exists, ZFS refuses to remove, attach, detach or replace devices, and deleted data frees no space; fstui refuses those changes too and says why.
+
+- `C` takes one. "Take a checkpoint first" in the form for adding devices does it as part of that change.
+- `D` discards it, freeing what it held.
+- `L` exports the pool and imports it read-only as it was at the checkpoint, to look before deciding. Exporting and importing it again (`x`, then `I`) returns to the present, with the checkpoint.
+- `w` rewinds: the pool is exported and imported at the checkpoint. Everything written since is lost, and the confirmation lists the filesystems, volumes and snapshots created since. A pool that holds the running system's `/` cannot be exported, so it cannot be rewound from that system.
 
 ## Running
 
