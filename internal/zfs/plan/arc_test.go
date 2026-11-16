@@ -78,7 +78,8 @@ func TestARCPersist(t *testing.T) {
 	for _, s := range p.Steps {
 		got = append(got, s.String())
 	}
-	want := "cp -p -- /etc/modprobe.d/zfs.conf /etc/modprobe.d/zfs.conf.bak | tee -- /etc/modprobe.d/zfs.conf.fstui-new | mv -- /etc/modprobe.d/zfs.conf.fstui-new /etc/modprobe.d/zfs.conf"
+	want := "cp -p -- /etc/modprobe.d/zfs.conf /etc/modprobe.d/zfs.conf.bak | tee -- /etc/modprobe.d/zfs.conf.fstui-new | " +
+		"chmod 0644 -- /etc/modprobe.d/zfs.conf.fstui-new | mv -- /etc/modprobe.d/zfs.conf.fstui-new /etc/modprobe.d/zfs.conf"
 	if strings.Join(got, " | ") != want || string(p.Steps[1].Input) != "# mine\noptions zfs zfs_arc_max=2147483648\n" {
 		t.Errorf("steps %q, new file %q", got, p.Steps[1].Input)
 	}

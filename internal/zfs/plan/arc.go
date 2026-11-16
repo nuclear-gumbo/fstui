@@ -155,8 +155,12 @@ func (b Builder) ARCPersist(_ context.Context, maxS, minS string) (*mutate.Plan,
 		affects(p, "the old file is kept as "+conf+".bak")
 	}
 	tmp := conf + ".fstui-new"
+	// The mode is set explicitly: tee creates the file with whatever
+	// umask fstui inherited, and a modprobe.d file others can write runs
+	// their commands as root when the module loads (install directives).
 	p.Steps = append(p.Steps,
 		execute.Argv{Tool: execute.Tee, Operands: []string{tmp}, Input: []byte(next)},
+		execute.Argv{Tool: execute.Chmod, Options: []string{"0644"}, Operands: []string{tmp}},
 		execute.Argv{Tool: execute.Mv, Operands: []string{tmp, conf}})
 	for _, d := range lineDiff(string(old), next) {
 		affects(p, d)

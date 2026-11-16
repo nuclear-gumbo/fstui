@@ -129,10 +129,22 @@ func checkFrame(t *testing.T, content string, w, h int) {
 }
 
 func TestSizeNotice(t *testing.T) {
-	for _, sz := range [][2]int{{79, 24}, {80, 23}, {40, 10}} {
+	for _, sz := range [][2]int{{79, 24}, {80, 23}, {40, 10}, {20, 4}, {1, 1}} {
 		got := sized(newModel(colorprofile.ASCII, &fakeScreen{name: "Pools"}), sz[0], sz[1]).View().Content
+		lines := strings.Split(got, "\n")
+		if len(lines) > sz[1] || strings.Contains(got, "READ-ONLY") {
+			t.Errorf("%dx%d: %d lines:\n%s", sz[0], sz[1], len(lines), got)
+		}
+		for _, l := range lines {
+			if ansi.StringWidth(l) > sz[0] {
+				t.Errorf("%dx%d: line wider than the terminal: %q", sz[0], sz[1], l)
+			}
+		}
+		if sz[0] < 40 {
+			continue // too small for the whole message; only the fit matters
+		}
 		want := fmt.Sprintf("Terminal is %dx%d. fstui needs at least 80x24.", sz[0], sz[1])
-		if !strings.Contains(got, want) || strings.Contains(got, "READ-ONLY") {
+		if flat := strings.Join(strings.Fields(got), " "); !strings.Contains(flat, want) {
 			t.Errorf("%dx%d: got\n%s", sz[0], sz[1], got)
 		}
 	}

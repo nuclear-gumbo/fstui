@@ -50,18 +50,21 @@ type numberInput struct {
 // review is a staged file and what it changes.
 type review struct {
 	staged   string
+	data     []byte // what was staged and shown; saved as is
 	diff     []string
 	problems []config.Problem
 	revert   bool
 }
 
-// NewSettings returns the Settings view for the user's config file; files
-// are all config files in load order, cfg the loaded settings.
-func NewSettings(files []string, cfg config.Config, themes []string, load Loader,
+// NewSettings returns the Settings view for the user's config file user;
+// files are all config files in load order, cfg the loaded settings. user
+// is empty when fstui could not find the user's file: then nothing can be
+// saved, and the system file is never edited in its place.
+func NewSettings(user string, files []string, cfg config.Config, themes []string, load Loader,
 	loadTheme func(string) (theme.Theme, []config.Problem),
 ) *Settings {
 	return &Settings{
-		file: files[len(files)-1], files: files, cfg: cfg,
+		file: user, files: files, cfg: cfg,
 		list: config.Settings(themes), pending: map[string]string{},
 		term: os.Getenv("TERM"), load: load, loadTheme: loadTheme,
 	}
@@ -184,9 +187,21 @@ func (s *Settings) value(path string) string {
 	return s.cfg.Value(path)
 }
 
+// noFile says why nothing can be saved, when the user's file is unknown.
+func (s *Settings) noFile() bool {
+	if s.file == "" {
+		s.message = "Settings cannot be saved: fstui could not find your config file (the notice at startup says why)."
+		return true
+	}
+	return false
+}
+
 // change cycles a choice to its next value, or starts typing a number.
 func (s *Settings) change(set config.Setting) {
 	s.message = ""
+	if s.noFile() {
+		return
+	}
 	if s.cfg.Sources[set.Path] == config.FlagSource {
 		s.message = set.Path + " was given on the command line and stays as given for this session."
 		return
@@ -240,6 +255,9 @@ const maxDigits = 6
 // startReview writes the pending changes to a temporary file and shows
 // what they change; nothing replaces config.yaml until confirmed.
 func (s *Settings) startReview() {
+	if s.noFile() {
+		return
+	}
 	if len(s.pending) == 0 {
 		s.message = "No unsaved changes."
 		return
@@ -259,6 +277,9 @@ func (s *Settings) startReview() {
 
 // startRevert shows what restoring the previous file would change.
 func (s *Settings) startRevert() {
+	if s.noFile() {
+		return
+	}
 	bak, err := config.Read(config.Backup(s.file))
 	switch {
 	case err != nil:
@@ -281,7 +302,7 @@ func (s *Settings) stage(cur, next []byte, revert bool) {
 		s.message = err.Error()
 		return
 	}
-	s.review = &review{staged: staged, diff: config.Diff(cur, next), problems: config.Check(s.file, next), revert: revert}
+	s.review = &review{staged: staged, data: next, diff: config.Diff(cur, next), problems: config.Check(s.file, next), revert: revert}
 	s.message = ""
 }
 
@@ -290,7 +311,7 @@ func (s *Settings) reviewKey(msg tea.KeyPressMsg) tea.Cmd {
 	switch {
 	case key.Matches(msg, keys.Get(keys.Write)) && len(r.problems) == 0:
 		s.review = nil
-		if err := config.Promote(s.file, r.staged); err != nil {
+		if err := config.Promote(s.file, r.staged, r.data); err != nil {
 			s.message = err.Error()
 			return nil
 		}

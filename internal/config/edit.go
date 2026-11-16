@@ -206,15 +206,13 @@ const privateDir = 0o700
 // Backup is where Promote keeps the file it replaces, for Revert.
 func Backup(file string) string { return file + ".bak" }
 
-// Promote replaces file with the staged copy, keeping the previous file
-// as its backup. The copy is written to a temporary file beside file and
-// renamed over it, so readers see the old file or the new one, never a
-// mix; the staged copy is then removed.
-func Promote(file, staged string) error {
-	data, err := os.ReadFile(staged) //nolint:gosec // the copy Stage made
-	if err != nil {
-		return fmt.Errorf("reading %s: %w", staged, err)
-	}
+// Promote replaces file with data, the contents the user reviewed,
+// keeping the previous file as its backup, and removes the staged copy.
+// data comes from memory, not from the staged copy, which sits in a
+// temporary directory and could have been changed since it was shown.
+// The new file is written beside file and renamed over it, so readers
+// see the old file or the new one, never a mix.
+func Promote(file, staged string, data []byte) error {
 	old, err := Read(file)
 	if err != nil {
 		return err

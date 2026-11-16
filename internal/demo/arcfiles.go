@@ -55,7 +55,7 @@ func (c *Commands) ReadFile(path string) ([]byte, error) {
 	return nil, fmt.Errorf("demo: %s: %w", path, fs.ErrNotExist)
 }
 
-// applyFile carries out tee, cp and mv on the demo's files.
+// applyFile carries out tee, cp, chmod and mv on the demo's files.
 func (c *Commands) applyFile(a execute.Argv, stdin []byte) (execute.Result, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -79,6 +79,8 @@ func (c *Commands) applyFile(a execute.Argv, stdin []byte) (execute.Result, erro
 		}
 	case a.Tool == execute.Tee && len(ops) == 1 && ops[0] == zfs.ModprobeConf+".fstui-new":
 		c.files.pending = append([]byte(nil), stdin...)
+	case a.Tool == execute.Chmod && len(ops) == 1 && ops[0] == zfs.ModprobeConf+".fstui-new":
+		// the demo keeps no modes
 	case a.Tool == execute.Mv && len(ops) == 2 && ops[1] == zfs.ModprobeConf:
 		c.files.conf, c.files.pending = c.files.pending, nil
 	case a.Tool == execute.Cp && len(ops) == 2 && ops[0] == zfs.ModprobeConf:

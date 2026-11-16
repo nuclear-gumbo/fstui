@@ -23,7 +23,7 @@ func (c *Commands) Apply(a execute.Argv, stdin []byte) (execute.Result, error) {
 	switch a.Tool { //nolint:exhaustive // zfs changes below
 	case execute.Zpool:
 		return c.applyPool(a)
-	case execute.Tee, execute.Cp, execute.Mv:
+	case execute.Tee, execute.Cp, execute.Chmod, execute.Mv:
 		return c.applyFile(a, stdin)
 	}
 	st, err := c.load()

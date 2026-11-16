@@ -150,9 +150,16 @@ func sizeNotice(w, h int) string {
 	msg := fmt.Sprintf("Terminal is %dx%d. fstui needs at least %dx%d.\nResize the window, or press q to quit.",
 		w, h, MinWidth, MinHeight)
 	if w <= 0 || h <= 0 {
-		return msg
+		return ""
 	}
-	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, msg)
+	// Wrapped to the width and cut to the height: a terminal wraps a line
+	// longer than itself, which would scroll the notice off a tiny screen.
+	lines := strings.Split(ansi.Wrap(msg, w, " "), "\n")
+	lines = lines[:min(len(lines), h)]
+	for i, l := range lines {
+		lines[i] = ansi.Truncate(l, w, "")
+	}
+	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, strings.Join(lines, "\n"))
 }
 
 // fit cuts or pads one line to exactly width cells.

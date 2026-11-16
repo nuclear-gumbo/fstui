@@ -219,3 +219,26 @@ func TestLimitedBuffer(t *testing.T) {
 		t.Fatalf("n %d err %v kept %q", n, err, b.String())
 	}
 }
+
+// Output past the bound is not kept, and the buffer says so; Read then
+// fails rather than parse a cut listing.
+func TestLimitedBufferMarksOverflow(t *testing.T) {
+	b := &limitedBuffer{max: 4}
+	_, _ = b.Write([]byte("ab"))
+	if b.over {
+		t.Fatal("over before the bound")
+	}
+	_, _ = b.Write([]byte("cdef"))
+	if !b.over || b.String() != "abcd" {
+		t.Errorf("kept %q, over %v", b.String(), b.over)
+	}
+}
+
+// Read applies the same operand check as a change.
+func TestReadRefusesADashOperandWithoutSeparator(t *testing.T) {
+	r := NewRunner(&Tools{paths: map[Tool]string{}})
+	_, err := r.Read(t.Context(), Argv{Tool: ZFS, Options: []string{"promote"}, Operands: []string{"-x"}, NoSeparator: true})
+	if !errors.Is(err, ErrOperandOption) {
+		t.Errorf("err = %v", err)
+	}
+}

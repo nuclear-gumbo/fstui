@@ -22,11 +22,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/nuclear-gumbo/fstui/internal/execute"
@@ -88,8 +90,10 @@ func New(t testing.TB, layout string, n int) *Pool {
 		t.Fatal(err)
 	}
 	p := &Pool{Name: Prefix + "i" + hex.EncodeToString(suffix), t: t, tools: tools}
-	if err := os.MkdirAll(filepath.Join(Dir, "mnt"), 0o750); err != nil {
-		t.Fatal(err)
+	for _, d := range []string{Dir, filepath.Join(Dir, "mnt")} {
+		if err := prepareDir(d, 0); err != nil {
+			t.Fatal(err)
+		}
 	}
 	t.Cleanup(p.destroy)
 
@@ -114,6 +118,31 @@ func New(t testing.TB, layout string, n int) *Pool {
 	p.run(execute.Zpool, p.Name, append(args, p.Images...)...)
 	p.created = true
 	return p
+}
+
+// prepareDir creates dir if it is missing and refuses to use it unless it
+// is a real directory owned by uid and writable by nobody else. Dir is in
+// /var/tmp, which anyone can write: a directory another user created
+// first would let them swap a backing file for a symlink before root
+// writes to it.
+func prepareDir(dir string, uid uint32) error {
+	if err := os.Mkdir(dir, 0o750); err != nil && !errors.Is(err, fs.ErrExist) {
+		return fmt.Errorf("testpool: %w", err)
+	}
+	fi, err := os.Lstat(dir)
+	if err != nil {
+		return fmt.Errorf("testpool: %w", err)
+	}
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	switch {
+	case !fi.IsDir():
+		return fmt.Errorf("testpool: %s is not a directory (a symlink?); remove it", dir)
+	case !ok || st.Uid != uid:
+		return fmt.Errorf("testpool: %s is not owned by uid %d; remove it", dir, uid)
+	case fi.Mode().Perm()&0o022 != 0:
+		return fmt.Errorf("testpool: %s is writable by group or others (mode %v); remove it", dir, fi.Mode().Perm())
+	}
+	return nil
 }
 
 func createSparse(path string) error {

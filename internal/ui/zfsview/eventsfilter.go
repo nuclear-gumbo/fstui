@@ -11,6 +11,7 @@ import (
 
 	"github.com/nuclear-gumbo/fstui/internal/config"
 	"github.com/nuclear-gumbo/fstui/internal/events"
+	"github.com/nuclear-gumbo/fstui/internal/termtext"
 	"github.com/nuclear-gumbo/fstui/internal/ui"
 	"github.com/nuclear-gumbo/fstui/internal/ui/keys"
 )
@@ -46,11 +47,13 @@ func (f eventFilter) matches(e events.Event) bool {
 	})
 }
 
-// describe is the active filter as the header shows it.
+// describe is the active filter as the header shows it. Pool and class
+// come from zpool events, the name and text from config and the keyboard:
+// all are sanitised for the terminal.
 func (f eventFilter) describe() string {
 	var parts []string
 	if f.name != "" {
-		parts = append(parts, "saved: "+f.name)
+		parts = append(parts, "saved: "+termtext.New(f.name).Display())
 	}
 	if len(f.sevs) > 0 {
 		words := make([]string, len(f.sevs))
@@ -64,7 +67,7 @@ func (f eventFilter) describe() string {
 	}
 	for _, p := range [][2]string{{"pool", f.pool}, {"class", f.class}, {"text", f.text}} {
 		if p[1] != "" {
-			parts = append(parts, p[0]+" "+p[1])
+			parts = append(parts, p[0]+" "+termtext.New(p[1]).Display())
 		}
 	}
 	if len(parts) == 0 {

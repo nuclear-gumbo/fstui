@@ -109,3 +109,32 @@ func TestReapply(t *testing.T) {
 		t.Fatalf("Reapply on changed state = %v", err)
 	}
 }
+
+// A plan directory others can reach is refused for reading too, not
+// only for saving: someone who can write it could plant a plan.
+func TestStoreRefusesAnOpenDirectory(t *testing.T) {
+	s := store(t)
+	sha, err := s.Save(savedPlan())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(s.Dir, 0o770); err != nil { //nolint:gosec // the test needs a group-accessible directory
+		t.Fatal(err)
+	}
+	if _, err := s.Load(sha); err == nil {
+		t.Error("Load read from a group-accessible directory")
+	}
+	if _, err := s.List(); err == nil {
+		t.Error("List read a group-accessible directory")
+	}
+	if err := PrivateDir(s.Dir); err == nil {
+		t.Error("PrivateDir accepted a group-accessible directory")
+	}
+	link := filepath.Join(t.TempDir(), "link")
+	if err := os.Symlink(t.TempDir(), link); err != nil {
+		t.Fatal(err)
+	}
+	if err := PrivateDir(link); err == nil {
+		t.Error("PrivateDir accepted a symlink")
+	}
+}

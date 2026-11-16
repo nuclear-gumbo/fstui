@@ -95,10 +95,19 @@ func TestMutateStopsWhenAResultCannotBeRecorded(t *testing.T) {
 	}
 }
 
-func TestMutatePassesStdin(t *testing.T) {
-	rep := fakeMutator(t, Write, new(recorder)).Mutate(PlanRef{ID: 5}, []Argv{{Tool: fake, Options: []string{"stdin"}}}, []byte("secret\n"))
-	if rep.Err != nil || string(rep.Ran[0].Stdout) != "got secret\n" {
+// The passphrase reaches only the step marked as reading it; the steps
+// after it (mounts after load-key) get an empty standard input.
+func TestMutatePassesStdinOnlyToItsStep(t *testing.T) {
+	steps := []Argv{{Tool: fake, Options: []string{"stdin"}, Stdin: true}, {Tool: fake, Options: []string{"stdin"}}}
+	rep := fakeMutator(t, Write, new(recorder)).Mutate(PlanRef{ID: 5}, steps, []byte("secret\n"))
+	if rep.Err != nil || len(rep.Ran) != 2 {
 		t.Fatalf("report = %+v", rep)
+	}
+	if got := string(rep.Ran[0].Stdout); got != "got secret\n" {
+		t.Errorf("the marked step got %q", got)
+	}
+	if got := string(rep.Ran[1].Stdout); got != "got \n" {
+		t.Errorf("an unmarked step got %q", got)
 	}
 }
 

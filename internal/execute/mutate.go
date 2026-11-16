@@ -133,8 +133,8 @@ const maxMutateOutput = 1 << 20
 
 // Mutate runs the steps of plan in order. It takes no context: a change that
 // has started is never cancelled or timed out, and nothing is retried. The
-// first failure stops the plan. stdin, if any, is given to every step; the
-// caller zeroes it after return.
+// first failure stops the plan. stdin, if any, is given only to steps
+// marked Stdin; the caller zeroes it after return.
 func (m *Mutator) Mutate(plan PlanRef, steps []Argv, stdin []byte) Report {
 	mode := m.mode.Get()
 	if mode == ReadOnly {
@@ -171,8 +171,11 @@ func (m *Mutator) step(mode Mode, a Argv, stdin []byte) (Result, error) {
 	if err := a.Check(); err != nil {
 		return Result{ExitCode: -1}, err
 	}
-	if a.Input != nil {
+	switch {
+	case a.Input != nil:
 		stdin = a.Input
+	case !a.Stdin:
+		stdin = nil
 	}
 	if m.simulate != nil {
 		return m.simulate(a, stdin)

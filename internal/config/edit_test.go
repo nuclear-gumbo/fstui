@@ -65,7 +65,7 @@ func TestStagePromoteRevert(t *testing.T) {
 	if info, _ := os.Stat(first); info.Mode().Perm() != 0o600 {
 		t.Errorf("staged file mode %v, want 0600", info.Mode().Perm())
 	}
-	if err := Promote(file, first); err != nil {
+	if err := Promote(file, first, []byte("units: exact\n")); err != nil {
 		t.Fatal(err)
 	}
 	// There was no file: the backup is empty, the defaults.
@@ -76,7 +76,7 @@ func TestStagePromoteRevert(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Promote(file, second); err != nil {
+	if err := Promote(file, second, []byte("units: iec\n")); err != nil {
 		t.Fatal(err)
 	}
 	if b, _ := os.ReadFile(Backup(file)); string(b) != "units: exact\n" {
@@ -89,7 +89,7 @@ func TestStagePromoteRevert(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Promote(file, staged); err != nil {
+	if err := Promote(file, staged, bak); err != nil {
 		t.Fatal(err)
 	}
 	cur, _ := Read(file)
@@ -127,8 +127,15 @@ func TestStageInTempDir(t *testing.T) {
 	if err != nil || filepath.Dir(staged) != tmp || info.Mode().Perm() != 0o600 {
 		t.Fatalf("staged at %s (%v), mode %v", staged, err, info.Mode())
 	}
-	if err := Promote(file, staged); err != nil {
+	// Changed after it was shown: what is saved is what was reviewed.
+	if err := os.WriteFile(staged, []byte("theme: planted\n"), 0o600); err != nil {
 		t.Fatal(err)
+	}
+	if err := Promote(file, staged, []byte("units: exact\n")); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(file); string(b) != "units: exact\n" { //nolint:gosec // the test's own file
+		t.Errorf("saved %q, want the reviewed contents", b)
 	}
 	if b, _ := os.ReadFile(file); string(b) != "units: exact\n" {
 		t.Errorf("written %q", b)

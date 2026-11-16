@@ -29,8 +29,19 @@ prefix=fstuitest_g_
 imgdir=/var/tmp/fstui-test
 mntdir=$imgdir/mnt
 suspend=/sys/module/zfs/parameters/zfs_scan_suspend_progress
-mkdir -p "$imgdir" "$mntdir"
-chmod 0750 "$imgdir"
+# /var/tmp is writable by anyone: a directory someone else created first
+# would let them swap a backing file for a symlink before root writes to
+# it with truncate or dd.
+prepare_dir() {
+	[ -e "$1" ] || mkdir -m 0750 "$1"
+	if [ -L "$1" ] || [ ! -d "$1" ] || [ "$(stat -c %u "$1")" != 0 ] ||
+		[ $((0$(stat -c %a "$1") & 022)) -ne 0 ]; then
+		echo "capture-golden: $1 must be a directory owned by root and writable only by root; remove it" >&2
+		exit 1
+	fi
+}
+prepare_dir "$imgdir"
+prepare_dir "$mntdir"
 
 # destroy_pool refuses any pool without the test prefix. It is the only way
 # this script destroys a pool.

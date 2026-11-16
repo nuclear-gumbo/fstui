@@ -18,6 +18,19 @@ import (
 // DefaultReadTimeout bounds a read when the caller sets no deadline.
 const DefaultReadTimeout = 30 * time.Second
 
+// maxReadOutput bounds what a read keeps of a command's output. Real
+// listings are far smaller (about 100 MiB of JSON for 100,000
+// snapshots); the bound keeps a pool with millions of objects, made by
+// any user with delegated create or snapshot rights, from exhausting a
+// root session's memory.
+const maxReadOutput = 256 << 20
+
+// maxReadStderr bounds the error output kept from a read.
+const maxReadStderr = 1 << 20
+
+// ErrOutputTooLarge is returned when a read's output passes maxReadOutput.
+var ErrOutputTooLarge = errors.New("output is larger than fstui reads")
+
 // pipeWaitDelay bounds how long Read waits for output pipes after the
 // command is killed: a child process it started can hold them open, and
 // without a bound a timed-out read would still block until that child exits.
@@ -50,6 +63,10 @@ type Argv struct {
 	// plan's: a value written with tee. It is not a secret and is
 	// shown in the confirmation.
 	Input []byte
+	// Stdin marks the step that reads the plan's standard input (a
+	// passphrase). Other steps get none, so a passphrase reaches only
+	// the command that needs it.
+	Stdin bool
 }
 
 // Args returns the arguments after the program name.
@@ -130,6 +147,9 @@ func NewRunner(tools *Tools) *Runner { return &Runner{tools: tools} }
 // Read runs a command that does not change state. It may be cancelled
 // through ctx, and is given DefaultReadTimeout if ctx has no deadline.
 func (r *Runner) Read(ctx context.Context, a Argv) (Result, error) {
+	if err := a.Check(); err != nil {
+		return Result{}, err
+	}
 	path, ok := r.tools.Path(a.Tool)
 	if !ok {
 		return Result{}, fmt.Errorf("%s: %w", a.Tool, ErrNotResolved)
@@ -140,14 +160,15 @@ func (r *Runner) Read(ctx context.Context, a Argv) (Result, error) {
 		defer cancel()
 	}
 
-	var stdout, stderr bytes.Buffer
+	stdout := &limitedBuffer{max: maxReadOutput}
+	stderr := &limitedBuffer{max: maxReadStderr}
 	// The path was verified by Resolve and the arguments are an argv vector;
 	// no shell is involved.
 	cmd := exec.CommandContext(ctx, path, a.Args()...) //nolint:gosec // see above
 	cmd.Env = env
 	cmd.Dir = "/"
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	cmd.WaitDelay = pipeWaitDelay
 
 	start := time.Now()
@@ -159,6 +180,9 @@ func (r *Runner) Read(ctx context.Context, a Argv) (Result, error) {
 	}
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return res, fmt.Errorf("%s: %w after %s", a, ctxErr, res.Duration.Round(time.Millisecond))
+	}
+	if stdout.over {
+		return Result{}, fmt.Errorf("%s: %w (%d MiB)", a, ErrOutputTooLarge, maxReadOutput>>20)
 	}
 	var exitErr *exec.ExitError
 	switch {
@@ -229,14 +253,20 @@ func (r *Runner) Stream(ctx context.Context, a Argv, line func([]byte)) error {
 	return nil
 }
 
-// limitedBuffer keeps the first max bytes written to it.
+// limitedBuffer keeps the first max bytes written to it; over says
+// whether more was written.
 type limitedBuffer struct {
 	bytes.Buffer
-	max int
+	max  int
+	over bool
 }
 
 func (b *limitedBuffer) Write(p []byte) (int, error) {
-	if room := b.max - b.Len(); room > 0 {
+	room := b.max - b.Len()
+	if len(p) > room {
+		b.over = true
+	}
+	if room > 0 {
 		b.Buffer.Write(p[:min(len(p), room)])
 	}
 	return len(p), nil

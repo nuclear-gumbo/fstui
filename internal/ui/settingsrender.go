@@ -52,8 +52,10 @@ func (s *Settings) Render(d Display, width, height int) string {
 	if set.Choices == nil {
 		help = fmt.Sprintf("A whole number from %d to %d; type it, then enter.", set.Min, set.Max)
 	}
-	lines = append(lines, "", ansi.Wrap(set.Desc+". "+help, width, ""),
-		muted.Render(ansi.Wrap("keys: and colors: are edited in "+s.file+"; ? lists the keys in effect.", width, "")))
+	lines = append(lines, "", ansi.Wrap(set.Desc+". "+help, width, ""))
+	if s.file != "" {
+		lines = append(lines, muted.Render(ansi.Wrap("keys: and colors: are edited in "+s.file+"; ? lists the keys in effect.", width, "")))
+	}
 	return strings.Join(lines, "\n")
 }
 

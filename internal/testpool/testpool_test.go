@@ -3,6 +3,8 @@
 package testpool
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -55,5 +57,43 @@ func TestExecRefusesBeforeRunning(t *testing.T) {
 	err := p.exec(execute.Zpool, "tank", []string{"destroy", "-f", "--", "tank"})
 	if err == nil || !strings.Contains(err.Error(), "not a test pool") {
 		t.Fatalf("err = %v, want the guard's refusal", err)
+	}
+}
+
+// The pool directory is in /var/tmp, which anyone can write. Root must
+// refuse one it does not own outright: a symlink, someone else's
+// directory, or one others can write.
+func TestPrepareDirRefusesForeignDirectories(t *testing.T) {
+	uid := uint32(os.Geteuid()) //nolint:gosec // uids are non-negative
+	base := t.TempDir()
+
+	fresh := filepath.Join(base, "fresh")
+	if err := prepareDir(fresh, uid); err != nil {
+		t.Fatalf("a new directory: %v", err)
+	}
+	if err := prepareDir(fresh, uid); err != nil {
+		t.Fatalf("the same directory again: %v", err)
+	}
+	if err := prepareDir(fresh, uid+1); err == nil {
+		t.Error("a directory owned by another uid was accepted")
+	}
+
+	open := filepath.Join(base, "open")
+	if err := os.Mkdir(open, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(open, 0o777); err != nil { //nolint:gosec // the test needs a world-writable directory
+		t.Fatal(err)
+	}
+	if err := prepareDir(open, uid); err == nil {
+		t.Error("a world-writable directory was accepted")
+	}
+
+	link := filepath.Join(base, "link")
+	if err := os.Symlink(fresh, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := prepareDir(link, uid); err == nil {
+		t.Error("a symlink to a directory was accepted")
 	}
 }

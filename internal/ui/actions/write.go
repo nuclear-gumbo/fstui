@@ -39,7 +39,7 @@ type Paths struct {
 // demo never touches a real installation's files or syslog.
 func DemoPaths() (Paths, error) {
 	dir := filepath.Join(os.TempDir(), fmt.Sprintf("fstui-demo-%d", os.Geteuid()))
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := mutate.PrivateDir(dir); err != nil {
 		return Paths{}, fmt.Errorf("demo files: %w", err)
 	}
 	return Paths{

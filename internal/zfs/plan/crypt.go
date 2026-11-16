@@ -48,6 +48,7 @@ func (b Builder) EncryptedCreate(ctx context.Context, ds string, props map[strin
 		return nil, err
 	}
 	a := &p.Steps[0]
+	a.Stdin = true
 	a.Options = slices.Insert(a.Options, 1, "-o", "encryption=on", "-o", "keyformat=passphrase", "-o", "keylocation=prompt")
 	p.Summary = "Create encrypted filesystem " + show(ds)
 	p.Params["encrypted"] = "true"
@@ -111,8 +112,9 @@ func (b Builder) KeyLoad(ctx context.Context, ds string, secret []byte) (*mutate
 	if err != nil {
 		return nil, err
 	}
-	p := newPlan(mutate.KeyLoad, "Load the key of "+show(ds), []string{ds}, map[string]string{"dataset": ds},
-		zfsArgv([]string{"load-key"}, ds))
+	load := zfsArgv([]string{"load-key"}, ds)
+	load.Stdin = true
+	p := newPlan(mutate.KeyLoad, "Load the key of "+show(ds), []string{ds}, map[string]string{"dataset": ds}, load)
 	blockNotRoot(p, ds, c)
 	blockIf(p, c.status == "available", "its key is already loaded")
 	if c.location == "prompt" {
@@ -182,7 +184,7 @@ func (b Builder) KeyChange(ctx context.Context, ds string, secret []byte) (*muta
 		return nil, err
 	}
 	p := newPlan(mutate.KeyChange, "Change the passphrase of "+show(ds), []string{ds}, map[string]string{"dataset": ds},
-		execute.Argv{Tool: execute.ZFS, Options: []string{"change-key", "-o", "keyformat=passphrase", "-o", "keylocation=prompt"}, Operands: []string{ds}})
+		execute.Argv{Tool: execute.ZFS, Options: []string{"change-key", "-o", "keyformat=passphrase", "-o", "keylocation=prompt"}, Operands: []string{ds}, Stdin: true})
 	p.Stdin, p.Secret = stdin, true
 	blockNotRoot(p, ds, c)
 	blockIf(p, c.status != "available", "its key must be loaded to change it")

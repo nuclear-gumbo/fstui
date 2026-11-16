@@ -89,3 +89,21 @@ func TestKeyLoadAndChange(t *testing.T) {
 		t.Fatalf("change: %+v, %v", ch, err)
 	}
 }
+
+// Only the step that reads the passphrase is marked to receive it: a
+// mount after load-key must not get it on its standard input.
+func TestOnlyThePassphraseStepGetsStdin(t *testing.T) {
+	load, err := cryptWorld("unavailable").KeyLoad(t.Context(), "tank/sec", []byte("correct horse"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var marked []string
+	for _, s := range load.Steps {
+		if s.Stdin {
+			marked = append(marked, s.String())
+		}
+	}
+	if len(marked) != 1 || !strings.Contains(marked[0], "load-key") || len(load.Steps) < 2 {
+		t.Errorf("steps %d, marked %q", len(load.Steps), marked)
+	}
+}

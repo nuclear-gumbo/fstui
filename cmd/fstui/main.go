@@ -66,6 +66,10 @@ func modules() *registry.Registry {
 }
 
 func main() {
+	if err := harden(); err != nil {
+		fmt.Fprintf(os.Stderr, "fstui: %v\n", err)
+		os.Exit(exitFailed)
+	}
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
@@ -143,10 +147,12 @@ func optionList(fs *pflag.FlagSet) string {
 func start(stderr io.Writer, superuserFlag, dashboard bool, wf *writeFlags) int {
 	files := []string{config.SystemFile}
 	var notices []string
-	if f, err := config.UserFile(); err != nil {
-		notices = append(notices, err.Error())
+	user, err := config.UserFile()
+	if err != nil {
+		notices = append(notices, err.Error()+"; settings cannot be saved this session")
+		user = ""
 	} else {
-		files = append(files, f)
+		files = append(files, user)
 	}
 	cfg, problems := config.Load(files...)
 	for _, p := range problems {
@@ -169,7 +175,7 @@ func start(stderr io.Writer, superuserFlag, dashboard bool, wf *writeFlags) int 
 	actions, writeScreens, mode, closeWrite, writeNotices := startWrite(wf, backends.write)
 	defer closeWrite()
 	notices = append(notices, writeNotices...)
-	screens := append(append(backends.screens, writeScreens...), ui.NewSettings(files, cfg, config.ThemeNames(config.ThemeDirs()...), config.Load,
+	screens := append(append(backends.screens, writeScreens...), ui.NewSettings(user, files, cfg, config.ThemeNames(config.ThemeDirs()...), config.Load,
 		func(name string) (theme.Theme, []config.Problem) {
 			return config.LoadTheme(name, config.ThemeDirs()...)
 		}))

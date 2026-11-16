@@ -156,3 +156,12 @@ func TestEventsDetail(t *testing.T) {
 		t.Error("esc did not leave the detail")
 	}
 }
+
+// Filter values from zpool events and the config are drawn sanitised.
+func TestFilterDescriptionIsSanitised(t *testing.T) {
+	f := eventFilter{name: "x\x1b]0;evil\a", pool: "p\x1b[2J", class: "c\r", text: "t\x07"}
+	got := f.describe()
+	if strings.ContainsAny(got, "\x1b\r\x07") {
+		t.Errorf("describe = %q", got)
+	}
+}

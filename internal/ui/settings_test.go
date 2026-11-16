@@ -31,7 +31,7 @@ func newSettings(t *testing.T, content string) (*Settings, string) {
 	if len(ps) != 0 {
 		t.Fatal(ps)
 	}
-	s := NewSettings([]string{file}, cfg, []string{"default", "gruvbox"}, parseFiles,
+	s := NewSettings(file, []string{file}, cfg, []string{"default", "gruvbox"}, parseFiles,
 		func(n string) (theme.Theme, []config.Problem) { return theme.Theme{Name: n}, nil })
 	return s, file
 }
@@ -269,4 +269,21 @@ func TestRootAppliesThemePreview(t *testing.T) {
 	if nm, ok := next.(Model); !ok || nm.opts.Theme.Name != "gruvbox" {
 		t.Error("the root did not apply the previewed theme")
 	}
+}
+
+// Without a user config file, nothing is staged or saved, and the system
+// file is never edited in its place.
+func TestSettingsWithoutAUserFile(t *testing.T) {
+	cfg := config.Default()
+	s := NewSettings("", []string{config.SystemFile}, cfg, []string{"default"}, parseFiles, nil)
+	s.change(s.list[0])
+	if len(s.pending) != 0 || !strings.Contains(s.message, "cannot be saved") {
+		t.Errorf("pending %v, message %q", s.pending, s.message)
+	}
+	s.startReview()
+	s.startRevert()
+	if s.review != nil {
+		t.Error("a review was started without a user file")
+	}
+	_ = s.Render(asciiDisplay(true), 80, 24)
 }

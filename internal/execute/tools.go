@@ -26,11 +26,12 @@ const (
 	// Systemctl lists the scrub timers OpenZFS ships for systemd; it is
 	// optional, since not every system runs systemd.
 	Systemctl Tool = "systemctl"
-	// Tee, Cp and Mv write module parameters and /etc/modprobe.d for
-	// the ARC limits; optional, like systemctl.
-	Tee Tool = "tee"
-	Cp  Tool = "cp"
-	Mv  Tool = "mv"
+	// Tee, Cp, Chmod and Mv write module parameters and /etc/modprobe.d
+	// for the ARC limits; optional, like systemctl.
+	Tee   Tool = "tee"
+	Cp    Tool = "cp"
+	Chmod Tool = "chmod"
+	Mv    Tool = "mv"
 )
 
 // systemDirs are searched in order. PATH from the environment is ignored, so
