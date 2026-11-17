@@ -52,6 +52,7 @@ func zfsScreens(cfg config.Config) (opened, error) {
 	reader := zfs.NewReader(cmds)
 	reader.CronFile = ""            // the host's cron file is not part of the demo
 	reader.ReadFile = cmds.ReadFile // nor its module parameters or modprobe.d
+	reader.ReadDir = cmds.ReadDir   // nor its kstat directories
 	pools := zfsview.NewPools(reader, zfsview.PoolsOptions{
 		Interval: cfg.Refresh.Pools, DatasetInterval: cfg.Refresh.Datasets, Thresholds: cfg.Thresholds, Superuser: cfg.Superuser,
 		Version: v, Root: true, Now: time.Now, // the recordings include pool history

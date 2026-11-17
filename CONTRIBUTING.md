@@ -61,6 +61,18 @@ Test pool rules:
 - Do not run pool tests in containers. A container shares the host's kernel and pools.
 - No test touches a real block device unless you list its `/dev/disk/by-id` path, one per line, in `testdata/allowed-devices.conf` (ignored by git). `scripts/integration.sh` wipes every listed device before the tests (`wipefs -a` on its partitions and the disk) and refuses to run if one is mounted or in an imported pool. List only a disk whose contents you do not need.
 
+## Measuring memory
+
+A build with the tag `fstui_profile` writes a heap profile every 5 seconds to `$FSTUI_HEAPPROFILE`. Release builds do not have it.
+
+```sh
+go build -tags fstui_profile -o bin/fstui-profile ./cmd/fstui
+FSTUI_HEAPPROFILE=/tmp/heap.pprof bin/fstui-profile --dry-run
+go tool pprof -top -inuse_space bin/fstui-profile /tmp/heap.pprof
+```
+
+`-sample_index=alloc_space` shows everything allocated since start, which finds short spikes. Measure on a test pool with many snapshots.
+
 ## Commits
 
 - One logical change per commit. Squash fixups before review.

@@ -45,12 +45,12 @@ func (c *countingSnapshots) Get(_ context.Context, names, _ []string) (map[strin
 	return out, nil
 }
 
-func (c *countingSnapshots) AllSnapshots(context.Context) ([]zfs.Dataset, error) {
+func (c *countingSnapshots) AllSnapshots(context.Context) ([]zfs.SnapshotRow, error) {
 	c.calls++
-	var out []zfs.Dataset
+	var out []zfs.SnapshotRow
 	for _, d := range c.fake.all {
 		if d.Type == zfs.Snapshot {
-			out = append(out, d)
+			out = append(out, snapRow(d))
 		}
 	}
 	return out, nil

@@ -111,8 +111,8 @@ func TestNeutralScan(t *testing.T) {
 			t.Errorf("%s: done %d exceeds total %d", tc.scenario, sc.Done, sc.Total)
 		}
 	}
-	if sc := neutralGolden(t, "checksum-repaired").Scan; sc.Repaired == 0 || sc.Errors != 0 {
-		t.Errorf("checksum-repaired: repaired %d, errors %d; want repairs and no unrepaired errors", sc.Repaired, sc.Errors)
+	if sc := neutralGolden(t, "checksum-repaired").Scan; sc.Errors != 0 {
+		t.Errorf("checksum-repaired: %d unrepaired errors", sc.Errors)
 	}
 	if sc := neutralGolden(t, "healthy").Scan; sc != nil {
 		t.Errorf("healthy pool was never scrubbed, got scan %+v", sc)

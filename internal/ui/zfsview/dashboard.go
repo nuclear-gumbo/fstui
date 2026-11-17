@@ -256,12 +256,10 @@ func (d *Dashboard) Render(disp ui.Display, width, height int) string {
 			w = width - w*(cols-1)
 		}
 		boxes := make([]string, len(stack))
+		heights := d.stackHeights(stack, height)
 		y := 0
 		for i, name := range stack {
-			h := height / len(stack)
-			if i == len(stack)-1 {
-				h = height - h*(len(stack)-1)
-			}
+			h := heights[i]
 			idx := c + i*cols // the panel's place in opts.Panels
 			d.rects[idx] = panelBox{name: name, x: (width / cols) * c, y: y, w: w, h: h}
 			boxes[i] = d.panel(disp, name, idx == d.focus, w, h)
@@ -270,6 +268,32 @@ func (d *Dashboard) Render(disp ui.Display, width, height int) string {
 		parts[c] = lipgloss.JoinVertical(lipgloss.Left, boxes...)
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
+}
+
+// stackHeights shares a column's height among its panels: evenly, except
+// that the health panel gets the rows its pools and warnings need, up to
+// two fifths of the column, so a short terminal still lists the pools.
+func (d *Dashboard) stackHeights(stack []string, height int) []int {
+	hs := make([]int, len(stack))
+	rest, n := height, len(stack)
+	for i, name := range stack {
+		if name == "health" && n > 1 {
+			need := 3 + len(d.pools.poll.data) + len(d.pools.visibleWarnings()) // borders, column titles
+			hs[i] = max(min(need, height*2/5), height/n)
+			rest, n = rest-hs[i], n-1
+		}
+	}
+	k := 0
+	for i := range hs {
+		if hs[i] == 0 {
+			hs[i] = rest / n
+			if k == n-1 {
+				hs[i] = rest - hs[i]*(n-1)
+			}
+			k++
+		}
+	}
+	return hs
 }
 
 func (d *Dashboard) panel(disp ui.Display, name string, focused bool, width, height int) string {

@@ -84,10 +84,15 @@ func TestDemoSnapshotsAppearAndGo(t *testing.T) {
 	}
 }
 
-func names(ds []zfs.Dataset) string {
+func names[T zfs.Dataset | zfs.SnapshotRow](ds []T) string {
 	var out []string
 	for _, d := range ds {
-		out = append(out, d.Name)
+		switch d := any(d).(type) {
+		case zfs.Dataset:
+			out = append(out, d.Name)
+		case zfs.SnapshotRow:
+			out = append(out, d.Name)
+		}
 	}
 	return strings.Join(out, " ")
 }

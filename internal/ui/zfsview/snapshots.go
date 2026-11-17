@@ -22,14 +22,14 @@ import (
 // SnapshotSource reads every snapshot and what changed since one.
 // *zfs.Reader implements it.
 type SnapshotSource interface {
-	AllSnapshots(ctx context.Context) ([]zfs.Dataset, error)
+	AllSnapshots(ctx context.Context) ([]zfs.SnapshotRow, error)
 	Differ
 	Sender
 }
 
 // allSnapshots is the global list's poller type; distinct from the other
 // []zfs.Dataset pollers so results cannot cross views.
-type allSnapshots []zfs.Dataset
+type allSnapshots []zfs.SnapshotRow
 
 // Snapshots lists every snapshot on the system. It reads when first shown and on
 // r, never on a timer: there can be hundreds of thousands.
@@ -41,7 +41,7 @@ type Snapshots struct {
 	sortBy  int
 	reverse bool
 	now     func() time.Time
-	order   derived[listKey, []zfs.Dataset]
+	order   derived[listKey, []zfs.SnapshotRow]
 }
 
 // NewSnapshots returns the global Snapshots view.
@@ -52,7 +52,7 @@ func NewSnapshots(src SnapshotSource, now func() time.Time) *Snapshots {
 	}
 	// The interval only spaces retries after a failure; success schedules
 	// no further reads because handle's tick is ignored below.
-	return &Snapshots{src: src, marked: marks{}, poll: poller[allSnapshots]{read: read, interval: time.Minute, now: now}, now: now}
+	return &Snapshots{src: src, marked: marks{}, poll: poller[allSnapshots]{read: read, interval: time.Minute, now: now, slow: true}, now: now}
 }
 
 // snapshotListTop: the summary line and the column header come first.
@@ -98,7 +98,7 @@ func (v *Snapshots) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 	if cmd, updated := v.poll.handle(msg); cmd != nil || updated {
 		v.cursor.clamp(len(v.poll.data))
 		v.marked.keep(func(n string) bool {
-			return slices.ContainsFunc(v.poll.data, func(d zfs.Dataset) bool { return d.Name == n })
+			return slices.ContainsFunc(v.poll.data, func(d zfs.SnapshotRow) bool { return d.Name == n })
 		})
 		return v, cmd
 	}
@@ -135,7 +135,7 @@ func (v *Snapshots) Render(disp ui.Display, width, height int) string {
 	muted := disp.Palette.Style(theme.Muted)
 	switch {
 	case v.poll.loaded.IsZero() && v.poll.lastErr.IsEmpty():
-		return muted.Render("Reading every snapshot; this can take a while on large systems")
+		return muted.Render("Reading every snapshot: zfs takes about half a second per thousand")
 	case v.poll.loaded.IsZero():
 		return "Could not read snapshots\n" + v.poll.lastErr.Display() + "\n" + muted.Render("r retries.")
 	case len(v.poll.data) == 0:
@@ -179,11 +179,11 @@ func (v *Snapshots) Status() ui.Status {
 
 // sendSet is what e estimates: the marked snapshots, or the one under
 // the cursor when none is marked.
-func (v *Snapshots) sendSet() []zfs.Dataset {
+func (v *Snapshots) sendSet() []zfs.SnapshotRow {
 	if len(v.marked) == 0 {
-		return []zfs.Dataset{v.sorted()[v.cursor.i]}
+		return []zfs.SnapshotRow{v.sorted()[v.cursor.i]}
 	}
-	var out []zfs.Dataset
+	var out []zfs.SnapshotRow
 	for _, d := range v.poll.data {
 		if v.marked[d.Name] {
 			out = append(out, d)
@@ -193,11 +193,9 @@ func (v *Snapshots) sendSet() []zfs.Dataset {
 }
 
 // sorted is the list in the order shown, which the cursor indexes.
-func (v *Snapshots) sorted() []zfs.Dataset {
-	return v.order.get(listKey{v.poll.loaded, len(v.poll.data), v.sortBy, v.reverse}, func() []zfs.Dataset {
-		list := append([]zfs.Dataset(nil), v.poll.data...)
-		(&dsDetail{sortBy: v.sortBy, reverse: v.reverse}).sortSnapshots(list)
-		return list
+func (v *Snapshots) sorted() []zfs.SnapshotRow {
+	return v.order.get(listKey{v.poll.loaded, len(v.poll.data), v.sortBy, v.reverse}, func() []zfs.SnapshotRow {
+		return sortSnapshots(v.poll.data, v.sortBy, v.reverse)
 	})
 }
 

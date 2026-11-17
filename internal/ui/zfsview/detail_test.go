@@ -181,18 +181,19 @@ func TestHistoryTab(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	es, err := zfs.ParseHistory(b)
+	h, err := zfs.ParseHistory(b)
 	if err != nil {
 		t.Fatal(err)
 	}
 	o := defaults()
 	o.Root = true
 	ov := golden(t, "healthy")
-	src := &fakeSource{pools: []zfs.Overview{ov}, props: map[name.Pool]zfs.Pool{ov.Pool.Name: goldenProps(t, "healthy")}, history: es}
+	src := &fakeSource{pools: []zfs.Overview{ov}, props: map[name.Pool]zfs.Pool{ov.Pool.Name: goldenProps(t, "healthy")}, history: &h}
 	p := NewPools(src, o)
 	p.Update(p.Init()())
 	p.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	p.Update(tea.KeyPressMsg{Code: 'h', Text: "h"}) // topology wraps to history
+	p.Update(tea.KeyPressMsg{Code: 'h', Text: "h"}) // topology wraps to tune
+	p.Update(tea.KeyPressMsg{Code: 'h', Text: "h"}) // history
 	p.Update(tea.KeyPressMsg{Code: 'h', Text: "h"}) // features
 	if p.detail.tab != tabFeatures {
 		t.Fatalf("tab %d", p.detail.tab)

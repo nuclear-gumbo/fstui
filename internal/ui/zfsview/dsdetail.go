@@ -3,9 +3,10 @@
 package zfsview
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -43,7 +44,7 @@ type (
 	}
 	dsSnaps struct {
 		ds   string
-		list []zfs.Dataset
+		list []zfs.SnapshotRow
 	}
 	dsAllow struct {
 		ds     string
@@ -72,7 +73,7 @@ type dsDetail struct {
 	sortBy  int
 	reverse bool
 	started bool // its reads have been started
-	order   derived[listKey, []zfs.Dataset]
+	order   derived[listKey, []zfs.SnapshotRow]
 }
 
 func newDSDetail(src DatasetSource, ds name.Dataset, typ zfs.DatasetType, o DatasetsOptions) *dsDetail {
@@ -92,7 +93,7 @@ func newDSDetail(src DatasetSource, ds name.Dataset, typ zfs.DatasetType, o Data
 				l, err := src.DatasetSnapshots(ctx, ds)
 				return dsSnaps{ds: s, list: l}, err
 			},
-			interval: datasetDetailInterval, now: o.Now,
+			interval: datasetDetailInterval, now: o.Now, slow: true,
 			accept: func(p dsSnaps) bool { return p.ds == s },
 		},
 		allow: poller[dsAllow]{
@@ -270,9 +271,35 @@ type spacePart struct {
 	tok                  theme.Token
 }
 
+// mark is the part's glyph, or its plain character in ASCII mode.
+func (p spacePart) mark(ascii bool) string {
+	if ascii {
+		return p.ascii
+	}
+	return p.glyph
+}
+
+// partsGauge draws d's parts as one stacked gauge, each scaled against
+// whole, and returns it with the number of cells drawn.
+func partsGauge(disp ui.Display, d zfs.Dataset, parts []spacePart, whole uint64) (string, int) {
+	var b strings.Builder
+	cells := 0
+	for _, p := range parts {
+		n, _ := d.Properties.Number(p.prop)
+		w := 0
+		if whole > 0 {
+			w = int((n*uint64(ui.BarWidth) + whole/2) / whole) //nolint:gosec // at most BarWidth
+		}
+		w = min(w, ui.BarWidth-cells) // rounding must not overflow the gauge
+		cells += w
+		b.WriteString(disp.Palette.Style(p.tok).Render(strings.Repeat(p.mark(disp.ASCII), w)))
+	}
+	return b.String(), cells
+}
+
 var spaceParts = []spacePart{
 	{"data", "usedbydataset", "freed if the dataset were destroyed", glyphData, asciiData, theme.Accent},
-	{"snapshots", "usedbysnapshots", "freed only by destroying all its snapshots", glyphSnapshots, asciiSnaps, theme.Muted},
+	{"snapshots", "usedbysnapshots", "freed by destroying every snapshot", glyphSnapshots, asciiSnaps, theme.Muted},
 	{"children", "usedbychildren", "held by datasets below it", glyphChildren, asciiChildren, theme.Muted},
 	{"reservation", "usedbyrefreservation", "reserved and not yet written", glyphResv, asciiResv, theme.Muted},
 }
@@ -282,33 +309,14 @@ var spaceParts = []spacePart{
 func spaceLines(disp ui.Display, d zfs.Dataset) []string {
 	muted := disp.Palette.Style(theme.Muted)
 	used, _ := d.Properties.Number("used")
-	var gauge strings.Builder
-	cells := 0
-	for _, p := range spaceParts {
-		n, _ := d.Properties.Number(p.prop)
-		w := 0
-		if used > 0 {
-			w = int((n*uint64(ui.BarWidth) + used/2) / used) //nolint:gosec // at most BarWidth
-		}
-		w = min(w, ui.BarWidth-cells) // rounding must not overflow the gauge
-		cells += w
-		g := p.glyph
-		if disp.ASCII {
-			g = p.ascii
-		}
-		gauge.WriteString(disp.Palette.Style(p.tok).Render(strings.Repeat(g, w)))
-	}
+	gauge, _ := partsGauge(disp, d, spaceParts, used)
 	size := func(prop string) string {
 		n, _ := d.Properties.Number(prop)
 		return lpad(ui.Size(n, disp.Exact), sizeWidth)
 	}
-	lines := []string{pad("used", spaceLabel) + size("used") + sp + gauge.String()}
+	lines := []string{pad("used", spaceLabel) + size("used") + sp + gauge}
 	for _, p := range spaceParts {
-		g := p.glyph
-		if disp.ASCII {
-			g = p.ascii
-		}
-		lines = append(lines, pad("  "+p.label, spaceLabel)+size(p.prop)+sp+disp.Palette.Style(p.tok).Render(g)+" "+muted.Render(p.prop+": "+p.explain))
+		lines = append(lines, pad("  "+p.label, spaceLabel)+size(p.prop)+sp+disp.Palette.Style(p.tok).Render(p.mark(disp.ASCII))+" "+muted.Render(p.prop+": "+p.explain))
 	}
 	return append(
 		lines, "",
@@ -338,10 +346,8 @@ func (d *dsDetail) snapshotLines(disp ui.Display, now time.Time) []string {
 	case len(d.snaps.data.list) == 0:
 		return []string{fmt.Sprintf("%s has no snapshots.", d.ds)}
 	}
-	list := d.order.get(listKey{d.snaps.loaded, len(d.snaps.data.list), d.sortBy, d.reverse}, func() []zfs.Dataset {
-		list := append([]zfs.Dataset(nil), d.snaps.data.list...)
-		d.sortSnapshots(list)
-		return list
+	list := d.order.get(listKey{d.snaps.loaded, len(d.snaps.data.list), d.sortBy, d.reverse}, func() []zfs.SnapshotRow {
+		return sortSnapshots(d.snaps.data.list, d.sortBy, d.reverse)
 	})
 	nameCol := len("SNAPSHOT")
 	for _, s := range list {
@@ -369,24 +375,27 @@ func snapshotHeader(nameCol int) string {
 // sortSnapshots orders by the chosen column. Creation order uses
 // createtxg, which is exact where the creation time ties within a second,
 // and breaks ties in the other columns.
-func (d *dsDetail) sortSnapshots(list []zfs.Dataset) {
-	prop := map[int]string{sortUsed: "used", sortReferenced: "referenced"}[d.sortBy]
-	less := func(a, b zfs.Dataset) bool {
-		if prop != "" {
-			x, _ := a.Properties.Number(prop)
-			y, _ := b.Properties.Number(prop)
-			if x != y {
-				return x < y
-			}
+// sortSnapshots returns a sorted copy of list: by used or referenced
+// space if by says so, else by creation.
+func sortSnapshots(list []zfs.SnapshotRow, by int, reverse bool) []zfs.SnapshotRow {
+	out := slices.Clone(list)
+	key := func(s zfs.SnapshotRow) uint64 {
+		switch by {
+		case sortUsed:
+			return s.Used
+		case sortReferenced:
+			return s.Referenced
 		}
-		return a.CreateTXG < b.CreateTXG
+		return 0
 	}
-	sort.SliceStable(list, func(a, b int) bool {
-		if d.reverse {
-			return less(list[b], list[a])
+	slices.SortStableFunc(out, func(a, b zfs.SnapshotRow) int {
+		c := cmp.Or(cmp.Compare(key(a), key(b)), cmp.Compare(a.CreateTXG, b.CreateTXG))
+		if reverse {
+			return -c
 		}
-		return less(list[a], list[b])
+		return c
 	})
+	return out
 }
 
 // shortSnap is the part after @: the dataset is in the title line.
@@ -396,19 +405,16 @@ func shortSnap(full string) string {
 }
 
 // snapshotRow draws one snapshot; label is its name as the view shows it.
-func snapshotRow(disp ui.Display, s zfs.Dataset, label string, nameCol int, now time.Time) string {
+func snapshotRow(disp ui.Display, s zfs.SnapshotRow, label string, nameCol int, now time.Time) string {
 	pal := disp.Palette
-	created, _ := s.Properties.Number("creation")
-	used, _ := s.Properties.Number("used")
-	refer, _ := s.Properties.Number("referenced")
-	holds, _ := s.Properties.Number("userrefs")
-	when := time.Unix(int64(created), 0).In(now.Location()).Format("2006-01-02 15:04") //nolint:gosec // seconds since 1970
+	used, refer, holds := s.Used, s.Referenced, s.Holds
+	when := time.Unix(int64(s.Creation), 0).In(now.Location()).Format("2006-01-02 15:04") //nolint:gosec // seconds since 1970
 	holdText := pal.Style(theme.Muted).Render(lpad("0", len("HOLDS")))
 	if holds > 0 {
 		holdText = pal.Style(theme.Warn).Render(lpad(fmt.Sprint(holds), len("HOLDS")))
 	}
-	clones := s.Properties["clones"].Text.Display()
-	if clones == "" || clones == "-" {
+	clones := s.Clones.Display()
+	if clones == "" {
 		clones = pal.Style(theme.Muted).Render("-")
 	}
 	return pad(label, nameCol) + sp + when + sp + lpad(ui.Size(used, disp.Exact), sizeWidth) + sp +

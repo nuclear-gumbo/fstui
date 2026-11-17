@@ -31,6 +31,7 @@ type fakeReader struct {
 	feature   string   // every feature's state; empty: enabled
 	objects   map[string][]zfs.Dataset
 	found     []zfs.Importable  // what zpool import lists
+	params    map[string]uint64 // module parameters
 	poolProps map[string]string // more pool properties, as zpool get prints them
 	compat    map[string]bool   // what a compatibility value other than off allows
 }
@@ -137,3 +138,5 @@ func (f *fakeReader) CompatibleFeatures(value string) (map[string]bool, bool, er
 	}
 	return f.compat, true, nil
 }
+
+func (f *fakeReader) ModuleParam(name string) (uint64, error) { return f.params[name], nil }

@@ -38,7 +38,7 @@ func NewVolumes(src VolumeSource, interval time.Duration, now func() time.Time) 
 		v, err := src.AllVolumes(ctx)
 		return allVolumes(v), err
 	}
-	return &Volumes{poll: poller[allVolumes]{read: read, interval: interval, now: now}}
+	return &Volumes{poll: poller[allVolumes]{read: read, interval: interval, now: now, slow: true}}
 }
 
 // Name implements ui.Screen.
@@ -86,8 +86,8 @@ func (v *Volumes) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 }
 
 const (
-	blockWidth  = len("BLOCK") + 2
-	sparseWidth = len("thick")
+	blockWidth  = len("16.0 KiB") // volblocksize up to 128 KiB
+	sparseWidth = len("sparse")
 )
 
 // Render implements ui.Screen.
@@ -106,8 +106,8 @@ func (v *Volumes) Render(disp ui.Display, width, height int) string {
 		nameCol = max(nameCol, len(d.Name))
 	}
 	fixed := markerWidth + 3*(gap+sizeWidth) + gap + blockWidth + gap + sparseWidth + gap + encWidth + gap
-	devCol := max(width-fixed-nameCol, 0)
 	nameCol = min(nameCol, max(width-fixed-len("/dev/zvol/"), len("NAME")))
+	devCol := max(width-fixed-nameCol, 0)
 	head := strings.Repeat(" ", markerWidth) + pad("NAME", nameCol) + sp + lpad("SIZE", sizeWidth) + sp +
 		lpad("USED", sizeWidth) + sp + lpad("REFER", sizeWidth) + sp + lpad("BLOCK", blockWidth) + sp +
 		pad("ALLOC", sparseWidth) + sp + pad("ENC", encWidth)
@@ -117,12 +117,14 @@ func (v *Volumes) Render(disp ui.Display, width, height int) string {
 	lines := []string{muted.Render(head)}
 	start, end := v.cursor.window(len(v.poll.data), max(height-1, 1))
 	for i := start; i < end; i++ {
-		lines = append(lines, volumeRow(disp, v.poll.data[i], i == v.cursor.i, nameCol, devCol > 0))
+		lines = append(lines, volumeRow(disp, v.poll.data[i], i == v.cursor.i, nameCol, devCol))
 	}
 	return strings.Join(lines, "\n")
 }
 
-func volumeRow(disp ui.Display, d zfs.Dataset, selected bool, nameCol int, device bool) string {
+// volumeRow draws one volume; devCol is the room for its device path, cut
+// from the left so the volume's own name stays (0: no device column).
+func volumeRow(disp ui.Display, d zfs.Dataset, selected bool, nameCol, devCol int) string {
 	pal := disp.Palette
 	num := func(prop string) uint64 { n, _ := d.Properties.Number(prop); return n }
 	marker, label := "  ", pad(leftTrunc(d.Name, nameCol), nameCol)
@@ -139,8 +141,8 @@ func volumeRow(disp ui.Display, d zfs.Dataset, selected bool, nameCol int, devic
 	row := marker + label + sp + lpad(ui.Size(num("volsize"), disp.Exact), sizeWidth) + sp +
 		lpad(ui.Size(num("used"), disp.Exact), sizeWidth) + sp + lpad(ui.Size(num("referenced"), disp.Exact), sizeWidth) + sp +
 		lpad(ui.Size(num("volblocksize"), disp.Exact), blockWidth) + sp + pad(alloc, sparseWidth) + sp + pad(encryption(disp, d), encWidth)
-	if device {
-		row += sp + pal.Style(theme.Muted).Render(zfs.ZvolDevice(d.Name))
+	if devCol > 0 {
+		row += sp + pal.Style(theme.Muted).Render(leftTrunc(zfs.ZvolDevice(d.Name), devCol))
 	}
 	return row
 }

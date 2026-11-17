@@ -11,7 +11,7 @@ Each [release](https://github.com/nuclear-gumbo/fstui/releases) has:
 - `SHA256SUMS`: checksums of both.
 
 ```sh
-v=0.6.1
+v=0.7.1
 curl -LO https://github.com/nuclear-gumbo/fstui/releases/download/v$v/fstui-$v-linux-amd64
 curl -LO https://github.com/nuclear-gumbo/fstui/releases/download/v$v/SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS
@@ -61,4 +61,4 @@ This binary only reads: write mode, the change menus, saved plans and the audit 
 podman run -it --rm ghcr.io/nuclear-gumbo/fstui-demo
 ```
 
-The demo runs fstui on output recorded from OpenZFS 2.3.9 pools, with simulated I/O and ARC activity. It runs no `zfs` or `zpool` command and needs no ZFS. In write mode, changes to snapshots, filesystems, volumes, scrubs, device states, checkpoints (taking and discarding) and the ARC are carried out on the demo's copy of the pools, in memory. Creating, importing, exporting and upgrading pools, adding, attaching, replacing, detaching and removing devices, and looking at or rewinding to a checkpoint are planned and shown; confirming one says the demo does not carry it out. `docker run` works the same way.
+The demo runs fstui on output recorded from OpenZFS 2.3.9 pools, with simulated I/O and ARC activity. It runs no `zfs` or `zpool` command and needs no ZFS. In write mode, changes to snapshots, filesystems, volumes, scrubs, device states, checkpoints (taking and discarding) and the ARC are carried out on the demo's copy of the pools, in memory. Creating, importing, exporting and upgrading pools, adding, attaching, replacing, detaching and removing devices, and looking at or rewinding to a checkpoint are planned and shown; confirming one says the demo does not carry it out. The Tune tab does not measure in the demo, which has no kernel statistics to replay. `docker run` works the same way.

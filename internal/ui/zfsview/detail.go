@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/lipgloss/v2"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -30,10 +32,11 @@ const (
 	tabProperties
 	tabFeatures
 	tabHistory
+	tabTune
 	numTabs
 )
 
-var tabNames = []string{"Topology", "Capacity", "Properties", "Features", "History"}
+var tabNames = []string{"Topology", "Capacity", "Properties", "Features", "History", "Tune"}
 
 // detail is the open pool. Its topology comes from the overview poll,
 // which already reads zpool status for every pool; properties and
@@ -51,10 +54,14 @@ type detail struct {
 
 	space poller[poolSpace] // started when the Space tab is first shown
 
-	history     []zfs.HistoryEntry // oldest first, as zpool prints it
+	history     zfs.History
+	historyGen  int // counts reads, for historyView
+	historyView derived[historyKey, []string]
 	historyErr  termtext.Text
 	historyRead bool // a read finished, successfully or not
 	internal    bool // i: include internal events
+
+	tune *tuneState // measuring while the Tune tab is shown
 }
 
 type (
@@ -70,7 +77,7 @@ type (
 	}
 	historyMsg struct {
 		pool    name.Pool
-		entries []zfs.HistoryEntry
+		history zfs.History
 		err     error
 	}
 )
@@ -84,8 +91,8 @@ func (p *Pools) loadHistory() tea.Cmd {
 	}
 	src, pool := p.src, d.pool
 	return func() tea.Msg {
-		es, err := src.PoolHistory(context.Background(), pool)
-		return historyMsg{pool: pool, entries: es, err: err}
+		h, err := src.PoolHistory(context.Background(), pool)
+		return historyMsg{pool: pool, history: h, err: err}
 	}
 }
 
@@ -99,7 +106,16 @@ func (p *Pools) applyHistory(msg historyMsg) {
 		d.historyErr = errText(msg.err)
 		return
 	}
-	d.history, d.historyErr = msg.entries, termtext.Text{}
+	d.history, d.historyErr = msg.history, termtext.Text{}
+	d.historyGen++
+}
+
+// historyKey is what the History tab's lines depend on: the read, the
+// internal toggle and the theme (a styled sample).
+type historyKey struct {
+	gen      int
+	internal bool
+	style    string
 }
 
 func (p *Pools) historyLines(disp ui.Display) []string {
@@ -116,25 +132,46 @@ func (p *Pools) historyLines(disp ui.Display) []string {
 	case !d.historyErr.IsEmpty():
 		return []string{"Could not read history", d.historyErr.Display()}
 	}
-	var lines []string
-	for i := len(d.history) - 1; i >= 0; i-- {
-		e := d.history[i]
-		if e.Internal && !d.internal {
-			continue
-		}
-		text := e.Text.FirstLine().Display()
+	key := historyKey{gen: d.historyGen, internal: d.internal, style: muted.Render(".")}
+	return d.historyView.get(key, func() []string { return historyText(d.history, d.internal, muted) })
+}
+
+// historyText is the History tab's text, newest first: user commands, and
+// internal events too if internal is set.
+func historyText(h zfs.History, internal bool, muted lipgloss.Style) []string {
+	head := fmt.Sprintf("%d user commands, newest first; i shows internal events", h.UserTotal)
+	es := h.User
+	if internal {
+		head = fmt.Sprintf("%d user commands and %d internal events, newest first; i hides internal events", h.UserTotal, h.InternalTotal)
+		es = mergeHistory(h.User, h.Internal)
+	}
+	lines := []string{muted.Render(head)}
+	if len(h.User) < h.UserTotal || internal && len(h.Internal) < h.InternalTotal {
+		lines = append(lines, muted.Render(fmt.Sprintf("Showing the most recent %d of each.", max(len(h.User), len(h.Internal)))))
+	}
+	for i := len(es) - 1; i >= 0; i-- {
+		e := es[i]
 		when := muted.Render(e.Time.Format("2006-01-02 15:04:05")) + sp
+		text := e.Text.FirstLine().Display()
 		if e.Internal {
-			lines = append(lines, when+muted.Render(text))
+			text = muted.Render(text)
+		}
+		lines = append(lines, when+text)
+	}
+	return lines
+}
+
+// mergeHistory merges two runs of entries, each in zpool's order, into one.
+func mergeHistory(a, b []zfs.HistoryEntry) []zfs.HistoryEntry {
+	out := make([]zfs.HistoryEntry, 0, len(a)+len(b))
+	for len(a) > 0 && len(b) > 0 {
+		if a[0].Seq < b[0].Seq {
+			out, a = append(out, a[0]), a[1:]
 		} else {
-			lines = append(lines, when+text)
+			out, b = append(out, b[0]), b[1:]
 		}
 	}
-	shown := "user commands"
-	if d.internal {
-		shown = "user commands and internal events"
-	}
-	return append([]string{muted.Render(fmt.Sprintf("%s, newest first; i toggles internal events", shown))}, lines...)
+	return append(append(out, a...), b...)
 }
 
 // open moves focus into the selected pool's detail.
@@ -160,6 +197,7 @@ func (p *Pools) follow() tea.Cmd {
 	tab := tabTopology
 	if p.detail != nil {
 		tab = p.detail.tab
+		p.stopTune()
 	}
 	p.detail = &detail{pool: pool, tab: tab, space: newSpacePoller(p.src, pool, p.opts)}
 	return p.enterTab()
@@ -200,6 +238,7 @@ func (p *Pools) detailKey(msg tea.KeyPressMsg) tea.Cmd {
 	case key.Matches(msg, keys.As(keys.Back, "back")):
 		p.focus = false
 		if !p.geo.split {
+			p.stopTune()
 			p.detail = nil
 		}
 	case key.Matches(msg, keys.As(keys.Right, "next tab")):
@@ -208,6 +247,10 @@ func (p *Pools) detailKey(msg tea.KeyPressMsg) tea.Cmd {
 	case key.Matches(msg, keys.As(keys.Left, "previous tab")):
 		d.tab, d.scroll = (d.tab+numTabs-1)%numTabs, 0
 		return p.enterTab()
+	case key.Matches(msg, keys.Get(keys.MeasureFiles)) && d.tab == tabTune:
+		return p.measureFiles()
+	case key.Matches(msg, keys.As(keys.Select, "evidence")) && d.tab == tabTune && d.tune != nil:
+		d.tune.evidence = !d.tune.evidence
 	case key.Matches(msg, keys.Get(keys.Internal)) && d.tab == tabHistory:
 		d.internal, d.scroll = !d.internal, 0
 	case d.tab == tabTopology && key.Matches(msg, keys.Get(keys.Down)):
@@ -222,6 +265,8 @@ func (p *Pools) detailKey(msg tea.KeyPressMsg) tea.Cmd {
 		d.timer++
 		cmds := []tea.Cmd{p.poll.refresh(), p.loadProps()}
 		switch d.tab {
+		case tabTune:
+			cmds = append(cmds, p.startTune())
 		case tabHistory:
 			cmds = append(cmds, p.loadHistory())
 		case tabSpace:
@@ -232,10 +277,16 @@ func (p *Pools) detailKey(msg tea.KeyPressMsg) tea.Cmd {
 	return nil
 }
 
-// enterTab starts a tab's reads the first time it is shown.
+// enterTab starts a tab's reads the first time it is shown; Tune
+// measures only while it is shown.
 func (p *Pools) enterTab() tea.Cmd {
 	d := p.detail
+	if d.tab != tabTune {
+		p.stopTune()
+	}
 	switch {
+	case d.tab == tabTune:
+		return p.startTune()
 	case (d.tab == tabProperties || d.tab == tabFeatures) && d.props == nil && !d.loading:
 		return p.loadProps()
 	case d.tab == tabHistory && !d.historyRead:
@@ -296,6 +347,8 @@ func (p *Pools) renderDetail(disp ui.Display, width, height int) string {
 		return t.render(disp, &d.scroll, width, height)
 	case tabHistory:
 		lines = p.historyLines(disp)
+	case tabTune:
+		lines = p.tuneLines(disp, width)
 	}
 	return scrolled(lines, &d.scroll, height)
 }

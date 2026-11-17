@@ -49,14 +49,24 @@ func (f *fakeDatasets) DatasetProperties(_ context.Context, ds name.Dataset) (zf
 	return zfs.Dataset{}, errors.New("dataset does not exist")
 }
 
-func (f *fakeDatasets) DatasetSnapshots(_ context.Context, ds name.Dataset) ([]zfs.Dataset, error) {
-	var out []zfs.Dataset
+func (f *fakeDatasets) DatasetSnapshots(_ context.Context, ds name.Dataset) ([]zfs.SnapshotRow, error) {
+	var out []zfs.SnapshotRow
 	for _, d := range f.all {
 		if d.Type == zfs.Snapshot && strings.HasPrefix(d.Name, ds.String()+"@") {
-			out = append(out, d)
+			out = append(out, snapRow(d))
 		}
 	}
 	return out, nil
+}
+
+// snapRow is a recorded snapshot as the snapshot lists read it.
+func snapRow(d zfs.Dataset) zfs.SnapshotRow {
+	n := func(p string) uint64 { v, _ := d.Properties.Number(p); return v }
+	s := zfs.SnapshotRow{Name: d.Name, CreateTXG: d.CreateTXG, Creation: n("creation"), Used: n("used"), Referenced: n("referenced"), Holds: n("userrefs")}
+	if c := d.Properties["clones"].Text; c.Raw() != "-" {
+		s.Clones = c
+	}
+	return s
 }
 
 func healthyDatasets(t *testing.T) *fakeDatasets {
@@ -187,7 +197,7 @@ func TestDatasetSpace(t *testing.T) {
 	unicode := display()
 	unicode.ASCII = false
 	out := ansi.Strip(v.Render(unicode, 110, 30))
-	for _, want := range []string{"Capacity", "usedbysnapshots: freed only by destroying all its snapshots", "children", "written", "compression"} {
+	for _, want := range []string{"Capacity", "usedbysnapshots: freed by destroying every snapshot", "children", "written", "compression"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("space tab lacks %q:\n%s", want, out)
 		}

@@ -246,8 +246,8 @@ func (f *fixture) checkDatasets(t *testing.T) {
 	if len(snaps) != 2 || snaps[0].Name != f.first {
 		t.Fatalf("snapshots = %v", snaps)
 	}
-	if n, ok := snaps[0].Properties.Number("userrefs"); !ok || n != 0 {
-		t.Errorf("userrefs = %d (%v), want 0 holds", n, ok)
+	if snaps[0].Holds != 0 || snaps[0].Creation == 0 || snaps[0].Referenced == 0 {
+		t.Errorf("snapshot %+v, want 0 holds, a creation time and referenced space", snaps[0])
 	}
 }
 
@@ -258,7 +258,7 @@ func (f *fixture) checkAllLists(t *testing.T) {
 	}
 	var mine []string
 	for _, s := range snaps {
-		if s.Pool.String() == f.tp.Name {
+		if strings.HasPrefix(s.Name, f.tp.Name+"/") || strings.HasPrefix(s.Name, f.tp.Name+"@") {
 			mine = append(mine, s.Name)
 		}
 	}

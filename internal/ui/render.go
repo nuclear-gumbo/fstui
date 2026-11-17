@@ -85,19 +85,24 @@ func (m Model) viewBar(d Display) string {
 	return " " + strings.Join(parts, sep)
 }
 
-// shortName is how long view names get when the bar would not fit
-// otherwise (ASCII labels such as "9:settings" are longer).
+// shortName is how long view names get when even the abbreviations do
+// not fit (ASCII labels such as "9:settings" are longer).
 const shortName = 4
 
-// viewLabels are the view bar's labels and the space between them: two
-// spaces if all fit, else one, else names cut to four letters, so every
-// view stays visible and clickable at 80 columns.
+// abbreviations shorten the longest view names when the bar would not
+// fit 80 columns otherwise; the rest stay whole.
+var abbreviations = map[string]string{"dashboard": "dash", "datasets": "data", "snapshots": "snaps", "volumes": "vols"}
+
+// viewLabels are the view bar's labels and the space between them: the
+// full names if they fit, else the abbreviations, else names cut to four
+// letters, so every view stays visible and clickable at 80 columns.
 func (m Model) viewLabels(d Display) (labels []string, sep string) {
 	full := make([]string, len(m.screens))
+	abbr := make([]string, len(m.screens))
 	short := make([]string, len(m.screens))
 	for i, s := range m.screens {
 		num, name := viewNumber(d, m.number(i)), strings.ToLower(s.Name())
-		full[i], short[i] = num+name, num+ansi.Truncate(name, shortName, "")
+		full[i], abbr[i], short[i] = num+name, num+cmp.Or(abbreviations[name], name), num+ansi.Truncate(name, shortName, "")
 	}
 	width := func(ls []string, sep string) int {
 		w := 1 + len(sep)*(len(ls)-1)
@@ -111,6 +116,10 @@ func (m Model) viewLabels(d Display) (labels []string, sep string) {
 		return full, fieldGap
 	case width(full, " ") <= m.width:
 		return full, " "
+	case width(abbr, fieldGap) <= m.width:
+		return abbr, fieldGap
+	case width(abbr, " ") <= m.width:
+		return abbr, " "
 	}
 	return short, " "
 }

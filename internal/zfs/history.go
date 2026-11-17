@@ -23,6 +23,7 @@ type HistoryEntry struct {
 	Internal bool      // logged by ZFS itself, not a command a user ran
 	TXG      uint64    // transaction group of an internal event
 	Text     termtext.Text
+	Seq      int // position in zpool's output, to merge the two kinds
 }
 
 // historyTimeLayout is zpool history's timestamp, e.g. 2026-11-12.23:41:06.
@@ -37,47 +38,106 @@ var ioctlRecord = regexp.MustCompile(`^\(\d+ms\) ioctl `)
 // previous entry instead.
 var historyLine = regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}\.\d{2}:\d{2}:\d{2}) (?:\[txg:(\d+)\] )?(.*)$`)
 
-// ParseHistory parses the output of zpool history -i for one pool,
-// oldest entry first, in the local time zone zpool printed.
-func ParseHistory(data []byte) ([]HistoryEntry, error) {
-	var out []HistoryEntry
+// History is what zpool history -i printed for one pool: the most
+// recent user commands and internal events, each oldest first, and how
+// many of each there were.
+type History struct {
+	User, Internal           []HistoryEntry
+	UserTotal, InternalTotal int
+}
+
+// keepHistory is how many entries of each kind History keeps. An old pool
+// logs an internal event for every snapshot ever taken, millions over
+// years; the commands people ran are kept apart so these never push them
+// out.
+const keepHistory = 10000
+
+// historyParser reads zpool history -i line by line, keeping the most
+// recent keep entries of each kind.
+type historyParser struct {
+	h       History
+	keep    int
+	started bool
+	last    *[]HistoryEntry // the kind the latest entry went to
+	more    []string        // its continuation lines, joined once it ends
+}
+
+// line consumes one line of output.
+func (p *historyParser) line(line string) error {
+	if !p.started {
+		if !strings.HasPrefix(line, "History for '") {
+			return fmt.Errorf("zpool history: unexpected first line %s", termtext.New(line))
+		}
+		p.started = true
+		return nil
+	}
+	m := historyLine.FindStringSubmatch(line)
+	if m == nil {
+		if p.last == nil {
+			if line == "" {
+				return nil
+			}
+			return fmt.Errorf("zpool history: text before the first entry: %s", termtext.New(line))
+		}
+		p.more = append(p.more, line)
+		return nil
+	}
+	p.finish()
+	e, err := historyEntry(m)
+	if err != nil {
+		return err
+	}
+	e.Seq = p.h.UserTotal + p.h.InternalTotal
+	if e.Internal {
+		p.last = &p.h.Internal
+		p.h.InternalTotal++
+	} else {
+		p.last = &p.h.User
+		p.h.UserTotal++
+	}
+	if len(*p.last) >= 2*p.keep { // drop the oldest half at once, not one by one
+		*p.last = append([]HistoryEntry(nil), (*p.last)[len(*p.last)-p.keep:]...)
+	}
+	*p.last = append(*p.last, e)
+	return nil
+}
+
+// finish joins the latest entry's continuation lines onto it.
+func (p *historyParser) finish() {
+	if p.last == nil || len(p.more) == 0 {
+		return
+	}
+	e := &(*p.last)[len(*p.last)-1]
+	e.Text = termtext.New(e.Text.Raw() + "\n" + strings.Join(p.more, "\n"))
+	p.more = p.more[:0]
+}
+
+// result is the history read, trimmed to keep entries of each kind.
+func (p *historyParser) result() (History, error) {
+	if !p.started {
+		return History{}, fmt.Errorf("zpool history: empty output")
+	}
+	p.finish()
+	trim := func(es []HistoryEntry) []HistoryEntry { return es[max(len(es)-p.keep, 0):] }
+	p.h.User, p.h.Internal = trim(p.h.User), trim(p.h.Internal)
+	return p.h, nil
+}
+
+// ParseHistory parses the output of zpool history -i for one pool, in the
+// local time zone zpool printed.
+func ParseHistory(data []byte) (History, error) {
+	p := historyParser{keep: keepHistory}
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	sc.Buffer(nil, maxHistoryLine)
-	first := true
 	for sc.Scan() {
-		line := sc.Text()
-		if first {
-			first = false
-			if !strings.HasPrefix(line, "History for '") {
-				return nil, fmt.Errorf("zpool history: unexpected first line %s", termtext.New(line))
-			}
-			continue
+		if err := p.line(sc.Text()); err != nil {
+			return History{}, err
 		}
-		m := historyLine.FindStringSubmatch(line)
-		if m == nil {
-			if len(out) == 0 {
-				if line == "" {
-					continue
-				}
-				return nil, fmt.Errorf("zpool history: text before the first entry: %s", termtext.New(line))
-			}
-			last := &out[len(out)-1]
-			last.Text = termtext.New(last.Text.Raw() + "\n" + line)
-			continue
-		}
-		e, err := historyEntry(m)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, e)
 	}
 	if err := sc.Err(); err != nil {
-		return nil, fmt.Errorf("zpool history: %w", err)
+		return History{}, fmt.Errorf("zpool history: %w", err)
 	}
-	if first {
-		return nil, fmt.Errorf("zpool history: empty output")
-	}
-	return out, nil
+	return p.result()
 }
 
 // maxHistoryLine bounds one line. A longer line fails the parse with an
@@ -99,12 +159,24 @@ func historyEntry(m []string) (HistoryEntry, error) {
 	return e, nil
 }
 
-// PoolHistory reads zpool history -i for one pool. It needs root: on
+// PoolHistory reads zpool history -i for one pool as it streams, keeping
+// the most recent entries (keepHistory of each kind). It needs root: on
 // 2.3.9 unprivileged users get "permission denied".
-func (r *Reader) PoolHistory(ctx context.Context, pool name.Pool) ([]HistoryEntry, error) {
-	out, err := r.read(ctx, execute.Argv{Tool: execute.Zpool, Options: []string{"history", "-i"}, Operands: []string{pool.String()}})
+func (r *Reader) PoolHistory(ctx context.Context, pool name.Pool) (History, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute) // grows with the pool's age
+	defer cancel()
+	p := historyParser{keep: keepHistory}
+	var parseErr error
+	err := r.run.Stream(ctx, execute.Argv{Tool: execute.Zpool, Options: []string{"history", "-i"}, Operands: []string{pool.String()}}, func(b []byte) {
+		if parseErr == nil {
+			parseErr = p.line(string(b))
+		}
+	})
 	if err != nil {
-		return nil, err
+		return History{}, fmt.Errorf("reading the history of %s: %w", pool, err)
 	}
-	return ParseHistory(out)
+	if parseErr != nil {
+		return History{}, parseErr
+	}
+	return p.result()
 }

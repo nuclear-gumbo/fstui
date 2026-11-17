@@ -14,7 +14,7 @@ import (
 )
 
 // sendFor opens the window on snapshots and runs its first estimate.
-func sendFor(t *testing.T, src *countingSnapshots, snaps ...zfs.Dataset) *sendWindow {
+func sendFor(t *testing.T, src *countingSnapshots, snaps ...zfs.SnapshotRow) *sendWindow {
 	t.Helper()
 	w := &sendWindow{src: src, marked: snaps}
 	w.Update(w.estimate()())
@@ -23,8 +23,8 @@ func sendFor(t *testing.T, src *countingSnapshots, snaps ...zfs.Dataset) *sendWi
 
 func sendRender(w *sendWindow) string { return ansi.Strip(w.Render(display(), 100, 40)) }
 
-func snapAt(n string, txg uint64) zfs.Dataset {
-	return zfs.Dataset{Name: n, Type: zfs.Snapshot, CreateTXG: txg}
+func snapAt(n string, txg uint64) zfs.SnapshotRow {
+	return zfs.SnapshotRow{Name: n, CreateTXG: txg}
 }
 
 // One chain per dataset: a full stream, then increments; the total is

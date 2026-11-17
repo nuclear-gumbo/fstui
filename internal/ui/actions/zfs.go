@@ -14,6 +14,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/nuclear-gumbo/fstui/internal/mutate"
+	"github.com/nuclear-gumbo/fstui/internal/tune"
 	"github.com/nuclear-gumbo/fstui/internal/ui"
 	"github.com/nuclear-gumbo/fstui/internal/zfs/plan"
 )
@@ -25,6 +26,9 @@ func ZFSOffers(b plan.Builder, now func() time.Time) func(ui.Target) (string, []
 			return "", nil
 		}
 		n := t.Names[0]
+		if t.Kind == "tune" { // the pool, then the changes, not marked items
+			return "what the findings in " + n + " point to", tuneOffers(b, t.Names[1:])
+		}
 		if len(t.Names) > 1 {
 			return batchOffers(b, t, now)
 		}
@@ -253,7 +257,7 @@ func poolOffers(b plan.Builder, pool string) []Offer {
 			Check: func(context.Context) string {
 				reasons, err := avail()
 				if err != nil {
-					return "cannot read the pool's state: " + err.Error()
+					return "cannot read the state of " + pool + ": " + err.Error()
 				}
 				return reasons[op]
 			},
@@ -398,7 +402,7 @@ func keyOffers(b plan.Builder, ds string) []Offer {
 		return func(context.Context) string {
 			reasons, err := avail()
 			if err != nil {
-				return "cannot read its encryption state: " + err.Error()
+				return "cannot read the encryption state of " + ds + ": " + err.Error()
 			}
 			return reasons[op]
 		}
@@ -476,4 +480,45 @@ func batchOffers(b plan.Builder, t ui.Target, now func() time.Time) (string, []O
 			},
 		},
 	}
+}
+
+// tuneOffers are the changes the Tune tab's findings point to, one per
+// kind: recordsize (r) and compression (c) on a dataset, a module
+// parameter (p), the ARC limits (s, the ARC's own form).
+func tuneOffers(b plan.Builder, encoded []string) []Offer {
+	var out []Offer
+	for _, e := range encoded {
+		c, ok := tune.DecodeChange(e)
+		if !ok {
+			continue
+		}
+		switch c.Kind {
+		case "property":
+			ds, prop, value := c.Dataset, c.Name, c.Value
+			key := map[string]string{"recordsize": "r", "compression": "c"}[prop]
+			if key == "" {
+				continue
+			}
+			out = append(out, Offer{
+				Key: key, Op: mutate.PropertySet, Need: needs(prop), Name: "Set " + prop + "=" + value + " on " + ds,
+				Build: func(ctx context.Context, _ map[string]string) (*mutate.Plan, error) {
+					return b.PropertySet(ctx, ds, prop, value)
+				},
+			})
+		case "param":
+			name, value := c.Name, c.Value
+			out = append(out, Offer{
+				Key: "p", Op: mutate.ParamSet, Name: "Set " + name + " to " + value + " until reboot",
+				Build: func(ctx context.Context, _ map[string]string) (*mutate.Plan, error) {
+					return b.ParamSet(ctx, name, value)
+				},
+			})
+		case "arc":
+			arc := arcOffers(b)
+			if len(arc) > 0 {
+				out = append(out, arc[0]) // set the limits now
+			}
+		}
+	}
+	return out
 }

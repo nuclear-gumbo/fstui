@@ -226,7 +226,22 @@ func (c *Commands) pools(file string, operands []string) ([]byte, error) {
 	if head == nil {
 		return nil, fmt.Errorf("%w: no pool %s", errNoRecording, strings.Join(operands, ", "))
 	}
-	return marshal(map[string]any{"output_version": head, "pools": merged})
+	return envelope(head, "pools", merged)
+}
+
+// envelope writes an OpenZFS JSON document: output_version first, as zfs
+// prints it and fstui reads it, then field.
+func envelope(head any, field string, v any) ([]byte, error) {
+	h, err := marshal(head)
+	if err != nil {
+		return nil, err
+	}
+	body, err := marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	key, _ := json.Marshal(field) //nolint:errchkjson // a string always marshals
+	return slices.Concat([]byte(`{"output_version":`), h, []byte(","), key, []byte(":"), body, []byte("}")), nil
 }
 
 func marshal(v any) ([]byte, error) {
@@ -255,7 +270,7 @@ func (c *Commands) datasets(command string, keep func(name, typ string) bool) ([
 		}
 	}
 	head := map[string]any{"command": command, "vers_major": 0, "vers_minor": 1}
-	return marshal(map[string]any{"output_version": head, "datasets": merged})
+	return envelope(head, "datasets", merged)
 }
 
 // list answers zfs list -j: -t picks the types, -d 0 the named datasets

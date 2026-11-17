@@ -5,6 +5,7 @@ package zfs
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"sort"
 
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
@@ -94,14 +95,18 @@ func parsePools(data []byte, command string) ([]Pool, error) {
 // ParseDatasetList parses "zfs list -j --json-int"; ParseDatasetGet parses
 // "zfs get -j --json-int". Both are sorted by name, which puts children
 // directly after their parent.
-func ParseDatasetList(data []byte) ([]Dataset, error) { return parseDatasets(data, "zfs list") }
+func ParseDatasetList(data []byte) ([]Dataset, error) {
+	return parseDatasets(bytes.NewReader(data), "zfs list")
+}
 
 // ParseDatasetGet parses "zfs get -j --json-int".
-func ParseDatasetGet(data []byte) ([]Dataset, error) { return parseDatasets(data, "zfs get") }
+func ParseDatasetGet(data []byte) ([]Dataset, error) {
+	return parseDatasets(bytes.NewReader(data), "zfs get")
+}
 
-func parseDatasets(data []byte, command string) ([]Dataset, error) {
+func parseDatasets(rd io.Reader, command string) ([]Dataset, error) {
 	var out []Dataset
-	err := decodeEach(data, command, "datasets", func(jd jsonDataset) error {
+	err := decodeEachFrom(rd, command, "datasets", func(jd jsonDataset) error {
 		d, err := jd.parse()
 		if err != nil {
 			return fmt.Errorf("%s: %w", command, err)

@@ -14,6 +14,15 @@ import (
 // maxBackoff caps the retry delay after failures at this many intervals.
 const maxBackoff = 10
 
+// A listing (slow set) may take longReads to read: zfs list takes about
+// half a second per thousand snapshots. After a read of d, the next waits
+// at least busyFactor × d, so fstui keeps zfs busy a fifth of the time at
+// most.
+const (
+	longReads  = 10 * time.Minute
+	busyFactor = 4
+)
+
 // poller keeps one source fresh: at most one read in flight,
 // the next one scheduled only when it completes, the interval doubled per
 // consecutive failure up to maxBackoff, and the last good data kept while
@@ -27,13 +36,17 @@ type poller[T any] struct {
 	// subject: a read started for a dataset the user has since left. Read
 	// functions used with it name their subject in T even when they fail.
 	accept func(T) bool
+	// slow marks a listing whose read time grows with the number of
+	// datasets or snapshots; it gets longReads instead of the default.
+	slow bool
 
 	data     T
 	loaded   time.Time // zero until a read succeeds
 	lastErr  termtext.Text
 	failures int
 	inFlight bool
-	timer    int // numbers the scheduled poll, so refresh supersedes it
+	took     time.Duration // the last read's duration
+	timer    int           // numbers the scheduled poll, so refresh supersedes it
 }
 
 type (
@@ -41,6 +54,7 @@ type (
 		data T
 		err  error
 		at   time.Time
+		took time.Duration
 	}
 	pollDue[T any] struct{ timer int }
 )
@@ -51,10 +65,16 @@ func (p *poller[T]) start() tea.Cmd {
 		return nil
 	}
 	p.inFlight = true
-	read, now := p.read, p.now
+	read, now, slow := p.read, p.now, p.slow
 	return func() tea.Msg {
-		data, err := read(context.Background())
-		return polled[T]{data: data, err: err, at: now()}
+		ctx, cancel := context.Background(), context.CancelFunc(func() {})
+		if slow {
+			ctx, cancel = context.WithTimeout(ctx, longReads)
+		}
+		defer cancel()
+		start := time.Now()
+		data, err := read(ctx)
+		return polled[T]{data: data, err: err, at: now(), took: time.Since(start)}
 	}
 }
 
@@ -72,7 +92,7 @@ func (p *poller[T]) handle(msg tea.Msg) (cmd tea.Cmd, updated bool) {
 		if p.accept != nil && !p.accept(msg.data) {
 			return nil, false
 		}
-		p.inFlight = false
+		p.inFlight, p.took = false, msg.took
 		if msg.err != nil {
 			p.failures++
 			p.lastErr = errText(msg.err)
@@ -98,5 +118,5 @@ func (p *poller[T]) delay() time.Duration {
 	for i := 0; i < p.failures && d < limit; i++ {
 		d *= 2
 	}
-	return min(d, limit)
+	return max(min(d, limit), busyFactor*p.took)
 }

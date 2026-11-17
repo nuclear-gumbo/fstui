@@ -30,6 +30,9 @@ type IOStat struct {
 	// I/O to measure (zpool prints "-").
 	ReadWait, WriteWait       time.Duration
 	HasReadWait, HasWriteWait bool
+	// ReadDiskWait and WriteDiskWait are disk_wait: the time on the
+	// device alone (0 without I/O).
+	ReadDiskWait, WriteDiskWait time.Duration
 }
 
 // IOPool is a pool's row and the rows of its devices.
@@ -54,6 +57,8 @@ const (
 	colWriteBytes
 	colReadWait
 	colWriteWait
+	colReadDiskWait
+	colWriteDiskWait
 )
 
 // IOStatArgv is the command the I/O view streams: every pool and its devices,
@@ -66,16 +71,24 @@ var IOStatArgv = execute.Argv{
 // IOStats streams zpool iostat until ctx is cancelled, calling sample
 // with each complete interval.
 func (r *Reader) IOStats(ctx context.Context, sample func(IOSample)) error {
-	var p IOStatParser
-	p.Sample = sample
+	if err := r.streamIOStat(ctx, IOStatArgv, sample); err != nil {
+		return fmt.Errorf("reading pool I/O: %w", err)
+	}
+	return nil
+}
+
+// streamIOStat streams a zpool iostat -p -l -v command until ctx ends,
+// calling sample with each complete interval.
+func (r *Reader) streamIOStat(ctx context.Context, a execute.Argv, sample func(IOSample)) error {
+	p := IOStatParser{Sample: sample}
 	var parseErr error
-	err := r.run.Stream(ctx, IOStatArgv, func(line []byte) {
+	err := r.run.Stream(ctx, a, func(line []byte) {
 		if e := p.Line(string(line)); e != nil && parseErr == nil {
 			parseErr = e
 		}
 	})
 	if err != nil {
-		return fmt.Errorf("reading pool I/O: %w", err)
+		return err //nolint:wrapcheck // the callers name what was read
 	}
 	return parseErr
 }
@@ -188,6 +201,12 @@ func ioRow(name string, depth int, section string, v []string) (IOStat, error) {
 		return IOStat{}, err
 	}
 	if row.WriteWait, row.HasWriteWait, err = nanoseconds(v[colWriteWait]); err != nil {
+		return IOStat{}, err
+	}
+	if row.ReadDiskWait, _, err = nanoseconds(v[colReadDiskWait]); err != nil {
+		return IOStat{}, err
+	}
+	if row.WriteDiskWait, _, err = nanoseconds(v[colWriteDiskWait]); err != nil {
 		return IOStat{}, err
 	}
 	return row, nil

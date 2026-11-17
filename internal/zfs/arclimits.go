@@ -69,3 +69,16 @@ func (r *Reader) Modprobe() (content []byte, exists bool, err error) {
 	}
 	return b, true, nil
 }
+
+// ModuleParam reads one zfs module parameter's value.
+func (r *Reader) ModuleParam(name string) (uint64, error) {
+	b, err := r.file(ParamDir + "/" + name)
+	if err != nil {
+		return 0, fmt.Errorf("reading %s: %w", name, err)
+	}
+	n, err := strconv.ParseUint(strings.TrimSpace(string(b)), 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", name, err)
+	}
+	return n, nil
+}

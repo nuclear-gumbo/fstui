@@ -26,8 +26,6 @@ type Device struct {
 	Parent      string   `json:"pkname"`
 	Model       string   `json:"model"`
 	Serial      string   `json:"serial"`
-	WWN         string   `json:"wwn"`
-	Rotational  bool     `json:"rota"`
 	ReadOnly    bool     `json:"ro"`
 	Children    []Device `json:"children"`
 
@@ -39,7 +37,7 @@ type Device struct {
 }
 
 // LsblkArgs are lsblk's options; the columns are what Device reads.
-var LsblkArgs = []string{"-J", "-b", "-o", "NAME,PATH,SIZE,TYPE,FSTYPE,MOUNTPOINTS,PKNAME,MODEL,SERIAL,WWN,ROTA,RO"}
+var LsblkArgs = []string{"-J", "-b", "-o", "NAME,PATH,SIZE,TYPE,FSTYPE,MOUNTPOINTS,PKNAME,MODEL,SERIAL,RO"}
 
 // ParseLsblk parses lsblk -J -b output into a flat list: every disk, then
 // its partitions.

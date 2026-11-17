@@ -17,6 +17,7 @@ fstui is below 1.0. A minor release may change keys or settings; [CHANGELOG.md](
 - Datasets: the hierarchy, space by reason, properties, snapshots, delegated permissions.
 - Snapshots and volumes across all pools; what changed since a snapshot; the size of a `zfs send` before running it.
 - The ARC, I/O per pool and device, and kernel events.
+- Tune: whether a pool's settings fit how it is used, measured while you watch. Write amplification, record size against request size, where memory would buy speed, what limits the pool, how well data compresses.
 
 ## What it changes
 
@@ -24,7 +25,7 @@ fstui is below 1.0. A minor release may change keys or settings; [CHANGELOG.md](
 - Filesystems and volumes: create, rename, resize, set and inherit properties, mount, unmount, promote, destroy; encryption keys.
 - Pools: create, add devices, checkpoints, scrub, trim, initialize, clear errors, import, export, upgrade.
 - Devices: attach, replace, detach, remove, online, offline; RAIDZ expansion.
-- The ARC's size limits.
+- The ARC's size limits, and the two module parameters Tune can point to.
 
 [docs/changes.md](docs/changes.md) lists every change and how it is confirmed.
 
@@ -37,7 +38,7 @@ fstui is below 1.0. A minor release may change keys or settings; [CHANGELOG.md](
 ## Install
 
 ```sh
-v=0.6.1
+v=0.7.1
 curl -LO https://github.com/nuclear-gumbo/fstui/releases/download/v$v/fstui-$v-linux-amd64
 curl -LO https://github.com/nuclear-gumbo/fstui/releases/download/v$v/SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS

@@ -46,6 +46,7 @@ type Reader interface {
 	PoolObjects(ctx context.Context, pool name.Pool) ([]zfs.Dataset, error)
 	RemoveDryRun(ctx context.Context, pool, vdev string) (termtext.Text, error)
 	Importable(ctx context.Context, dirs []string) ([]zfs.Importable, error)
+	ModuleParam(name string) (uint64, error)
 	CompatibleFeatures(value string) (allowed map[string]bool, ok bool, err error)
 }
 
@@ -226,6 +227,8 @@ func (b Builder) buildPool(ctx context.Context, op mutate.Op, p map[string]strin
 		return b.PoolImport(ctx, importSpecFromParams(p))
 	case mutate.PoolUpgrade:
 		return b.PoolUpgrade(ctx, p["pool"])
+	case mutate.ParamSet:
+		return b.ParamSet(ctx, p["param"], p["value"])
 	}
 	return nil, fmt.Errorf("fstui cannot build %s plans yet", op)
 }

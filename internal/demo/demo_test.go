@@ -61,11 +61,11 @@ func checkPools(t *testing.T, r *zfs.Reader) {
 
 func checkHistory(t *testing.T, r *zfs.Reader) {
 	h, err := r.PoolHistory(context.Background(), mustPool(t, "tank"))
-	if err != nil || len(h) == 0 {
-		t.Fatalf("history: %d entries, %v", len(h), err)
+	if err != nil || len(h.User) == 0 {
+		t.Fatalf("history: %d entries, %v", len(h.User), err)
 	}
 	created := false
-	for _, e := range h {
+	for _, e := range append(h.User, h.Internal...) {
 		text := e.Text.Display()
 		if leaked(text) {
 			t.Errorf("recorded name leaked into history: %s", text)

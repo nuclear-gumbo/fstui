@@ -20,7 +20,7 @@ import (
 )
 
 func registerZFS(r *registry.Registry) {
-	r.Add(registry.Module{Name: "zfs", OmitTag: "fstui_nozfs", Kind: registry.Backend, Describe: describeZFS})
+	r.Add(registry.Module{Name: "zfs", Kind: registry.Backend, Describe: describeZFS})
 }
 
 // describeZFS reports the OpenZFS userland and kernel module versions, or

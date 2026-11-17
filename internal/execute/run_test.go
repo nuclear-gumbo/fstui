@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,6 +34,8 @@ sleep) %[1]s 30 & wait ;;
 stream) printf 'one\ntwo\n'; %[1]s 30 & wait ;;
 streamfail) printf 'partial\n'; printf 'no pools\n' >&2; exit 2 ;;
 stdin) read -r l; printf 'got %%s\n' "$l" ;;
+json) printf '{"a":1}\n' ;;
+jsonfail) printf '{"a":' ; printf 'dataset does not exist\n' >&2; exit 1 ;;
 mark) printf x > "$2" ;;
 made) printf 'made, but it may only be mounted by root\n' >&2; exit 1 ;;
 esac
@@ -253,5 +256,56 @@ func TestArgvShell(t *testing.T) {
 	}
 	if got := (Argv{Tool: ZFS, Options: []string{"send", "-c"}, Operands: []string{"tank/a@daily-1"}}).Shell(); got != "zfs send -c -- tank/a@daily-1" {
 		t.Errorf("plain = %s", got)
+	}
+}
+
+// ReadTo hands the output over as a reader; a failing command still
+// reports its exit and error output, and a consumer's error wins.
+func TestReadTo(t *testing.T) {
+	r := fakeRunner(t)
+	var got []byte
+	err := r.ReadTo(context.Background(), Argv{Tool: fake, Options: []string{"json"}}, func(rd io.Reader) error {
+		var err error
+		got, err = io.ReadAll(rd)
+		return err
+	})
+	if err != nil || string(got) != "{\"a\":1}\n" {
+		t.Fatalf("%q, %v", got, err)
+	}
+	err = r.ReadTo(context.Background(), Argv{Tool: fake, Options: []string{"jsonfail"}}, func(rd io.Reader) error { _, err := io.ReadAll(rd); return err })
+	var ce *CommandError
+	if !errors.As(err, &ce) || ce.ExitCode != 1 || !strings.Contains(ce.Stderr.Display(), "does not exist") {
+		t.Errorf("failing command: %v", err)
+	}
+	mine := errors.New("not what I asked for")
+	if err := r.ReadTo(context.Background(), Argv{Tool: fake, Options: []string{"json"}}, func(io.Reader) error { return mine }); !errors.Is(err, mine) {
+		t.Errorf("consumer error: %v", err)
+	}
+}
+
+func TestReadToTimesOut(t *testing.T) {
+	if _, err := exec.LookPath("sleep"); err != nil {
+		t.Skip("no sleep binary on this host")
+	}
+	r := fakeRunner(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	err := r.ReadTo(ctx, Argv{Tool: fake, Options: []string{"sleep"}}, func(rd io.Reader) error { _, err := io.ReadAll(rd); return err })
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+// The reader stops at its limit and says so, rather than cutting the
+// output short silently.
+func TestLimitedReader(t *testing.T) {
+	l := &limitedReader{r: strings.NewReader("abcdef"), left: 4}
+	got, err := io.ReadAll(l)
+	if string(got) != "abcd" || !errors.Is(err, ErrOutputTooLarge) || !l.over {
+		t.Errorf("%q, %v, over %v", got, err, l.over)
+	}
+	l = &limitedReader{r: strings.NewReader("abcd"), left: 4}
+	if got, err := io.ReadAll(l); string(got) != "abcd" || err != nil || l.over {
+		t.Errorf("exactly at the limit: %q, %v", got, err)
 	}
 }

@@ -25,9 +25,8 @@ const (
 
 // Module describes one optional part of fstui.
 type Module struct {
-	Name    string // short name shown to users and used as the Gentoo USE flag, e.g. "zfs"
-	OmitTag string // build tag that leaves the module out, e.g. "fstui_nozfs"
-	Kind    Kind
+	Name string // short name shown to users and used as the Gentoo USE flag, e.g. "zfs"
+	Kind Kind
 	// Describe, if set, reports the module's state on this host in one
 	// line for --version, e.g. the OpenZFS release found.
 	Describe func(context.Context) string

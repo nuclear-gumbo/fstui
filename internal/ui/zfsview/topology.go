@@ -140,7 +140,7 @@ func scanLine(sc zfs.Scan, now time.Time, exact bool) string {
 		}
 		return s + "."
 	case sc.State == "CANCELED":
-		return fmt.Sprintf("%s canceled %s ago.", word, ui.Age(now.Sub(sc.End)))
+		return fmt.Sprintf("%s cancelled %s ago.", word, ui.Age(now.Sub(sc.End)))
 	}
 	return fmt.Sprintf("%s finished %s ago in %s: repaired %s, %d errors.",
 		word, ui.Age(now.Sub(sc.End)), ui.Age(sc.End.Sub(sc.Start)), ui.Size(sc.Processed, exact), sc.Errors)

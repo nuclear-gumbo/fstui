@@ -27,7 +27,7 @@ import (
 type Source interface {
 	Overviews(ctx context.Context) ([]zfs.Overview, error)
 	PoolProperties(ctx context.Context, pool name.Pool) (zfs.Pool, error)
-	PoolHistory(ctx context.Context, pool name.Pool) ([]zfs.HistoryEntry, error)
+	PoolHistory(ctx context.Context, pool name.Pool) (zfs.History, error)
 	PoolDatasets(ctx context.Context, pool name.Pool) ([]zfs.Dataset, error)
 }
 
@@ -54,6 +54,9 @@ type Pools struct {
 	focus  bool                // keys go to the detail rather than the list
 	geo    geometry            // layout of the last render, for the mouse
 	sched  *poller[scrubPlans] // nil when the source cannot tell
+	// tuneGen numbers Tune tab measurements across pools, so a message
+	// from an earlier pool's measuring is never taken for the current one.
+	tuneGen int
 }
 
 // ScheduleSource says when pools are scrubbed next. *zfs.Reader
@@ -131,8 +134,12 @@ func (p *Pools) Keys() []key.Binding {
 			down, up = keys.As(keys.Down, "next device"), keys.As(keys.Up, "previous device")
 		}
 		bs := []key.Binding{down, up, keys.As(keys.Right, "next tab"), keys.As(keys.Left, "previous tab"), keys.Get(keys.Refresh), keys.As(keys.Back, "back")}
-		if p.detail.tab == tabHistory {
+		switch p.detail.tab {
+		case tabHistory:
 			bs = append([]key.Binding{keys.Get(keys.Internal)}, bs...)
+		case tabTune:
+			bs = append([]key.Binding{keys.As(keys.Select, "evidence"), keys.As(keys.Refresh, "measure again"), keys.Get(keys.MeasureFiles)}, bs[:len(bs)-2]...)
+			bs = append(bs, keys.As(keys.Back, "back"))
 		}
 		return bs
 	}
@@ -141,6 +148,20 @@ func (p *Pools) Keys() []key.Binding {
 
 // Nested implements ui.Screen: esc and q leave the detail for the list.
 func (p *Pools) Nested() bool { return p.focus }
+
+// Activate restarts measuring when the view returns to the Tune tab.
+func (p *Pools) Activate() tea.Cmd {
+	if p.detail != nil && p.detail.tab == tabTune {
+		return p.startTune()
+	}
+	return nil
+}
+
+// Deactivate stops measuring while another view is shown.
+func (p *Pools) Deactivate() tea.Cmd {
+	p.stopTune()
+	return nil
+}
 
 // Init starts the first load.
 func (p *Pools) Init() tea.Cmd {
@@ -190,6 +211,9 @@ func (p *Pools) schedule(pool string) (s zfs.ScrubSchedule, scheduled, known boo
 // Update implements ui.Screen.
 func (p *Pools) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 	if cmd, handled := p.reads(msg); handled {
+		return p, cmd
+	}
+	if cmd, handled := p.updateTune(msg); handled {
 		return p, cmd
 	}
 	if cmd, ok := p.mouse(msg); ok {
@@ -328,6 +352,9 @@ func (p *Pools) Selection() (ui.Target, bool) {
 	}
 	o := p.poll.data[p.cursor]
 	pool := o.Pool.Name.String()
+	if p.focus && p.detail != nil && p.detail.tab == tabTune && p.detail.tune != nil {
+		return ui.Target{Backend: "zfs", Kind: "tune", Names: append([]string{pool}, p.tuneChanges()...)}, true
+	}
 	if p.focus && p.detail != nil && p.detail.tab == tabTopology {
 		if leaves := leafNames(o.Status); len(leaves) > 0 {
 			dev := leaves[min(p.detail.device, len(leaves)-1)]

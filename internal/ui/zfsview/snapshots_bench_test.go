@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nuclear-gumbo/fstui/internal/termtext"
 	"github.com/nuclear-gumbo/fstui/internal/ui"
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
 )
@@ -15,11 +14,9 @@ import (
 // benchSnapshots draws Snapshots with 100,000 snapshots; cold drops the
 // kept sort first, as every draw did before 0.6.0.
 func benchSnapshots(b *testing.B, cold bool) {
-	data := make([]zfs.Dataset, 100000)
+	data := make([]zfs.SnapshotRow, 100000)
 	for i := range data {
-		data[i] = zfs.Dataset{Name: fmt.Sprintf("tank/home/u%d@auto-%06d", i%50, i), Type: zfs.Snapshot, CreateTXG: uint64(100000 - i), Properties: zfs.Properties{
-			"used": {Number: uint64(i), IsNumber: true, Text: termtext.New("1")}, "referenced": {Number: 5, IsNumber: true}, "creation": {Number: 1794800000, IsNumber: true},
-		}}
+		data[i] = zfs.SnapshotRow{Name: fmt.Sprintf("tank/home/u%d@auto-%06d", i%50, i), CreateTXG: uint64(100000 - i), Used: uint64(i), Referenced: 5, Creation: 1794800000}
 	}
 	v := NewSnapshots(nil, time.Now)
 	v.poll.data, v.poll.loaded = data, time.Now()

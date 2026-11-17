@@ -23,6 +23,7 @@ Select something and press `a`. The menu lists the changes possible now, and bel
 | No pool (Pools, 1, when none is imported) | create a new pool; import a pool |
 | Device (Pools, `enter`, Topology, `j` `k` to a device) | bring online, take offline, clear its errors; attach a device (a mirror, or one more device in a raidz vdev); replace it; detach it from its mirror; remove it from the pool with its vdev |
 | ARC (5) | set its limits now, or keep them after reboot in `/etc/modprobe.d/zfs.conf` |
+| Tune tab (Pools, `enter`, Tune) | what the findings point to: a dataset's `recordsize` or `compression=lz4`; `zfs_prefetch_disable` or `zfs_arc_meta_balance` raised until reboot (never lowered); the ARC limits |
 
 [keys.md](keys.md#change-menus) lists the menu letters.
 
@@ -89,7 +90,7 @@ Every step is recorded before it runs and after, as one JSON line, in `/var/log/
 
 ## Without root
 
-Datasets whose owner delegated permissions with `zfs allow` can be changed by other users. The menu offers only what was delegated and says what is missing for the rest; the Permissions tab of a dataset shows who may do what. Pool, device and ARC changes need root. Linux lets only root mount, so mount and unmount need root, and a filesystem another user creates or clones stays unmounted.
+Datasets whose owner delegated permissions with `zfs allow` can be changed by other users. The menu offers only what was delegated and says what is missing for the rest; the Permissions tab of a dataset shows who may do what. Pool, device, ARC and module parameter changes need root. Linux lets only root mount, so mount and unmount need root, and a filesystem another user creates or clones stays unmounted.
 
 ## Builds without changes
 

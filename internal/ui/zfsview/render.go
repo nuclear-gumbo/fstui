@@ -261,7 +261,7 @@ func scrubText(o zfs.Overview, now func() time.Time) string {
 
 // scanParts names the pool's last scan, which zpool status keeps whether
 // it was a scrub or a resilver, and says where it stands: "36%", "paused
-// 36%", "canceled", "3h ago", or "never" with the word "scrub".
+// 36%", "cancelled", "3h ago", or "never" with the word "scrub".
 func scanParts(o zfs.Overview, now func() time.Time) (word, state string) {
 	sc := o.Status.Scan
 	if sc == nil {
@@ -278,7 +278,7 @@ func scanParts(o zfs.Overview, now func() time.Time) (word, state string) {
 	case sc.State == "SCANNING":
 		return word, fmt.Sprintf("%d%%", pct)
 	case sc.State == "CANCELED":
-		return word, "canceled"
+		return word, "cancelled"
 	}
 	state = ui.Age(now().Sub(sc.End)) + " ago"
 	if sc.Errors > 0 {

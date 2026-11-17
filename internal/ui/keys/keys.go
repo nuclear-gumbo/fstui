@@ -54,6 +54,8 @@ const (
 	Diff Action = "diff"
 	// SendSize estimates a zfs send of the marked snapshots (read only).
 	SendSize Action = "send_size"
+	// MeasureFiles measures compression per file in the Tune tab.
+	MeasureFiles Action = "measure_files"
 	// Mark and ClearMarks mark items for one change to several.
 	Mark       Action = "mark"
 	ClearMarks Action = "clear_marks"
@@ -96,13 +98,14 @@ var defaults = map[Action]def{
 	Confirm:  {[]string{"y"}, "confirm"},
 	Cancel:   {[]string{"n"}, "cancel"},
 	// W, not w: w writes the reviewed file in Settings.
-	Actions:     {[]string{"a"}, "changes for the selection"},
-	WriteMode:   {[]string{"W"}, "write mode on/off"},
-	NewSnapshot: {[]string{"n"}, "new snapshot"},
-	Diff:        {[]string{"="}, "what changed since this snapshot"},
-	SendSize:    {[]string{"e"}, "estimate the send size"},
-	Mark:        {[]string{"m"}, "mark for a change to several"},
-	ClearMarks:  {[]string{"M"}, "clear the marks"},
+	Actions:      {[]string{"a"}, "changes for the selection"},
+	WriteMode:    {[]string{"W"}, "write mode on/off"},
+	NewSnapshot:  {[]string{"n"}, "new snapshot"},
+	Diff:         {[]string{"="}, "what changed since this snapshot"},
+	SendSize:     {[]string{"e"}, "estimate the send size"},
+	MeasureFiles: {[]string{"c"}, "measure compression per file"},
+	Mark:         {[]string{"m"}, "mark for a change to several"},
+	ClearMarks:   {[]string{"M"}, "clear the marks"},
 
 	// p is Settings' save, and a key means the same everywhere, so the
 	// pool filter is on P.

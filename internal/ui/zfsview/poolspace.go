@@ -28,7 +28,7 @@ func newSpacePoller(src Source, pool name.Pool, o PoolsOptions) poller[poolSpace
 			l, err := src.PoolDatasets(ctx, pool)
 			return poolSpace{pool: p, list: l}, err
 		},
-		interval: o.DatasetInterval, now: o.Now,
+		interval: o.DatasetInterval, now: o.Now, slow: true,
 		accept: func(s poolSpace) bool { return s.pool == p },
 	}
 }
@@ -106,21 +106,6 @@ func legend(disp ui.Display) string {
 // fills the gauge; each part has its own glyph, so the split reads
 // without colour.
 func heldGauge(disp ui.Display, d zfs.Dataset, largest uint64) string {
-	var b strings.Builder
-	cells := 0
-	for _, p := range heldParts {
-		n, _ := d.Properties.Number(p.prop)
-		w := 0
-		if largest > 0 {
-			w = int((n*uint64(ui.BarWidth) + largest/2) / largest) //nolint:gosec // at most BarWidth
-		}
-		w = min(w, ui.BarWidth-cells)
-		cells += w
-		g := p.glyph
-		if disp.ASCII {
-			g = p.ascii
-		}
-		b.WriteString(disp.Palette.Style(p.tok).Render(strings.Repeat(g, w)))
-	}
-	return b.String() + strings.Repeat(" ", ui.BarWidth-cells)
+	g, cells := partsGauge(disp, d, heldParts, largest)
+	return g + strings.Repeat(" ", ui.BarWidth-cells)
 }

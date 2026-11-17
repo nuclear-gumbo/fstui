@@ -25,7 +25,8 @@
 | Key | View | Action |
 |---|---|---|
 | `x` | Pools | Hide a warning for the session |
-| `i` | Pools, History tab | Show internal events |
+| `i` | Pools, History tab | Show or hide internal events |
+| `enter`, `r`, `c` | Pools, Tune tab | Show the evidence; measure again; measure compression per file |
 | `s`, `S` | Snapshots, a dataset's Snapshots tab | Sort by the next column; reverse the order |
 | `m`, `M` | Datasets, Snapshots | Mark for one change to several; clear the marks |
 | `=` | Snapshots | What changed since the snapshot (`zfs diff`) |
@@ -142,6 +143,10 @@ With several snapshots marked:
 | `h` | Hold all |
 | `u` | Release a hold on all |
 | `d` | Destroy all |
+
+### Tune tab
+
+The changes the findings point to, when there are any: `r` sets a dataset's `recordsize`, `c` its `compression`, `p` a module parameter (`zfs_prefetch_disable`, `zfs_arc_meta_balance`) until the next reboot, `s` the ARC limits.
 
 ### ARC
 

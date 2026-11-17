@@ -186,7 +186,7 @@ func (v *Plans) Render(d ui.Display, width, height int) string {
 	muted := d.Palette.Style(theme.Muted)
 	if len(v.list) == 0 {
 		lines := []string{"No saved plans.", ""}
-		lines = append(lines, wrapStyled(muted, "ctrl+s in a change's confirmation window saves the change here, to make later with enter.", width)...)
+		lines = append(lines, wrapStyled(muted, "ctrl+s in a confirmation window saves the change here; enter here makes it.", width)...)
 		if v.err != nil {
 			lines = append(lines, d.Palette.Style(theme.Error).Render(fitW(v.err.Error(), width)))
 		}

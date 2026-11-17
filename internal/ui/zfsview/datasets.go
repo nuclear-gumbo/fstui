@@ -23,7 +23,7 @@ import (
 type DatasetSource interface {
 	Datasets(ctx context.Context) ([]zfs.Dataset, error)
 	DatasetProperties(ctx context.Context, ds name.Dataset) (zfs.Dataset, error)
-	DatasetSnapshots(ctx context.Context, ds name.Dataset) ([]zfs.Dataset, error)
+	DatasetSnapshots(ctx context.Context, ds name.Dataset) ([]zfs.SnapshotRow, error)
 	Allow(ctx context.Context, ds name.Dataset) ([]zfs.Delegation, error)
 }
 
@@ -52,7 +52,7 @@ type Datasets struct {
 func NewDatasets(src DatasetSource, o DatasetsOptions) *Datasets {
 	return &Datasets{
 		src: src, opts: o, collapsed: map[string]bool{}, marked: marks{},
-		poll: poller[[]zfs.Dataset]{read: src.Datasets, interval: o.Interval, now: o.Now},
+		poll: poller[[]zfs.Dataset]{read: src.Datasets, interval: o.Interval, now: o.Now, slow: true},
 	}
 }
 

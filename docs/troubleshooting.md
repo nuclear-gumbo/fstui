@@ -24,9 +24,13 @@ fstui was started without a terminal, for example from a pipe or a service. `fst
 
 Make the window larger; the screen comes back as soon as it fits. `q` quits.
 
-## Pool history is empty
+## `History needs root` and `ZFS events need root`
 
-`zpool history` needs root. Start fstui with `sudo` to see it.
+`zpool history` and `zpool events` refuse other users. Start fstui with `sudo` to see them.
+
+## `context deadline exceeded after 30s`
+
+A read did not finish in time: 30 seconds for most reads, 10 minutes for listings of datasets and snapshots, which take `zfs` about half a second per thousand snapshots. A pool whose devices stopped answering also hangs `zfs` and `zpool`; `zpool status` in a shell shows whether it is suspended. fstui keeps the last data it read and tries again; `r` tries now.
 
 ## A change is listed under "Unavailable"
 

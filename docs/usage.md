@@ -2,7 +2,7 @@
 
 fstui has ten views, numbered 0 to 9; the number keys switch between them. Lists move with `j` and `k` (or the arrows), `enter` opens the selected item's detail, and `h` and `l` switch the detail's tabs. `?` lists every key of the current view; [keys.md](keys.md) has them all.
 
-Data is read again in the background (pools every 5 seconds, datasets every 15, the ARC every second while shown; see [configuration.md](configuration.md)). The status bar shows the host, the mode, whether fstui runs as root, and how old the data is. `r` reads now. `b` switches every size between IEC units (`1.5 GiB`) and exact bytes.
+Data is read again in the background (pools every 5 seconds, datasets every 15, the ARC every second while shown; see [configuration.md](configuration.md)). After a slow read, fstui waits at least four times as long as it took before the next. The status bar shows the host, the mode, whether fstui runs as root, and how old the data is. `r` reads now. `b` switches every size between IEC units (`1.5 GiB`) and exact bytes.
 
 ## 0 Dashboard
 
@@ -12,13 +12,15 @@ One screen for leaving open: the pools with health, capacity, errors and warning
 
 Every imported pool with health, capacity, fragmentation and device errors. Below the list, warnings: a degraded pool, a pool over the capacity or fragmentation threshold, an overdue scrub, a checkpoint held for long. `x` hides a warning for the session.
 
-The detail has five tabs:
+The detail has six tabs:
 
 - **Topology**: the device tree with states and error counts; ZFS's explanation of a problem and what to do; scrub, resilver, expansion and removal progress; the checkpoint; which systemd timer or cron job scrubs the pool. `enter` moves into the tree to select a device, whose changes `a` then offers.
 - **Capacity**: which datasets hold the space.
 - **Properties**: every pool property with its source and a line of help.
 - **Features**: feature flags and their states.
-- **History**: `zpool history`; `i` adds internal events. Reading it needs root.
+- **History**: `zpool history`, newest first; `i` adds internal events. The most recent 10,000 commands and 10,000 internal events are kept. Reading it needs root.
+- **Tune**: whether the pool's settings fit how it is used, measured while the tab is open from `/proc/spl/kstat/zfs` and `zpool iostat`; no root needed. Five questions: write amplification, record size against request size, where memory would buy speed, what limits the pool, how well data compresses. Each gets a verdict (fits, worth a look, mismatch, not enough data yet), the figure behind it and what would change it. Write amplification and what limits the pool need a minute of activity.
+  `r` measures again, `enter` shows the evidence, `a` offers the changes the findings point to. `c` reads every file's size and allocation for the compression question: metadata only, at most 200,000 files or 60 seconds.
 
 ## 2 Datasets
 
@@ -31,7 +33,7 @@ Filesystems and volumes as a tree; `h` and `l` collapse and expand. The detail's
 
 ## 3 Snapshots
 
-Every snapshot of every pool, with creation time, used and referenced space, holds and clones. The list is read once when the view opens; `r` reads it again. `s` and `S` sort.
+Every snapshot of every pool, with creation time, used and referenced space, holds and clones. The list is read once when the view opens, which takes `zfs` about half a second per thousand snapshots; `r` reads it again. `s` and `S` sort.
 
 - `m` marks snapshots for one change to several (hold, release, destroy); `M` clears the marks.
 - `=` shows what changed between the snapshot and now (`zfs diff`).
@@ -63,4 +65,4 @@ The settings in effect, where each comes from (default, `/etc/fstui/config.yaml`
 
 ## Without root
 
-Everything is shown to other users except pool history, which `zpool history` refuses them. Changes need root, or permissions delegated with `zfs allow` for dataset and snapshot changes ([changes.md](changes.md#without-root)).
+Everything is shown to other users except pool history and kernel events, which `zpool history` and `zpool events` refuse them. Changes need root, or permissions delegated with `zfs allow` for dataset and snapshot changes ([changes.md](changes.md#without-root)).

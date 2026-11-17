@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os/exec"
 	"strings"
 	"time"
@@ -219,6 +220,90 @@ func (r *Runner) Read(ctx context.Context, a Argv) (Result, error) {
 	}
 }
 
+// ReadTo runs a command that does not change state, like Read, but hands
+// its output to consume as it arrives instead of keeping it: a listing of
+// many snapshots is parsed while zfs prints it, never held whole. The
+// deadline, the output limit and the errors are Read's. If consume
+// returns an error, the command is stopped and that error returned.
+func (r *Runner) ReadTo(ctx context.Context, a Argv, consume func(io.Reader) error) error {
+	if err := a.Check(); err != nil {
+		return err
+	}
+	path, ok := r.tools.Path(a.Tool)
+	if !ok {
+		return fmt.Errorf("%s: %w", a.Tool, ErrNotResolved)
+	}
+	if _, has := ctx.Deadline(); !has {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, DefaultReadTimeout)
+		defer cancel()
+	}
+	cmdCtx, stop := context.WithCancel(ctx) // stops the command when consume gives up
+	defer stop()
+	stderr := &limitedBuffer{max: maxReadStderr}
+	cmd := exec.CommandContext(cmdCtx, path, a.Args()...) //nolint:gosec // as in Read
+	cmd.Env = env
+	cmd.Dir = "/"
+	cmd.Stderr = stderr
+	cmd.WaitDelay = pipeWaitDelay
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("starting %s: %w", a, err)
+	}
+	start := time.Now()
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("starting %s: %w", a, err)
+	}
+	limited := &limitedReader{r: out, left: maxReadOutput}
+	consumeErr := consume(limited)
+	if consumeErr == nil {
+		if _, err := io.Copy(io.Discard, limited); err != nil { // anything after what consume read
+			consumeErr = fmt.Errorf("reading %s: %w", a, err)
+		}
+	}
+	if consumeErr != nil {
+		stop() // nobody reads the rest
+	}
+	err = cmd.Wait()
+	var exitErr *exec.ExitError
+	switch {
+	case limited.over:
+		return fmt.Errorf("%s: %w (%d MiB)", a, ErrOutputTooLarge, maxReadOutput>>20)
+	case ctx.Err() != nil: // the deadline, or the caller cancelled
+		return fmt.Errorf("%s: %w after %s", a, ctx.Err(), time.Since(start).Round(time.Millisecond))
+	case consumeErr != nil:
+		return consumeErr
+	case errors.As(err, &exitErr):
+		return &CommandError{Argv: a, ExitCode: exitErr.ExitCode(), Stderr: termtext.New(stderr.String())}
+	case err != nil:
+		return fmt.Errorf("running %s: %w", a, err)
+	}
+	return nil
+}
+
+// limitedReader reads at most left bytes, then reports an error and sets
+// over.
+type limitedReader struct {
+	r    io.Reader
+	left int
+	over bool
+}
+
+func (l *limitedReader) Read(p []byte) (int, error) {
+	if l.left <= 0 {
+		var one [1]byte
+		if n, _ := l.r.Read(one[:]); n > 0 {
+			l.over = true
+			return 0, ErrOutputTooLarge
+		}
+		return 0, io.EOF
+	}
+	p = p[:min(len(p), l.left)]
+	n, err := l.r.Read(p)
+	l.left -= n
+	return n, err //nolint:wrapcheck // io.Reader passes errors through
+}
+
 // maxStreamLine bounds one line of a streamed command's output; a longer
 // line ends the stream with an error instead of growing without limit.
 const maxStreamLine = 64 << 10
@@ -233,6 +318,9 @@ const maxStderr = 64 << 10
 // returns nil, or until the command exits. line must not keep its
 // argument, which is reused.
 func (r *Runner) Stream(ctx context.Context, a Argv, line func([]byte)) error {
+	if err := a.Check(); err != nil {
+		return err
+	}
 	path, ok := r.tools.Path(a.Tool)
 	if !ok {
 		return fmt.Errorf("%s: %w", a.Tool, ErrNotResolved)

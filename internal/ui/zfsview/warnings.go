@@ -60,7 +60,7 @@ func (p *Pools) poolWarnings(o zfs.Overview, now time.Time) []warning {
 		ws = append(ws, warning{"capacity:" + name, level, fmt.Sprintf("%s is %d%% full (warning from %d%%)", name, pct, th.CapacityWarn), true})
 	}
 	if frag, ok := o.Pool.Properties.Number("fragmentation"); ok && int(frag) >= th.FragmentationWarn { //nolint:gosec // a percentage
-		ws = append(ws, warning{"fragmentation:" + name, "over", fmt.Sprintf("%s free space is %d%% fragmented; writes may slow down", name, frag), true})
+		ws = append(ws, warning{"fragmentation:" + name, "over", fmt.Sprintf("free space in %s is %d%% fragmented; writes may slow down", name, frag), true})
 	}
 	if sc := o.Status.Scan; sc != nil && sc.Function == "SCRUB" && !sc.End.IsZero() {
 		if age := now.Sub(sc.End); age > time.Duration(th.ScrubOverdueDays)*24*time.Hour {

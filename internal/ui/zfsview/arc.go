@@ -147,7 +147,7 @@ func (a *ARC) Render(d ui.Display, width, height int) string {
 	if v, ok := a.hits.last(); ok {
 		now = fmt.Sprintf("%.1f%%", v)
 	}
-	lines := append(head, muted.Render("size, last 5 minutes   ")+size(s.Size)+muted.Render(" of ")+size(s.Max)+muted.Render(" maximum"))
+	lines := append(head, muted.Render("size, last 5 minutes"))
 	lines = append(lines, axisGraph(d, a.sizes.slots(a.poll.loaded, arcWindow, ui.GraphSamples(d, graphW)), "max  ", graphW, rows)...)
 	lines = append(lines, "", muted.Render("hit ratio, last 5 minutes   now ")+now+muted.Render("   since load ")+fmt.Sprintf("%.1f%%", sinceLoad(s)))
 	lines = append(lines, axisGraph(d, a.hits.slots(a.poll.loaded, arcWindow, ui.GraphSamples(d, graphW)), "100% ", graphW, rows)...)

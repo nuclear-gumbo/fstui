@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 )
 
@@ -41,32 +42,49 @@ func decode(data []byte, command string, v any) error {
 	return nil
 }
 
-// decodeEach checks the document like decode, then decodes the members
-// of its object field one at a time and hands each to fn. Nothing holds
-// the whole document decoded at once, so a listing of many thousands of
-// snapshots needs a fraction of the memory decode would.
-func decodeEach[T any](data []byte, command, field string, fn func(T) error) error {
-	if err := checkVersion(data, command); err != nil {
-		return err
-	}
-	dec := json.NewDecoder(bytes.NewReader(data))
+// decodeEachFrom checks the document's output_version, then decodes the
+// members of its object field one at a time, reading rd as the output
+// arrives, and hands each to fn. Nothing holds the whole document, read
+// or decoded, so a listing of many thousands of snapshots needs a
+// fraction of the memory decode would. output_version must come before
+// field, as OpenZFS prints it.
+func decodeEachFrom[T any](rd io.Reader, command, field string, fn func(T) error) error {
+	dec := json.NewDecoder(rd)
 	if err := expectDelim(dec, '{'); err != nil {
 		return fmt.Errorf("parsing %s output: %w", command, err)
 	}
+	checked := false
 	for dec.More() {
 		key, err := dec.Token()
 		if err != nil {
 			return fmt.Errorf("parsing %s output: %w", command, err)
 		}
-		if key != field {
+		switch key {
+		case "output_version":
+			var ov outputVersion
+			if err = dec.Decode(&ov.OutputVersion); err == nil {
+				err = ov.check(command)
+				checked = err == nil
+			}
+			if err != nil {
+				return err
+			}
+			continue
+		case field:
+			if !checked {
+				return fmt.Errorf("parsing %s output: no output_version before %s", command, field)
+			}
+			err = eachMember(dec, fn)
+		default:
 			var skip json.RawMessage
 			err = dec.Decode(&skip)
-		} else {
-			err = eachMember(dec, fn)
 		}
 		if err != nil {
 			return fmt.Errorf("parsing %s output: %w", command, err)
 		}
+	}
+	if !checked {
+		return fmt.Errorf("parsing %s output: no output_version", command)
 	}
 	return nil
 }
@@ -109,6 +127,11 @@ func checkVersion(data []byte, command string) error {
 	if err := json.Unmarshal(data, &ov); err != nil {
 		return fmt.Errorf("parsing %s output: %w", command, err)
 	}
+	return ov.check(command)
+}
+
+// check is checkVersion for an output_version already decoded.
+func (ov outputVersion) check(command string) error {
 	got := ov.OutputVersion
 	if got.Command != command {
 		return fmt.Errorf("parsing %s output: document is from %q", command, got.Command)

@@ -32,7 +32,7 @@ type Sender interface {
 // It only reads: nothing is sent.
 type sendWindow struct {
 	src      Sender
-	marked   []zfs.Dataset
+	marked   []zfs.SnapshotRow
 	opts     zfs.SendOptions
 	capacity uint64
 	typing   *string // the capacity being typed
@@ -57,7 +57,7 @@ type sendMsg struct {
 }
 
 // openSend opens the window for the marked snapshots, then estimates.
-func openSend(src Sender, marked []zfs.Dataset) tea.Cmd {
+func openSend(src Sender, marked []zfs.SnapshotRow) tea.Cmd {
 	w := &sendWindow{src: src, marked: marked}
 	open := func() tea.Msg { return ui.OpenModalMsg{Modal: w} }
 	return tea.Sequence(open, w.estimate())

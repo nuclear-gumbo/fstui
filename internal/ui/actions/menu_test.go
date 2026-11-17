@@ -16,6 +16,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/nuclear-gumbo/fstui/internal/mutate"
+	"github.com/nuclear-gumbo/fstui/internal/tune"
 	"github.com/nuclear-gumbo/fstui/internal/ui"
 	"github.com/nuclear-gumbo/fstui/internal/zfs/plan"
 )
@@ -187,5 +188,26 @@ func TestKeysDocListsEveryOffer(t *testing.T) {
 				t.Errorf("docs/keys.md lacks %q (%s)", row, tg.Kind)
 			}
 		}
+	}
+}
+
+// The Tune tab's selection carries the changes its findings point to.
+func TestTuneOffers(t *testing.T) {
+	names := []string{
+		"tank",
+		tune.Change{Kind: "property", Dataset: "tank/db", Name: "recordsize", Value: "16K"}.Encode(),
+		tune.Change{Kind: "property", Dataset: "tank/media", Name: "compression", Value: "lz4"}.Encode(),
+		tune.Change{Kind: "param", Name: "zfs_prefetch_disable", Value: "1"}.Encode(),
+		tune.Change{Kind: "arc"}.Encode(),
+		"not a change",
+	}
+	title, offers := ZFSOffers(plan.Builder{}, time.Now)(ui.Target{Backend: "zfs", Kind: "tune", Names: names})
+	var got []string
+	for _, o := range offers {
+		got = append(got, o.Key+" "+o.Name)
+	}
+	want := "r Set recordsize=16K on tank/db|c Set compression=lz4 on tank/media|p Set zfs_prefetch_disable to 1 until reboot|s Set ARC limits now"
+	if strings.Join(got, "|") != want || !strings.Contains(title, "tank") {
+		t.Errorf("%q: %q", title, got)
 	}
 }

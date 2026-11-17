@@ -12,7 +12,7 @@ import (
 	"github.com/nuclear-gumbo/fstui/internal/execute"
 )
 
-// testdata/linux/lsblk.json: the dev VM, with a spare disk (sda), the
+// testdata/linux/lsblk.json: a test VM with a spare disk (sda), the
 // system disk (sdb: / on sdb1, swap on sdb5, an extended partition sdb2)
 // and a CD-ROM.
 func recorded(t *testing.T) []Device {

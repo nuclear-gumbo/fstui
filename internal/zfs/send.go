@@ -4,6 +4,7 @@ package zfs
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"fmt"
 	"slices"
@@ -134,8 +135,8 @@ func (r *Reader) EstimateSend(ctx context.Context, s SendStep, o SendOptions) (S
 // incremental streams to each later one in creation order, or with
 // Intermediates one stream from the oldest to the newest that carries
 // every snapshot between them.
-func PlanSends(marked []Dataset, o SendOptions) []SendStep {
-	by := map[string][]Dataset{}
+func PlanSends(marked []SnapshotRow, o SendOptions) []SendStep {
+	by := map[string][]SnapshotRow{}
 	var datasets []string
 	for _, d := range marked {
 		ds, _, ok := strings.Cut(d.Name, "@")
@@ -151,7 +152,7 @@ func PlanSends(marked []Dataset, o SendOptions) []SendStep {
 	var steps []SendStep
 	for _, ds := range datasets {
 		snaps := by[ds]
-		sortByTXG(snaps)
+		slices.SortStableFunc(snaps, func(a, b SnapshotRow) int { return cmp.Compare(a.CreateTXG, b.CreateTXG) })
 		steps = append(steps, SendStep{To: snaps[0].Name})
 		switch {
 		case len(snaps) == 1:

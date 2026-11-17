@@ -5,6 +5,7 @@
 package demo
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/fs"
@@ -41,8 +42,19 @@ const slowDevice = "/dev/disk/by-id/ata-DEMO_TANK_B"
 // Stream implements zfs.Commands: zpool iostat prints made-up activity
 // for the recorded pools once a second until ctx is cancelled.
 func (c *Commands) Stream(ctx context.Context, a execute.Argv, line func([]byte)) error {
-	if a.Tool != execute.Zpool || len(a.Options) == 0 || a.Options[0] != "iostat" {
-		return fmt.Errorf("%w: %s", errNoRecording, a)
+	switch {
+	case a.String() == zfs.IOStatArgv.String():
+	case a.Tool == execute.Zpool && len(a.Options) > 0 && a.Options[0] == "iostat":
+		return fmt.Errorf("%s: %w", a, errNoKstats) // tune mode's reports
+	default: // a recorded command, such as zpool history, streamed as it was recorded
+		res, err := c.Read(ctx, a)
+		if err != nil {
+			return err
+		}
+		for _, l := range bytes.Split(bytes.TrimSuffix(res.Stdout, []byte("\n")), []byte("\n")) {
+			line(l)
+		}
+		return nil
 	}
 	m, err := c.ioModel()
 	if err != nil {
@@ -63,6 +75,7 @@ func (c *Commands) Stream(ctx context.Context, a execute.Argv, line func([]byte)
 }
 
 type ioModel struct {
+	mu    sync.Mutex // streams of two views can share the model
 	pools []zfs.PoolStatus
 	rng   *rand.Rand
 	level map[string]float64 // each pool's current share of its load, a random walk
@@ -124,6 +137,8 @@ const dashes = "------------------------------------------------  ---  ---  --- 
 
 // interval prints one second of activity for every pool.
 func (m *ioModel) interval() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	out := []string{
 		strings.Repeat(" ", 40) + "capacity     operations     bandwidth     total_wait",
 		"pool                                             alloc  free  read  write  read  write  read  write",

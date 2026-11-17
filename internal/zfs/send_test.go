@@ -61,8 +61,8 @@ func TestSendStepArgv(t *testing.T) {
 }
 
 func TestPlanSends(t *testing.T) {
-	snap := func(n string, txg uint64) Dataset { return Dataset{Name: n, CreateTXG: txg} }
-	marked := []Dataset{snap("tank/b@x", 5), snap("tank/a@3", 30), snap("tank/a@1", 10), snap("tank/a@2", 20)}
+	snap := func(n string, txg uint64) SnapshotRow { return SnapshotRow{Name: n, CreateTXG: txg} }
+	marked := []SnapshotRow{snap("tank/b@x", 5), snap("tank/a@3", 30), snap("tank/a@1", 10), snap("tank/a@2", 20)}
 	str := func(steps []SendStep) string {
 		var s []string
 		for _, st := range steps {

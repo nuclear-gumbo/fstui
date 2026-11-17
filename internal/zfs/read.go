@@ -3,8 +3,10 @@
 package zfs
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/nuclear-gumbo/fstui/internal/execute"
@@ -31,6 +33,9 @@ type Reader struct {
 	// ReadFile, if set, reads module parameters, ARC statistics and
 	// /etc/modprobe.d/zfs.conf instead of the host's files (the demo).
 	ReadFile fileReader
+	// ReadDir, if set, lists a directory's entries instead of the host's
+	// (the demo); tune mode lists a pool's kstat directory with it.
+	ReadDir func(string) ([]string, error)
 }
 
 // Commands runs zfs and zpool for a Reader. *execute.Runner implements
@@ -51,6 +56,24 @@ var (
 	_ storage.VolumeReader     = (*Reader)(nil)
 	_ storage.SnapshotReader   = (*Reader)(nil)
 )
+
+// readerTo is a Commands that can hand output over as it arrives
+// (*execute.Runner); others are read whole.
+type readerTo interface {
+	ReadTo(ctx context.Context, a execute.Argv, consume func(io.Reader) error) error
+}
+
+// readTo runs a and hands its output to consume, streamed when run can.
+func (r *Reader) readTo(ctx context.Context, a execute.Argv, consume func(io.Reader) error) error {
+	if rt, ok := r.run.(readerTo); ok {
+		return rt.ReadTo(ctx, a, consume) //nolint:wrapcheck // execute names the command
+	}
+	out, err := r.read(ctx, a)
+	if err != nil {
+		return err
+	}
+	return consume(bytes.NewReader(out))
+}
 
 func (r *Reader) read(ctx context.Context, a execute.Argv) ([]byte, error) {
 	res, err := r.run.Read(ctx, a)
@@ -156,12 +179,7 @@ func (r *Reader) listPool(ctx context.Context, pool storage.Pool, typ, columns s
 }
 
 func (r *Reader) list(ctx context.Context, operand, typ, columns string, depth ...string) ([]Dataset, error) {
-	opts := append([]string{"list", "-j", "--json-int", "-t", typ, "-o", columns}, depth...)
-	out, err := r.read(ctx, execute.Argv{Tool: execute.ZFS, Options: opts, Operands: []string{operand}})
-	if err != nil {
-		return nil, err
-	}
-	return ParseDatasetList(out)
+	return r.listDatasets(ctx, append([]string{"-t", typ, "-o", columns}, depth...), []string{operand})
 }
 
 // numbers copies numeric properties into the given fields. A missing or
@@ -241,7 +259,7 @@ func neutralDevice(v Vdev, role storage.Role) storage.Device {
 func neutralScan(s Scan) (storage.Scan, error) {
 	sc := storage.Scan{
 		Word: s.Function, Start: s.Start, End: s.End,
-		Total: s.ToExamine, Done: s.Issued, Repaired: s.Processed, Errors: s.Errors,
+		Total: s.ToExamine, Done: s.Issued, Errors: s.Errors,
 	}
 	switch {
 	case s.State == "SCANNING" && s.Paused:

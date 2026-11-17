@@ -14,7 +14,12 @@ import (
 // pool it would create, without creating it. operands are the pool name
 // and the vdev specification.
 func (r *Reader) CreateDryRun(ctx context.Context, opts, operands []string) (termtext.Text, error) {
-	out, err := r.read(ctx, execute.Argv{Tool: execute.Zpool, Options: append([]string{"create", "-n"}, opts...), Operands: operands})
+	return r.dryRun(ctx, "create", opts, operands)
+}
+
+// dryRun runs zpool verb -n and returns what it prints.
+func (r *Reader) dryRun(ctx context.Context, verb string, opts, operands []string) (termtext.Text, error) {
+	out, err := r.read(ctx, execute.Argv{Tool: execute.Zpool, Options: append([]string{verb, "-n"}, opts...), Operands: operands})
 	if err != nil {
 		return termtext.Text{}, err
 	}
@@ -57,20 +62,12 @@ func (r *Reader) PoolDevices(ctx context.Context) (map[string][]string, error) {
 // AddDryRun runs zpool add -n: it checks the new vdevs and prints the
 // pool's configuration with them, changing nothing.
 func (r *Reader) AddDryRun(ctx context.Context, opts, operands []string) (termtext.Text, error) {
-	out, err := r.read(ctx, execute.Argv{Tool: execute.Zpool, Options: append([]string{"add", "-n"}, opts...), Operands: operands})
-	if err != nil {
-		return termtext.Text{}, err
-	}
-	return termtext.New(string(out)), nil
+	return r.dryRun(ctx, "add", opts, operands)
 }
 
 // RemoveDryRun runs zpool remove -n: it prints the memory the removed
 // vdev's mapping would use, changing nothing. It does not check every
 // rule a removal has (docs: testdata/zfs/2.3.9/README.md, remove/).
 func (r *Reader) RemoveDryRun(ctx context.Context, pool, vdev string) (termtext.Text, error) {
-	out, err := r.read(ctx, execute.Argv{Tool: execute.Zpool, Options: []string{"remove", "-n"}, Operands: []string{pool, vdev}})
-	if err != nil {
-		return termtext.Text{}, err
-	}
-	return termtext.New(string(out)), nil
+	return r.dryRun(ctx, "remove", nil, []string{pool, vdev})
 }

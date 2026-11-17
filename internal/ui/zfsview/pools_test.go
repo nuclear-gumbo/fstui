@@ -63,7 +63,7 @@ func golden(t *testing.T, scenario string) zfs.Overview {
 type fakeSource struct {
 	pools    []zfs.Overview
 	props    map[name.Pool]zfs.Pool
-	history  []zfs.HistoryEntry
+	history  *zfs.History
 	datasets []zfs.Dataset
 	err      error
 	calls    int
@@ -74,11 +74,11 @@ func (f *fakeSource) Overviews(context.Context) ([]zfs.Overview, error) {
 	return f.pools, f.err
 }
 
-func (f *fakeSource) PoolHistory(_ context.Context, pool name.Pool) ([]zfs.HistoryEntry, error) {
+func (f *fakeSource) PoolHistory(_ context.Context, pool name.Pool) (zfs.History, error) {
 	if f.history == nil {
-		return nil, errors.New("cannot get history for '" + pool.String() + "': permission denied")
+		return zfs.History{}, errors.New("cannot get history for '" + pool.String() + "': permission denied")
 	}
-	return f.history, nil
+	return *f.history, nil
 }
 
 func (f *fakeSource) PoolDatasets(_ context.Context, pool name.Pool) ([]zfs.Dataset, error) {

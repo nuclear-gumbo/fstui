@@ -75,8 +75,6 @@ type Preview struct {
 	// Outside is set when a destroy reaches objects outside the selected
 	// hierarchy (escalates to High).
 	Outside bool
-	// HiddenBySelection counts selected items the active filter hides.
-	HiddenBySelection int
 	// Output is the native dry run's output, shown as it came.
 	Output termtext.Text
 }

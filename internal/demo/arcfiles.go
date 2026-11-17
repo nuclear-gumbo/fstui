@@ -5,6 +5,7 @@
 package demo
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"strconv"
@@ -127,3 +128,13 @@ func (a *ARC) kstat() []byte {
 	}
 	return []byte(b.String())
 }
+
+// ReadDir answers the reader's directory listings. The demo has no
+// per-pool kstats to replay, so tune mode says it cannot measure; the
+// host's /proc is never listed.
+func (c *Commands) ReadDir(path string) ([]string, error) {
+	return nil, fmt.Errorf("%s: %w", path, errNoKstats)
+}
+
+// errNoKstats is why tune mode cannot measure in the demo.
+var errNoKstats = errors.New("the demo has no kernel statistics to measure")

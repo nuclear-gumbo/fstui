@@ -96,14 +96,13 @@ const (
 // Scan is the current or most recent integrity scan of a pool: a check of
 // every block against its checksum, or a rebuild onto a new device.
 type Scan struct {
-	Word     string // the backend's name for the scan, e.g. "SCRUB", "RESILVER"
-	State    ScanState
-	Start    time.Time
-	End      time.Time // zero until the scan finishes or is cancelled
-	Total    uint64    // bytes to process
-	Done     uint64    // bytes processed so far
-	Repaired uint64    // bytes repaired
-	Errors   uint64    // errors found that could not be repaired
+	Word   string // the backend's name for the scan, e.g. "SCRUB", "RESILVER"
+	State  ScanState
+	Start  time.Time
+	End    time.Time // zero until the scan finishes or is cancelled
+	Total  uint64    // bytes to process
+	Done   uint64    // bytes processed so far
+	Errors uint64    // errors found that could not be repaired
 }
 
 // PoolStatus is the detailed state of one pool.

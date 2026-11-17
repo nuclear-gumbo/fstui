@@ -23,7 +23,7 @@ import (
 // none of it.
 
 func registerWrite(r *registry.Registry) {
-	r.Add(registry.Module{Name: "write", OmitTag: "fstui_nowrite", Kind: registry.Feature})
+	r.Add(registry.Module{Name: "write", Kind: registry.Feature})
 }
 
 const writeUsage = `

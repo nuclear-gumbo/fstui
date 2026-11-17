@@ -4,45 +4,79 @@ All notable changes to fstui are listed here. The format follows [Keep a Changel
 
 ## [Unreleased]
 
-## [0.6.1] - 2026-11-16
+## [0.7.1] - 2026-11-16
 
-Fixes and documentation. On GitHub this is the first release with the changes of 0.6.0 (pools and devices, the send size estimate), which was published only on the development forge; they are listed under 0.6.0 below. Tested with OpenZFS 2.3.9 on Debian 13: unit tests on recorded output, and integration tests on pools built from sparse files and on a whole disk.
+Memory and large systems. Measured with 331 datasets and 66,200 snapshots on OpenZFS 2.3.9.
 
 ### Changed
 
-- The README is a short overview. The manual is in `docs/`: installation, the views, every key and change menu letter, changes and how they are confirmed, configuration, and troubleshooting by the messages fstui prints.
+- Peak memory across all views: 248 MiB → 59 MiB. Listings are parsed while `zfs` prints them; a snapshot row uses an eighth of the memory.
+- History tab keeps the newest 10,000 commands and 10,000 internal events. ZFS logs an internal event for every snapshot, so an old pool's history runs to millions of lines.
+- After a slow read, the next waits at least four times as long, so `zfs` is busy at most a fifth of the time.
+- View bar at 80 columns: `dash`, `data`, `snaps`, `vols` instead of names cut to four letters.
+- Dashboard on short terminals: the health panel gets up to two fifths of the height.
+- Tune: shorter findings; module parameters are only raised, never lowered.
 
 ### Fixed
 
-- `a` in a view without changes (I/O, Events, the dashboard) opened a seven-line message saying fstui cannot change pools or disks, which has been wrong since 0.6.0. It now names the views that have changes, in one sentence.
-- The empty Plans view said changes are made only in Datasets, Snapshots and Volumes. It now says how a change is saved, in one line.
+- Snapshots view never loaded with tens of thousands of snapshots: `zfs list` ran past the 30 s limit. Listings now get 10 minutes.
+- History tab re-rendered every entry on each key press; a very long history could fail at the 256 MiB output limit.
+- Switching pools with the Tune tab open could mix the first pool's measurements into the second's.
+- Volumes: device path cut from the left (`…/tank/vol`), not the right; block size and allocation columns fit their values.
+- Docs: kernel events need root, like pool history.
 
-## [0.6.0] - 2026-11-16
-
-Pools and their devices: create a pool, add devices, attach, replace, detach and remove them, widen a raidz vdev, take and use checkpoints, import, export and upgrade; and the size of a `zfs send` before running it.
+## [0.7.0] - 2026-11-16
 
 ### Added
 
-- **New pools**: Pools offers "Create a new pool" (`a`, then `N`), also when no pool is imported. It lists the disks and partitions from lsblk with their stable `/dev/disk/by-id` names, sizes and models, and lists the ones that cannot be used with the reason (mounted, swap, held by device-mapper, md or LVM, in a pool, read-only, smaller than 64 MiB, a disk with partitions). `space` sets each device's role (data, log, cache, special, spare); layouts are stripe, mirror and raidz1 to raidz3; options are ashift, compression, autotrim and the mountpoint. A device holding something (an old pool's label, a filesystem) is used only with "overwrite" switched on, and is then listed as destroyed. The preview shows ZFS's own dry run (`zpool create -n`) and the usable capacity; the pool name is typed to confirm, and the devices are read again just before creating it. Needs root and `lsblk`.
-- **Adding devices**: on a pool, "Add devices" (`a`, then `A`) uses the same form: a data vdev of the pool's own layout, log, cache, special and spare devices. A data vdev with other redundancy than the pool's is refused, as is a single special device. "Take a checkpoint first" lets you rewind the pool if the result is wrong. The preview shows `zpool add -n` and says when the new vdev can never be removed (any pool with raidz).
-- **Checkpoints**: on a pool, take a checkpoint (`C`), discard it (`D`), look at the pool as it was at the checkpoint (`L`: read-only, nothing written; export and import it again to return), or rewind to it (`w`). Rewinding lists the filesystems, volumes and snapshots created since the checkpoint, which it removes, and you confirm by typing the pool name. It is refused for a pool that holds the running system's `/`. Taking one is refused unless the pool's `zpool_checkpoint` feature is enabled.
-- **Attach, replace, detach**: on a device in a pool's Topology, attach another device to it (`a`, making or widening a mirror), replace it (`r`), or detach it from its mirror (`d`). The new device is chosen from the same disk list as for a new pool, and a device smaller than the one it mirrors or replaces is refused. Detaching is refused when no other side is online, and asks for the typed name when it leaves the mirror without redundancy. All three are refused while the pool has a checkpoint, as ZFS refuses them.
-- **RAIDZ expansion**: attaching a device to a member of a raidz vdev (`a` in Topology) widens the vdev by one device (OpenZFS 2.3). The preview says that data already written keeps its old ratio of data to parity until rewritten, and that a raidz vdev never gets narrower again, so you confirm by typing the name. Topology and the dashboard show how far an expansion has got.
-- **Removing vdevs**: on a device in Topology, `R` removes it from the pool with its vdev (the whole mirror for a mirror's member), and on a pool `X` cancels a removal that is running. Log, cache and spare devices go without a trace. A data, special or dedup vdev has its data copied to the other vdevs first, which leaves a table of moved blocks in the pool for good, so you confirm it by typing the name. It is refused in a pool with raidz vdevs and when the other vdevs have no room for its data. Topology and the dashboard show the progress.
-- **Import and export**: `x` on a pool exports it, after you type its name; it is refused for the pool holding the running system's `/`. `I` (on Pools, also when no pool is imported) lists the pools that `zpool import` finds, with their state and devices, and imports the one you choose: read-only, without mounting, or under a new name if you like. A pool zpool says was last used by another system is not imported: fstui does not force it.
-- **Upgrade**: `u` on a pool enables the features this system supports and the pool does not have yet, after you type its name. The preview lists the features to be enabled and those the pool's `compatibility` setting keeps disabled; fstui reads the compatibility files for this, because `zpool upgrade`'s own listing ignores them. For a pool that boots the system and has no compatibility setting, it warns that a boot loader may not read the new features.
-- **Send size**: `e` in Snapshots estimates how large a `zfs send` of the marked snapshots, or the selected one, would be: a full stream of the oldest per dataset, then increments, from ZFS's own dry run (`zfs send -n -P`). `c`, `w` and `I` switch compressed, raw and every-snapshot-between streams; `t` sets a capacity such as a tape (`18TB` decimal, `16T` binary) and a gauge shows how full it gets. The commands are shown quoted for a shell; nothing is sent. A dataset whose key is not loaded needs a raw send, and an encrypted dataset sent without raw is flagged as sent decrypted.
+- Tune tab in each pool's detail: measures the pool while shown and answers five questions, each with a verdict, the deciding figure and what would change it. No root needed.
+  - Write amplification, with the cause named: sync writes through the ZIL, read-modify-write, raidz padding.
+  - Record size against request size, per dataset.
+  - Where memory would buy speed: ARC ghost hits, unused prefetch, metadata misses, L2ARC overhead.
+  - What limits the pool: write throttle, slow transaction groups, memory, a slow device, ZFS queues, ZIL stalls.
+  - How well data compresses; `c` reads file metadata to find what does not.
+- `a` in the Tune tab offers the changes a finding points to: `recordsize`, `compression=lz4`, `zfs_prefetch_disable` or `zfs_arc_meta_balance` until reboot, ARC limits.
 
 ### Changed
 
-- Messages name the pool, device, dataset or vdev they are about: "tank has no scrub running", "/dev/sdb is already online", "the key of tank/home is not loaded", instead of "it" or "the pool". A long reason in the change menu wraps instead of being cut off. With no pool imported, Pools says which keys import or create one.
-- Less memory with many snapshots. Measured with 100,000: each snapshot takes 288 bytes instead of 442, reading the list peaks 140 MiB above the start instead of 178, and the Snapshots view no longer copies and sorts the whole list each time it redraws (7.5 ms and 0.3 MB per redraw instead of 76 ms and 6.4 MB).
+- Pool detail has six tabs; `h` from Topology goes to Tune.
+
+## [0.6.1] - 2026-11-16
+
+First GitHub release with the 0.6.0 changes below.
+
+### Changed
+
+- The manual moved to `docs/`: install, views, keys, changes, configuration, troubleshooting. The README is an overview.
 
 ### Fixed
 
-- A vdev named `raidz` or `draid` without a parity digit, or a scan without a function name, no longer stops fstui.
+- `a` in a view without changes showed a seven-line message, wrong since 0.6.0; it now names the views that have changes.
+- The empty Plans view named the wrong views; it now says how to save a change.
 
-- A change that needs a tool fstui did not find at startup (`tee`, `cp`, `chmod`, `mv`) is refused before anything runs, naming the tool, instead of stopping halfway.
+## [0.6.0] - 2026-11-16
+
+### Added
+
+- Create a pool (`a`, `N` in Pools): disks from `lsblk` by `/dev/disk/by-id` name, with the reason any cannot be used; stripe, mirror, raidz1–3; log, cache, special and spare devices; preview from `zpool create -n`. Needs root.
+- Add devices to a pool (`A`), optionally after a checkpoint. Mismatched redundancy and a single special device are refused.
+- Checkpoints: take (`C`), discard (`D`), look read-only (`L`), rewind (`w`). Rewinding discards everything written since the checkpoint and lists what it removes; refused for the pool holding `/`.
+- Device changes in Topology: attach (`a`), replace (`r`), detach (`d`), remove with its vdev (`R`); cancel a removal on the pool (`X`). A smaller device, or detaching the last online side, is refused.
+- RAIDZ expansion: attaching to a raidz member widens the vdev. Data already written keeps its old data-to-parity ratio until rewritten, and the vdev can never be made narrower again. Progress shows in Topology and on the dashboard.
+- Import (`I`): read-only, without mounting, or under a new name. A pool last used by another system is not imported, since forcing it can destroy it. Export (`x`): refused for the pool holding `/`.
+- Upgrade (`u`): lists the features it enables and those the pool's `compatibility` setting keeps off.
+- Send size (`e` in Snapshots): how large a `zfs send` of the marked snapshots would be, from `zfs send -n -P`, as compressed, raw or intermediate streams. `t` sets a capacity, such as a tape, and shows how full it would get. Nothing is sent.
+- Pool-wide changes that remove data or cannot be undone (rewind, export, upgrade, removing a data vdev, RAIDZ expansion) ask for the pool name.
+
+### Changed
+
+- Messages name their subject: "tank has no scrub running", not "it has no scrub running".
+- 100,000 snapshots: 288 bytes each instead of 442; a redraw takes 7.5 ms instead of 76 ms.
+
+### Fixed
+
+- A `raidz` or `draid` vdev without a parity digit, or a scan without a function name, crashed fstui.
+- A change needing `tee`, `cp`, `chmod` or `mv` that fstui did not find stopped halfway; it is now refused before anything runs.
 
 ## [0.5.6] - 2026-11-15
 
@@ -78,7 +112,9 @@ First public release. Earlier versions were not published.
 - A demo container that runs on recorded output without ZFS.
 - `fstui --version` reports the module version for binaries built with `go install`.
 
-[Unreleased]: https://github.com/nuclear-gumbo/fstui/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/nuclear-gumbo/fstui/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/nuclear-gumbo/fstui/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/nuclear-gumbo/fstui/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/nuclear-gumbo/fstui/compare/v0.5.6...v0.6.1
 [0.6.0]: https://github.com/nuclear-gumbo/fstui/compare/v0.5.6...v0.6.1
 [0.5.6]: https://github.com/nuclear-gumbo/fstui/compare/v0.5.5...v0.5.6

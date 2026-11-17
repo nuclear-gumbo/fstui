@@ -4,7 +4,7 @@
 |                                                                                                  |
 |used          24.1 MiB  #########\x1b[2m\x1b[m\x1b[2m+++++++++++++++++\x1b[m\x1b[2m\x1b[m                                                |
 |  data         8.0 MiB  # \x1b[2musedbydataset: freed if the dataset were destroyed\x1b[m                      |
-|  snapshots   14.0 KiB  \x1b[2m=\x1b[m \x1b[2musedbysnapshots: freed only by destroying all its snapshots\x1b[m             |
+|  snapshots   14.0 KiB  \x1b[2m=\x1b[m \x1b[2musedbysnapshots: freed by destroying every snapshot\x1b[m                     |
 |  children    16.0 MiB  \x1b[2m+\x1b[m \x1b[2musedbychildren: held by datasets below it\x1b[m                               |
 |  reservation      0 B  \x1b[2m.\x1b[m \x1b[2musedbyrefreservation: reserved and not yet written\x1b[m                      |
 |                                                                                                  |

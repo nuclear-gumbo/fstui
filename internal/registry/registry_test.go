@@ -9,11 +9,11 @@ func TestHasBackendNeedsABackendNotJustFeatures(t *testing.T) {
 	if r.HasBackend() {
 		t.Fatal("empty registry reports a backend")
 	}
-	r.Add(Module{Name: "write", OmitTag: "fstui_nowrite", Kind: Feature})
+	r.Add(Module{Name: "write", Kind: Feature})
 	if r.HasBackend() {
 		t.Fatal("a feature module alone must not count as a backend")
 	}
-	r.Add(Module{Name: "zfs", OmitTag: "fstui_nozfs", Kind: Backend})
+	r.Add(Module{Name: "zfs", Kind: Backend})
 	if !r.HasBackend() {
 		t.Fatal("registry with zfs reports no backend")
 	}

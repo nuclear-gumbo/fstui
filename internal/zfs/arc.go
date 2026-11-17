@@ -3,8 +3,6 @@
 package zfs
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -57,22 +55,14 @@ func ReadARCStats() (ARCStats, error) {
 	return ParseARCStats(b)
 }
 
-// ParseARCStats parses the kstat format of arcstats: a header line, a
-// "name type data" line, then one statistic per line. Types 3 and 4 are
-// signed and unsigned 64-bit integers; nothing else is used.
+// ParseARCStats parses arcstats (ParseKstat). Types 3 and 4 are signed
+// and unsigned 64-bit integers; nothing else is used.
 func ParseARCStats(b []byte) (ARCStats, error) {
-	vals := map[string]string{}
-	sc := bufio.NewScanner(bytes.NewReader(b))
-	for line := 0; sc.Scan(); line++ {
-		f := strings.Fields(sc.Text())
-		if line < 2 || len(f) != 3 { // kstat header, column names
-			continue
-		}
-		vals[f[0]] = f[2]
-	}
-	if err := sc.Err(); err != nil {
+	k, err := ParseKstat(b)
+	if err != nil {
 		return ARCStats{}, fmt.Errorf("reading ARC statistics: %w", err)
 	}
+	vals := k.raw
 	var s ARCStats
 	required := map[string]*uint64{
 		"size": &s.Size, "c": &s.Target, "c_min": &s.Min, "c_max": &s.Max,

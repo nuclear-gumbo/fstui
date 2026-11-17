@@ -74,6 +74,7 @@ const (
 	KeyUnload
 	KeyChange
 	ARCSet
+	ParamSet
 	ARCPersist
 	PoolCreate
 	PoolAdd
@@ -161,7 +162,9 @@ var table = map[Op]row{
 	KeyChange: {name: "key-change", base: Medium},
 	// Cannot go back to automatic without a reload; the ARC shrinks
 	// only under pressure.
-	ARCSet:     {name: "arc-set", base: Medium},
+	ARCSet: {name: "arc-set", base: Medium},
+	// A module parameter tune mode points at, until the next reboot.
+	ParamSet:   {name: "param-set", base: Medium},
 	ARCPersist: {name: "arc-persist", base: Medium},
 	// The devices' contents are gone, and a wrong device is someone's
 	// data: the pool name is always typed.
