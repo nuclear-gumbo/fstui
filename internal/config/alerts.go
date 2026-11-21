@@ -107,31 +107,31 @@ var BuiltinTemplates = []Template{
 		Text: "{pool} is {value}{detail}", ResolvedText: "{pool} is ONLINE again",
 	},
 	{
-		Name: "device-down", About: "A disk has dropped out of its pool: unplugged, failed, or taken offline. A mirror or RAIDZ keeps working on what is left until the disk is back or replaced.", Category: "Pool health", Desc: "A device is offline, faulted, unavailable or removed", Metric: "devices_down", Op: ">", Value: "0", Severity: "error",
+		Name: "device-down", About: "A disk has dropped out of its pool: unplugged, failed, or taken offline. A mirror or RAIDZ keeps working on what is left until the disk is back or replaced.", Category: "Pool health", Desc: "A device is offline", Metric: "devices_down", Op: ">", Value: "0", Severity: "error",
 		Text: "{pool} has devices that are not online{detail}", ResolvedText: "{pool}: every device is online again",
 	},
 	{
-		Name: "device-errors", About: "A disk returned read, write or checksum errors. One or two can be a loose cable or a bad sector; a count that keeps rising means the disk is failing.", Category: "Pool health", Desc: "Devices report read, write or checksum errors", Metric: "device_errors", Op: ">", Value: "0", Severity: "warning",
+		Name: "device-errors", About: "A disk returned read, write or checksum errors. One or two can be a loose cable or a bad sector; a count that keeps rising means the disk is failing.", Category: "Pool health", Desc: "A device reports errors", Metric: "device_errors", Op: ">", Value: "0", Severity: "warning",
 		Text: "{pool}: devices report {value} read, write or checksum errors", ResolvedText: "{pool}: device error counts are back to zero",
 	},
 	{
-		Name: "data-errors", About: "ZFS found files it could not repair, because no good copy was left. zpool status -v lists them; restore them from a backup.", Category: "Pool health", Desc: "Files have permanent data errors", Metric: "data_errors", Op: ">", Value: "0", Severity: "error",
+		Name: "data-errors", About: "ZFS found files it could not repair, because no good copy was left. zpool status -v lists them; restore them from a backup.", Category: "Pool health", Desc: "Files have data errors", Metric: "data_errors", Op: ">", Value: "0", Severity: "error",
 		Text: "{pool} has {value} data errors; zpool status -v {pool} lists the files", ResolvedText: "{pool} reports no data errors",
 	},
 	{
-		Name: "capacity", About: "A pool slows down as it fills and stops taking writes when full. Hearing at 80% leaves time to free space or add disks.", Category: "Space", Desc: "A pool is filling up; an error when full", Metric: "capacity", Op: ">=", Value: "80", ErrorValue: "90", Severity: "warning",
+		Name: "capacity", About: "A pool slows down as it fills and stops taking writes when full. Hearing at 80% leaves time to free space or add disks.", Category: "Space", Desc: "A pool is filling up", Metric: "capacity", Op: ">=", Value: "80", ErrorValue: "90", Severity: "warning",
 		Text: "{pool} is {value} full (from {threshold})", ResolvedText: "{pool} is below {threshold} full again",
 	},
 	{
-		Name: "low-free-space", About: "The same warning by the amount left instead of a percentage: better for a large pool, where 10% free is still a lot.", Category: "Space", Desc: "Free space drops below an amount", Metric: "free", Op: "<", Value: "100G", Severity: "warning",
+		Name: "low-free-space", About: "The same warning by the amount left instead of a percentage: better for a large pool, where 10% free is still a lot.", Category: "Space", Desc: "Free space is low", Metric: "free", Op: "<", Value: "100G", Severity: "warning",
 		Text: "{pool} has {value} free (below {threshold})", ResolvedText: "{pool} has more than {threshold} free again",
 	},
 	{
-		Name: "fragmentation", About: "When free space is split into small pieces, writes get slower. It eases as old data is deleted or rewritten.", Category: "Space", Desc: "Free space is fragmented, so writes may slow down", Metric: "fragmentation", Op: ">=", Value: "50", Severity: "warning",
+		Name: "fragmentation", About: "When free space is split into small pieces, writes get slower. It eases as old data is deleted or rewritten.", Category: "Space", Desc: "Free space is fragmented", Metric: "fragmentation", Op: ">=", Value: "50", Severity: "warning",
 		Text: "free space in {pool} is {value} fragmented", ResolvedText: "free space in {pool} is below {threshold} fragmented",
 	},
 	{
-		Name: "scrub-overdue", About: "A scrub reads every block to find and repair damage while a good copy still exists. Monthly is usual; the Schedules tab can run them.", Category: "Maintenance", Desc: "A pool has not been scrubbed for a while", Metric: "scrub_age", Op: ">", Value: "35", Severity: "warning",
+		Name: "scrub-overdue", About: "A scrub reads every block to find and repair damage while a good copy still exists. Monthly is usual; the Schedules tab can run them.", Category: "Maintenance", Desc: "A scrub is overdue", Metric: "scrub_age", Op: ">", Value: "35", Severity: "warning",
 		Text: "{pool} was last scrubbed {value} ago (overdue after {threshold})", ResolvedText: "{pool} has been scrubbed",
 	},
 	{
@@ -139,24 +139,24 @@ var BuiltinTemplates = []Template{
 		Text: "{pool} is resilvering{detail}", ResolvedText: "{pool} finished resilvering",
 	},
 	{
-		Name: "checkpoint-held", About: "While a checkpoint is held, no space is freed and disks cannot be removed or changed. Usually it was meant to be discarded after an upgrade.", Category: "Maintenance", Desc: "A checkpoint is held, blocking device changes", Metric: "checkpoint_age", Op: ">", Value: "24h", Severity: "warning",
+		Name: "checkpoint-held", About: "While a checkpoint is held, no space is freed and disks cannot be removed or changed. Usually it was meant to be discarded after an upgrade.", Category: "Maintenance", Desc: "A checkpoint is held", Metric: "checkpoint_age", Op: ">", Value: "24h", Severity: "warning",
 		Text:         "{pool} has held a checkpoint for {value}; remove, attach, detach, split and reguid are blocked until it is discarded",
 		ResolvedText: "{pool} holds no old checkpoint",
 	},
 	{
-		Name: "slow-reads", About: "Reads are waiting longer than usual on the disks: often one disk failing slowly, or more work than the pool can take. Measured over one second at each check.", Category: "Performance", Desc: "Reads wait longer than usual", Metric: "read_wait", Op: ">", Value: "50", Severity: "warning",
+		Name: "slow-reads", About: "Reads are waiting longer than usual on the disks: often one disk failing slowly, or more work than the pool can take. Measured over one second at each check.", Category: "Performance", Desc: "Reads are slow", Metric: "read_wait", Op: ">", Value: "50", Severity: "warning",
 		Text: "reads on {pool} wait {value} on average (over {threshold})", ResolvedText: "reads on {pool} wait less than {threshold} again",
 	},
 	{
-		Name: "slow-writes", About: "Writes are waiting longer than usual on the disks: often one disk failing slowly, or more work than the pool can take. Measured over one second at each check.", Category: "Performance", Desc: "Writes wait longer than usual", Metric: "write_wait", Op: ">", Value: "50", Severity: "warning",
+		Name: "slow-writes", About: "Writes are waiting longer than usual on the disks: often one disk failing slowly, or more work than the pool can take. Measured over one second at each check.", Category: "Performance", Desc: "Writes are slow", Metric: "write_wait", Op: ">", Value: "50", Severity: "warning",
 		Text: "writes on {pool} wait {value} on average (over {threshold})", ResolvedText: "writes on {pool} wait less than {threshold} again",
 	},
 	{
-		Name: "version-mismatch", About: "The zfs commands and the running kernel module are different versions, usually after an update without a reboot. Some commands may fail until you reboot.", Category: "System", Desc: "ZFS tools and kernel module versions differ", Metric: "versions_differ", Op: ">", Value: "0", Severity: "warning",
+		Name: "version-mismatch", About: "The zfs commands and the running kernel module are different versions, usually after an update without a reboot. Some commands may fail until you reboot.", Category: "System", Desc: "ZFS versions differ", Metric: "versions_differ", Op: ">", Value: "0", Severity: "warning",
 		Text: "the ZFS userland and kernel module differ{detail}; reboot or reload the module", ResolvedText: "the userland and kernel module versions match",
 	},
 	{
-		Name: "kernel-events", About: "ZFS reports events as they happen, such as a checksum error on a disk or an I/O error. This sends those of the chosen severity or worse.", Category: "System", Desc: "The kernel reports events, such as checksum errors", Metric: "events", Op: ">=", Value: "error", Severity: "warning",
+		Name: "kernel-events", About: "ZFS reports events as they happen, such as a checksum error on a disk or an I/O error. This sends those of the chosen severity or worse.", Category: "System", Desc: "The kernel reports events", Metric: "events", Op: ">=", Value: "error", Severity: "warning",
 		Text: "{detail}",
 	},
 }

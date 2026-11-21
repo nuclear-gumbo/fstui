@@ -279,7 +279,7 @@ Every channel also takes `ca_file` (a PEM certificate authority, for a server wi
 
 ### Alerts and templates
 
-In the Alerts tab every kind of alert is a line to tick: "A pool is filling up", "A device is offline", "Reads wait longer than usual". In the file, each kind is a template: a measure of a pool, a comparison, a threshold, a severity and the message it sends. An entry under `alerts:` turns a template on for some pools and channels, or all of them, and can change its threshold, severity, messages, how often it repeats and whether it says when the condition clears. Your own alerts, added with `a` in the Alerts tab, are templates under `templates:`.
+In the Alerts tab every kind of alert is a line to tick: "A pool is filling up", "A device is offline", "Reads are slow". In the file, each kind is a template: a measure of a pool, a comparison, a threshold, a severity and the message it sends. An entry under `alerts:` turns a template on for some pools and channels, or all of them, and can change its threshold, severity, messages, how often it repeats and whether it says when the condition clears. Your own alerts, added with `a` in the Alerts tab, are templates under `templates:`.
 
 ```yaml
 notifications:

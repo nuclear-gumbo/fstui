@@ -8,6 +8,10 @@ All notable changes to fstui are listed here. The format follows [Keep a Changel
 
 - `ui.text_width` (Display group): the widest a line of text runs in the Config view before it wraps, 110 columns by default.
 
+### Changed
+
+- Config view, Alerts tab: the built-in alerts have short titles ("A device is offline", "Reads are slow"); the box under the list explains each. On a short terminal the box shortens to the explanation, so the list keeps its rows.
+
 ## [0.8.6] - 2026-11-20
 
 The 0.8 series brings notifications and schedules to fstui, and this is its first public release. In short:
