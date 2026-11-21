@@ -88,7 +88,7 @@ func (r *Reader) streamIOStat(ctx context.Context, a execute.Argv, sample func(I
 		}
 	})
 	if err != nil {
-		return err //nolint:wrapcheck // the callers name what was read
+		return err // the callers name what was read
 	}
 	return parseErr
 }
@@ -149,7 +149,7 @@ func (p *IOStatParser) Line(line string) error {
 	case indent == 0:
 		p.section = name // "special", "logs", "cache": a label with no figures
 	default:
-		row, err := ioRow(name, indent/2, p.section, values) //nolint:mnd // zpool indents by two
+		row, err := ioRow(name, indent/2, p.section, values) // zpool indents by two
 		if err != nil {
 			return err
 		}

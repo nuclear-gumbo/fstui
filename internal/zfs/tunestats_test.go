@@ -48,7 +48,7 @@ func TestParseTxgs(t *testing.T) {
 	var synced time.Duration
 	for _, x := range txgs {
 		if x.State == "C" {
-			synced += time.Duration(x.SyncTime) //nolint:gosec // recorded ns
+			synced += time.Duration(x.SyncTime) // recorded ns
 		}
 	}
 	if synced == 0 {

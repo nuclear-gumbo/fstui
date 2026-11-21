@@ -20,10 +20,16 @@ linters:
     - gocognit
     - gosec
     - nilerr
+    - nolintlint
     - revive
     - unparam
     - wrapcheck
   settings:
+    nolintlint:
+      # A suppression names its linter and says why, and goes when the
+      # linter no longer reports anything there.
+      require-specific: true
+      require-explanation: true
     depguard:
       rules:
         # Only internal/execute may start processes.

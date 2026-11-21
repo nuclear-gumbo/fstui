@@ -88,7 +88,7 @@ func (s *Schedules) Read(_ context.Context, a execute.Argv) (execute.Result, err
 		h := fnv.New32a()
 		_, _ = h.Write([]byte(e.Name()))
 		next := s.now().Add(time.Duration(h.Sum32()%(7*24)) * time.Hour)
-		out = append(out, timer{Next: uint64(next.UnixMicro()), Unit: e.Name()}) //nolint:gosec // a time after 1970
+		out = append(out, timer{Next: uint64(next.UnixMicro()), Unit: e.Name()}) // a time after 1970
 	}
 	b, err := json.Marshal(out)
 	if err != nil {

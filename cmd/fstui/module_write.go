@@ -99,7 +99,7 @@ func fstuiBinary() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("finding fstui's own path: %w", err)
 	}
-	return execute.Trusted(p) //nolint:wrapcheck // names the file and the problem
+	return execute.Trusted(p) // names the file and the problem
 }
 
 func startWrite(wf *writeFlags, h writeHooks, auditEntries int) (ui.Actions, []ui.Screen, string, func(), []string) {

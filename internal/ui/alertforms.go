@@ -244,7 +244,7 @@ func (a *Alerts) apply(f *entryForm) error {
 	al.Template = t.Name
 	overrides(&al, t, f.values)
 	if err := config.CheckTemplate(al.Effective(t)); err != nil {
-		return err //nolint:wrapcheck // the message names the field
+		return err // the message names the field
 	}
 	a.put(f, al)
 	return nil
@@ -263,7 +263,7 @@ func (a *Alerts) applyOwn(f *entryForm, al config.Alert) error {
 		return errors.New("description: say what it is, as the list will show it")
 	}
 	if err := config.CheckNewTemplate(t); err != nil {
-		return err //nolint:wrapcheck // the message names the field
+		return err // the message names the field
 	}
 	taken := func(x config.Template) bool { return x.Name == t.Name }
 	if t.Name != f.template && (slices.ContainsFunc(a.book.templates(), taken) || slices.ContainsFunc(config.BuiltinTemplates, taken)) {

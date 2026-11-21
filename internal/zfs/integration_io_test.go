@@ -36,7 +36,7 @@ func TestIntegrationIOStats(t *testing.T) {
 		data := bytes.Repeat([]byte("fstui"), 1<<20) // 5 MiB
 		file := filepath.Join(testpool.Dir, "mnt", tp.Name, "data")
 		for ctx.Err() == nil {
-			f, err := os.Create(file) //nolint:gosec // inside the test pool's mountpoint
+			f, err := os.Create(file) // inside the test pool's mountpoint
 			if err != nil {
 				return
 			}

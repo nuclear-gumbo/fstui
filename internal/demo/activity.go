@@ -169,7 +169,7 @@ func (m *ioModel) interval() []string {
 		if lv == 0 {
 			lv = 1
 		}
-		lv = min(max(lv+m.rng.NormFloat64()*0.15, 0.2), 1.8) //nolint:mnd // a gentle random walk
+		lv = min(max(lv+m.rng.NormFloat64()*0.15, 0.2), 1.8) // a gentle random walk
 		m.level[name] = lv
 		l := load[name]
 		leaves := countLeaves(p.Data.Children)
@@ -189,7 +189,7 @@ func (m *ioModel) interval() []string {
 			}
 			lines = append(lines, row{name: sec.label}.label())
 			for _, v := range sec.vdevs {
-				r, ls := m.device(v, 1, sec.label, l.read*lv*0.1, l.write*lv*0.2) //nolint:mnd // support devices see less
+				r, ls := m.device(v, 1, sec.label, l.read*lv*0.1, l.write*lv*0.2) // support devices see less
 				total.add(r)
 				lines = append(lines, ls...)
 			}
@@ -224,9 +224,9 @@ func (m *ioModel) device(v zfs.Vdev, depth int, section string, read, write floa
 	if len(v.Children) == 0 {
 		r := row{name: indent + v.Name.Display()}
 		if v.State == "ONLINE" || v.State == "" {
-			r.rBW = uint64(read * (0.8 + 0.4*m.rng.Float64()))  //nolint:mnd // jitter
-			r.wBW = uint64(write * (0.8 + 0.4*m.rng.Float64())) //nolint:mnd // jitter
-			r.rOps, r.wOps = r.rBW/(64<<10), r.wBW/(128<<10)    //nolint:mnd // typical I/O sizes
+			r.rBW = uint64(read * (0.8 + 0.4*m.rng.Float64()))  // jitter
+			r.wBW = uint64(write * (0.8 + 0.4*m.rng.Float64())) // jitter
+			r.rOps, r.wOps = r.rBW/(64<<10), r.wBW/(128<<10)    // typical I/O sizes
 			base := time.Duration(300+m.rng.IntN(900)) * time.Microsecond
 			if section == "cache" {
 				base /= 4
@@ -280,14 +280,14 @@ func NewARC() (*ARC, error) {
 func (a *ARC) Read() (zfs.ARCStats, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	a.ratio = min(max(a.ratio+a.rng.NormFloat64()*0.01, 0.86), 0.995) //nolint:mnd // see the type
-	lookups := 2000 + a.rng.Uint64N(4000)                             //nolint:mnd // per second
+	a.ratio = min(max(a.ratio+a.rng.NormFloat64()*0.01, 0.86), 0.995) // see the type
+	lookups := 2000 + a.rng.Uint64N(4000)                             // per second
 	hits := uint64(float64(lookups) * a.ratio)
 	a.s.Hits += hits
-	a.s.IOHits += (lookups - hits) / 10 //nolint:mnd // a few blocks already in flight
+	a.s.IOHits += (lookups - hits) / 10 // a few blocks already in flight
 	a.s.Misses += lookups - hits - (lookups-hits)/10
-	a.s.L2Hits += a.rng.Uint64N(40)    //nolint:mnd // a small cache device
-	a.s.L2Misses += a.rng.Uint64N(120) //nolint:mnd // a small cache device
+	a.s.L2Hits += a.rng.Uint64N(40)    // a small cache device
+	a.s.L2Misses += a.rng.Uint64N(120) // a small cache device
 	drift := int64(a.rng.NormFloat64() * 8 * mib)
 	a.s.Size = uint64(min(max(int64(a.s.Size)+drift, int64(a.s.Min)), int64(a.s.Max))) //nolint:gosec // within c_min..c_max
 	a.s.Target = max(min(a.s.Target, a.s.Max), a.s.Min)

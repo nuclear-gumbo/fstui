@@ -229,7 +229,7 @@ func (v *IO) Render(d ui.Display, width, height int) string {
 	devices := v.deviceLines(d, width, height-len(lines)-stopped)
 	// The charts get what the tables leave, the devices giving way
 	// first when the charts would be under two rows each.
-	room := height - len(lines) - len(devices) - stopped - 2 //nolint:mnd // the blank lines around the charts
+	room := height - len(lines) - len(devices) - stopped - 2 // the blank lines around the charts
 	if short := chartMin - room; short > 0 {
 		devices = devices[:max(len(devices)-short, 0)]
 		room += short
@@ -263,7 +263,7 @@ func (v *IO) poolLines(d ui.Display, width, rows int) []string {
 	for _, p := range v.latest {
 		nameCol = max(nameCol, lipgloss.Width(p.Name.Display()))
 	}
-	cols := 4 //nolint:mnd // read, write and their peaks
+	cols := 4 // read, write and their peaks
 	if markerWidth+nameCol+cols*(gap+rateWidth) > width {
 		cols = 2
 	}
@@ -316,7 +316,7 @@ func (v *IO) chartLines(d ui.Display, width, rows int) []string {
 	read := v.read[name].means(v.at, span, cols)
 	write := v.write[name].means(v.at, span, cols)
 	top := max(peakOf(read), peakOf(write))
-	h := min((rows-3)/2, chartRowsMax) //nolint:mnd // a title and two labels; two charts
+	h := min((rows-3)/2, chartRowsMax) // a title and two labels; two charts
 	label := func(dir string, now uint64, peak float64) string {
 		left := dir + " " + rate(d, now)
 		right := "peak " + rate(d, uint64(peak))

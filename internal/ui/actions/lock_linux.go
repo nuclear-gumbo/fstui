@@ -21,5 +21,5 @@ func TakeLock(path string) (*Lock, error) {
 	if errors.Is(err, statedir.ErrLocked) {
 		return nil, fmt.Errorf("another fstui is in write mode: %w", err)
 	}
-	return l, err //nolint:wrapcheck // statedir names the lock
+	return l, err // statedir names the lock
 }

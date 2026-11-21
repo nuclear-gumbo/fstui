@@ -32,7 +32,7 @@ func TestSchemaIsCurrent(t *testing.T) {
 		return
 	}
 	if os.Getenv("FSTUI_UPDATE_DOCS") != "" {
-		if err := os.WriteFile(schemaFile, want, 0o644); err != nil { //nolint:gosec // a documentation file
+		if err := os.WriteFile(schemaFile, want, 0o644); err != nil { // a documentation file
 			t.Fatal(err)
 		}
 		return

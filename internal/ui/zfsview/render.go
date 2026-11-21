@@ -295,7 +295,7 @@ func warningBlock(d ui.Display, ws []problem.Problem, width, height int) []strin
 	if len(ws) == 0 {
 		return nil
 	}
-	budget := max(height/3, 1) //nolint:mnd // a third of the view
+	budget := max(height/3, 1) // a third of the view
 	out := []string{""}
 	for i, w := range ws {
 		lines := wrapIndented(w.Text, width, warnIndent)

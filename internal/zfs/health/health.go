@@ -130,7 +130,7 @@ type Source struct {
 
 // Events are the kernel's events (zpool events).
 func (s Source) Events(ctx context.Context) ([]events.Event, int, error) {
-	return s.Reader.Events(ctx) //nolint:wrapcheck // as above
+	return s.Reader.Events(ctx) // as above
 }
 
 // Measures reads every pool and reports the measures alerts compare
@@ -142,7 +142,7 @@ func (s Source) Events(ctx context.Context) ([]events.Event, int, error) {
 func (s Source) Measures(ctx context.Context, now time.Time, need map[string]bool) ([]problem.Measure, error) {
 	pools, err := s.Reader.Overviews(ctx)
 	if err != nil {
-		return nil, err //nolint:wrapcheck // the reader names the command
+		return nil, err // the reader names the command
 	}
 	out := Measure(pools, now, s.Options.Version)
 	if need["read_wait"] || need["write_wait"] {

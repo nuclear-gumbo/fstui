@@ -95,7 +95,7 @@ func TestPlanCron(t *testing.T) {
 		t.Errorf("blocked %v; shown:\n%s", blocked, shown)
 	}
 	// Write the file as the plan would, then turn the scrub off.
-	if err := os.WriteFile(filepath.Join(root, CronFile), []byte(cronFile(map[string]cronEntry{"scrub:tank": {when: Weekly, line: "x"}})), 0o644); err != nil { //nolint:gosec // a test file
+	if err := os.WriteFile(filepath.Join(root, CronFile), []byte(cronFile(map[string]cronEntry{"scrub:tank": {when: Weekly, line: "x"}})), 0o644); err != nil { // a test file
 		t.Fatal(err)
 	}
 	_, _, shown = steps(t, builder(r), "scrub:tank", Off)
@@ -121,7 +121,7 @@ func TestPlanOpenRC(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, "/etc/init.d"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, InitScript), []byte("someone's\n"), 0o755); err != nil { //nolint:gosec // a test file
+	if err := os.WriteFile(filepath.Join(root, InitScript), []byte("someone's\n"), 0o755); err != nil { // a test file
 		t.Fatal(err)
 	}
 	now, err := p.Recheck(t.Context())

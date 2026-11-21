@@ -167,7 +167,7 @@ func TestNeutralSnapshotsOldestFirst(t *testing.T) {
 	if !strings.HasSuffix(snaps[0].Name.Raw(), "@daily-1") || !strings.HasSuffix(snaps[1].Name.Raw(), "@daily-2") {
 		t.Fatalf("order = %s, %s; want daily-1 then daily-2", snaps[0].Name.Raw(), snaps[1].Name.Raw())
 	}
-	if want := time.Unix(int64(creation[snaps[0].Name.Raw()].Number), 0); !snaps[0].Created.Equal(want) { //nolint:gosec // test data
+	if want := time.Unix(int64(creation[snaps[0].Name.Raw()].Number), 0); !snaps[0].Created.Equal(want) { // test data
 		t.Fatalf("created = %v, want %v", snaps[0].Created, want)
 	}
 }

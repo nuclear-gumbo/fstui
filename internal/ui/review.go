@@ -31,7 +31,7 @@ type fileReview struct {
 func newFileReview(userFile, file string, cur, next []byte) (*fileReview, error) {
 	staged, err := config.Stage(file, next)
 	if err != nil {
-		return nil, err //nolint:wrapcheck // the message names the file
+		return nil, err // the message names the file
 	}
 	problems := config.CheckAmong(config.Files(userFile), file, next)
 	return &fileReview{file: file, staged: staged, data: next, diff: config.Diff(cur, next), problems: problems}, nil

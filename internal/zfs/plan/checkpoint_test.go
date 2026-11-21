@@ -31,7 +31,7 @@ func checkpointed(with bool) *fakeReader {
 	f.topo["tank"] = st
 	obj := func(n string, at time.Time, mp string) zfs.Dataset {
 		return zfs.Dataset{Name: n, Properties: zfs.Properties{
-			"creation":   {Number: uint64(at.Unix()), IsNumber: true}, //nolint:gosec // a test time
+			"creation":   {Number: uint64(at.Unix()), IsNumber: true}, // a test time
 			"mountpoint": {Text: termtext.New(mp)}, "mounted": {Text: termtext.New("yes")},
 		}}
 	}

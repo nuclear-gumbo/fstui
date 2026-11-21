@@ -225,7 +225,7 @@ var ErrNoChannel = errors.New("no channel by that name in notifications.channels
 func (r Run) Test(ctx context.Context, name string) error {
 	for _, ch := range r.Config.Notifications.Channels {
 		if ch.Name == name {
-			return notify.Test(ctx, r.Config.Notifications, ch, r.Secrets, r.Host) //nolint:wrapcheck // notify names the channel
+			return notify.Test(ctx, r.Config.Notifications, ch, r.Secrets, r.Host) // notify names the channel
 		}
 	}
 	return fmt.Errorf("%q: %w", name, ErrNoChannel)

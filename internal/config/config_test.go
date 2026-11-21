@@ -19,7 +19,7 @@ const otherUID = 12345
 // testTrust trusts the current user and stops directory checks at dir,
 // because t.TempDir() lives under a world-writable /tmp.
 func testTrust(dir string) trust {
-	return trust{euid: uint32(os.Geteuid()), top: dir} //nolint:gosec // uids are non-negative
+	return trust{euid: uint32(os.Geteuid()), top: dir} // uids are non-negative
 }
 
 // write creates name in dir with mode 0600 and returns its path.
@@ -176,7 +176,7 @@ func TestUnsafeFilesIgnored(t *testing.T) {
 		t.Fatal(err)
 	}
 	f = write(t, sub, "config.yaml", "theme: evil\n")
-	if err := os.Chmod(sub, 0o777); err != nil { //nolint:gosec // the point of the test
+	if err := os.Chmod(sub, 0o777); err != nil { // the point of the test
 		t.Fatal(err)
 	}
 	ignored(t, tr, f, "writable by group or others")
@@ -192,7 +192,7 @@ func TestUnsafeFilesIgnored(t *testing.T) {
 	if err := os.Symlink(good, link); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(shared, 0o777); err != nil { //nolint:gosec // the point of the test
+	if err := os.Chmod(shared, 0o777); err != nil { // the point of the test
 		t.Fatal(err)
 	}
 	ignored(t, tr, link, "writable by group or others")

@@ -120,7 +120,7 @@ func TestStoreRefusesAnOpenDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(s.Dir, 0o770); err != nil { //nolint:gosec // the test needs a group-accessible directory
+	if err := os.Chmod(s.Dir, 0o770); err != nil { // the test needs a group-accessible directory
 		t.Fatal(err)
 	}
 	if _, err := s.Load(sha); err == nil {

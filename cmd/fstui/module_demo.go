@@ -120,7 +120,7 @@ func checkSource(cfg config.Config) (check.Source, error) {
 func checkSending(string) (func(context.Context, notify.Channel, notify.Message) error, string) {
 	dir := filepath.Join(os.TempDir(), fmt.Sprintf("fstui-demo-%d", os.Geteuid()), "check")
 	return func(_ context.Context, ch notify.Channel, m notify.Message) error {
-		fmt.Printf("demo, not sent to %s: %s\n", ch.Name, m.Title) //nolint:forbidigo // the demo's stand-in for sending
+		fmt.Printf("demo, not sent to %s: %s\n", ch.Name, m.Title) // the demo's stand-in for sending
 		return nil
 	}, dir
 }

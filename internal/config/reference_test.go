@@ -33,7 +33,7 @@ func TestReferenceIsCurrent(t *testing.T) {
 		return
 	}
 	if os.Getenv("FSTUI_UPDATE_DOCS") != "" {
-		if err := os.WriteFile(referenceFile, []byte(want), 0o644); err != nil { //nolint:gosec // a documentation file
+		if err := os.WriteFile(referenceFile, []byte(want), 0o644); err != nil { // a documentation file
 			t.Fatal(err)
 		}
 		return

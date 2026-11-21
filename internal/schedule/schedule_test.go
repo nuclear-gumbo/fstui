@@ -30,7 +30,7 @@ func fakeRoot(t *testing.T, files map[string]string, links ...string) string {
 		if strings.HasSuffix(p, "/") {
 			continue
 		}
-		if err := os.WriteFile(full, []byte(content), 0o644); err != nil { //nolint:gosec // a test file
+		if err := os.WriteFile(full, []byte(content), 0o644); err != nil { // a test file
 			t.Fatal(err)
 		}
 	}

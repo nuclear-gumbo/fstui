@@ -17,7 +17,7 @@ import (
 func seed(f *testing.F, files ...string) {
 	f.Helper()
 	for _, name := range files {
-		b, err := os.ReadFile(filepath.Join("..", "..", "testdata", "zfs", "2.3.9", name)) //nolint:gosec // test data
+		b, err := os.ReadFile(filepath.Join("..", "..", "testdata", "zfs", "2.3.9", name)) // test data
 		if err != nil {
 			f.Fatal(err)
 		}

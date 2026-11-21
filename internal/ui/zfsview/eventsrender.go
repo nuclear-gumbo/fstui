@@ -110,7 +110,7 @@ func (v *Events) columns(width int) eventColumns {
 			c.time = dateWidth
 		}
 	}
-	c.pool = min(c.pool, poolMax, max(width/5, len("POOL"))) //nolint:mnd // a fifth of a narrow list
+	c.pool = min(c.pool, poolMax, max(width/5, len("POOL"))) // a fifth of a narrow list
 	fixed := markerWidth + c.time + sevWidth + c.pool + 3*gap
 	if spare := width - fixed - summaryMin - gap; spare > len("DEVICE") {
 		c.device = min(spare, width/deviceShare)
@@ -182,7 +182,7 @@ func (v *Events) detailPanel(d ui.Display, width, height int, focused bool) stri
 	for _, f := range e.Detail {
 		nameCol = max(nameCol, len(f.Name))
 	}
-	nameCol = min(nameCol, iw/2) //nolint:mnd // names never take more than half
+	nameCol = min(nameCol, iw/2) // names never take more than half
 	line := func(name, value string) string {
 		return muted.Render(pad(name, nameCol)) + sp + ansi.Truncate(value, max(iw-nameCol-gap, 1), "…")
 	}

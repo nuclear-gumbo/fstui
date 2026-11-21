@@ -243,7 +243,7 @@ func (s PoolSpec) capacity(inv []disks.Device) string {
 		usable = smallest
 	default:
 		if k := len(sizes) - parity[s.Layout]; k > 0 {
-			usable = uint64(k) * smallest //nolint:gosec // k is positive
+			usable = uint64(k) * smallest // k is positive
 		}
 	}
 	line := "about " + iec(usable) + " usable, before ZFS's own reservations"

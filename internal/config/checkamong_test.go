@@ -21,7 +21,7 @@ func TestCheckAmong(t *testing.T) {
 	if err := os.WriteFile(dropIn, []byte("notifications:\n  channels: [{name: phone, type: ntfy, url: \"https://n\", topic: z}]\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	tr := trust{euid: uint32(os.Geteuid()), top: dir} //nolint:gosec // uids are non-negative
+	tr := trust{euid: uint32(os.Geteuid()), top: dir} // uids are non-negative
 	files := []string{user, dropIn}
 	ok := []byte("notifications:\n  alerts: [{template: capacity, channels: [phone]}]\n")
 	if p := tr.checkAmong(files, user, ok); len(p) > 0 {

@@ -134,7 +134,7 @@ func (r recorder) Record(ev execute.StepEvent) error {
 	if l == nil {
 		return errors.New("the audit log is not open")
 	}
-	return l.Record(ev) //nolint:wrapcheck // the audit package's errors say what failed
+	return l.Record(ev) // the audit package's errors say what failed
 }
 
 // Pipeline returns the pipeline plans run through.
@@ -335,7 +335,7 @@ func (r savedRunner) Run(ctx context.Context, p *mutate.Plan) (execute.Report, e
 		}
 		_ = r.s.store.Mark(p.SavedSHA256, state, reason) // the audit log has the full record
 	}
-	return rep, err //nolint:wrapcheck // the pipeline's errors are shown as they are
+	return rep, err // the pipeline's errors are shown as they are
 }
 
 // Screens returns the write module's views.

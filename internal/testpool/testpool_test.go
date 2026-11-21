@@ -64,7 +64,7 @@ func TestExecRefusesBeforeRunning(t *testing.T) {
 // refuse one it does not own outright: a symlink, someone else's
 // directory, or one others can write.
 func TestPrepareDirRefusesForeignDirectories(t *testing.T) {
-	uid := uint32(os.Geteuid()) //nolint:gosec // uids are non-negative
+	uid := uint32(os.Geteuid()) // uids are non-negative
 	base := t.TempDir()
 
 	fresh := filepath.Join(base, "fresh")
@@ -82,7 +82,7 @@ func TestPrepareDirRefusesForeignDirectories(t *testing.T) {
 	if err := os.Mkdir(open, 0o750); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(open, 0o777); err != nil { //nolint:gosec // the test needs a world-writable directory
+	if err := os.Chmod(open, 0o777); err != nil { // the test needs a world-writable directory
 		t.Fatal(err)
 	}
 	if err := prepareDir(open, uid); err == nil {

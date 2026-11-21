@@ -121,7 +121,7 @@ func (p Panel) tabsWidth() int {
 	}
 	w := 1
 	for _, t := range p.Tabs {
-		w += len(t) + 3 //nolint:mnd // separator and two spaces
+		w += len(t) + 3 // separator and two spaces
 	}
 	return w
 }

@@ -416,7 +416,7 @@ func (s *Settings) startRevert() {
 func (s *Settings) stageFile(r *review, file string, cur, next []byte) error {
 	staged, err := config.Stage(file, next)
 	if err != nil {
-		return err //nolint:wrapcheck // config names the file
+		return err // config names the file
 	}
 	r.files = append(r.files, reviewFile{file: file, staged: staged, data: next, diff: config.Diff(cur, next)})
 	r.problems = append(r.problems, config.Check(file, next)...)

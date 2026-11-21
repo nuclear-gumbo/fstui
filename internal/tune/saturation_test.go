@@ -26,7 +26,7 @@ func satWindow(t *testing.T, ops uint64, waits map[string][2]uint64, throttle ui
 	w.Sample(zfs.TuneSample{At: t0.Add(2 * time.Minute), DMUTx: dmu, Txgs: txgs})
 	var rep []zfs.IOStat
 	for name, wt := range waits {
-		rep = append(rep, zfs.IOStat{Name: termtext.New(name), WriteOps: ops / 120, WriteWait: time.Duration(wt[0]), WriteDiskWait: time.Duration(wt[1])}) //nolint:gosec // test waits
+		rep = append(rep, zfs.IOStat{Name: termtext.New(name), WriteOps: ops / 120, WriteWait: time.Duration(wt[0]), WriteDiskWait: time.Duration(wt[1])}) // test waits
 	}
 	w.AddIO(ioPool(rep...), 120)
 	return &w

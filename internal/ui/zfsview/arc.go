@@ -156,7 +156,7 @@ func (a *ARC) Render(d ui.Display, width, height int) string {
 
 	// Two graphs share the rows the rest leaves, three to twelve each:
 	// taller adds no detail worth the rows.
-	rows := min(max((height-len(head)-len(body)-4)/2, arcGraphMin), arcGraphMax) //nolint:mnd // two graphs, two titles, two gaps
+	rows := min(max((height-len(head)-len(body)-4)/2, arcGraphMin), arcGraphMax) // two graphs, two titles, two gaps
 	graphW := max(width-axisWidth, 1)
 	now := muted.Render("no reads")
 	if v, ok := a.hits.last(); ok {
@@ -243,7 +243,7 @@ func pctOf(n, of uint64) int {
 	if of == 0 {
 		return 0
 	}
-	return int(min(n*percent/of, percent)) //nolint:gosec // at most 100
+	return int(min(n*percent/of, percent)) // at most 100
 }
 
 // series holds values that each cover an interval of time, oldest first:

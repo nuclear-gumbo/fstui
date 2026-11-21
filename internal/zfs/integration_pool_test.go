@@ -21,7 +21,7 @@ func fill(t *testing.T, p *testpool.Pool, mib int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := rand.New(rand.NewPCG(1, 2)) //nolint:gosec // test data, not secrets
+	r := rand.New(rand.NewPCG(1, 2)) // test data, not secrets
 	buf := make([]byte, 1<<20)
 	for range mib {
 		for i := range buf {

@@ -351,7 +351,7 @@ func (w *sendWindow) totalLine(d ui.Display, iw int) string {
 		line += fmt.Sprintf(" (%d stream(s) without an estimate)", failed)
 	}
 	if w.capacity > 0 {
-		pct := int(min(sum*100/w.capacity, 999)) //nolint:gosec // bounded above
+		pct := int(min(sum*100/w.capacity, 999)) // bounded above
 		line += fmt.Sprintf(" of %s, %d%%", format.Size(w.capacity, d.Exact), pct)
 		if sum > w.capacity {
 			return d.Palette.Style(theme.Warn).Render(ansi.Truncate(line+": does not fit", iw, "…"))

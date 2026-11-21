@@ -86,7 +86,7 @@ dark:
 func TestUnsafeThemeIgnored(t *testing.T) {
 	dir := t.TempDir()
 	f := write(t, dir, "nord.yaml", "name: nord\ndark:\n  accent: \"#ff0000\"\n")
-	if err := os.Chmod(f, 0o666); err != nil { //nolint:gosec // the point of the test
+	if err := os.Chmod(f, 0o666); err != nil { // the point of the test
 		t.Fatal(err)
 	}
 	th, ps := testTrust(dir).loadTheme("nord", []string{dir})

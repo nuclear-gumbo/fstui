@@ -72,7 +72,7 @@ type readerTo interface {
 // readTo runs a and hands its output to consume, streamed when run can.
 func (r *Reader) readTo(ctx context.Context, a execute.Argv, consume func(io.Reader) error) error {
 	if rt, ok := r.run.(readerTo); ok {
-		return rt.ReadTo(ctx, a, consume) //nolint:wrapcheck // execute names the command
+		return rt.ReadTo(ctx, a, consume) // execute names the command
 	}
 	out, err := r.read(ctx, a)
 	if err != nil {
@@ -293,7 +293,7 @@ func neutralSnapshots(ds []Dataset) ([]storage.Snapshot, error) {
 		}); err != nil {
 			return nil, fmt.Errorf("snapshot %s: %w", s.Name, err)
 		}
-		s.Created = time.Unix(int64(created), 0) //nolint:gosec // seconds since 1970 fit in int64
+		s.Created = time.Unix(int64(created), 0) // seconds since 1970 fit in int64
 		out = append(out, s)
 	}
 	return out, nil

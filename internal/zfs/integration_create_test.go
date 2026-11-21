@@ -28,7 +28,7 @@ func fileDevices(files []string) func(context.Context) ([]disks.Device, error) {
 			if err != nil {
 				return nil, err
 			}
-			out = append(out, disks.Device{Name: f, Path: f, ByID: f, Size: uint64(fi.Size()), Type: "disk"}) //nolint:gosec // a file size
+			out = append(out, disks.Device{Name: f, Path: f, ByID: f, Size: uint64(fi.Size()), Type: "disk"}) // a file size
 		}
 		return out, nil
 	}

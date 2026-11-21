@@ -134,7 +134,7 @@ func TestStageInTempDir(t *testing.T) {
 	if err := Promote(file, staged, []byte("units: exact\n")); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(file); string(b) != "units: exact\n" { //nolint:gosec // the test's own file
+	if b, _ := os.ReadFile(file); string(b) != "units: exact\n" { // the test's own file
 		t.Errorf("saved %q, want the reviewed contents", b)
 	}
 	if b, _ := os.ReadFile(file); string(b) != "units: exact\n" {

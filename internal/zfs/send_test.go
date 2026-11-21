@@ -11,7 +11,7 @@ import (
 
 func sendRecording(t *testing.T, name string) []byte {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join("..", "..", "testdata", "zfs", "2.3.9", "send", name)) //nolint:gosec // test data
+	b, err := os.ReadFile(filepath.Join("..", "..", "testdata", "zfs", "2.3.9", "send", name)) // test data
 	if err != nil {
 		t.Fatal(err)
 	}
