@@ -11,15 +11,15 @@ internal/
   termtext/           text from outside fstui, made safe to draw
   config/             YAML settings: defaults, files, drop-ins, the settings registry, themes, secrets
   storage/            backend-neutral types the generic views use
-  problem/            what any backend reports as wrong, for the dashboard, fstui check and notifications
+  problem/            what any backend measures and reports as wrong, for the dashboard and fstui check
   events/             backend-neutral kernel events
   zfs/                the OpenZFS backend: readers and parsers of zfs and zpool output
     name/             validated pool, dataset and snapshot names
-    health/           ZFS pool problems
+    health/           ZFS pool warnings, and the measures alerts compare
     plan/             ZFS changes as plans
   mutate/             plans, confirmation tiers, the re-check before running, saved plans
   audit/              the audit log of every change
-  check/              fstui check and fstui watch: rules, state, sending
+  check/              fstui check and fstui watch: alerts, what was sent, sending
   notify/             notification senders; the only package that opens network connections
   schedule/           scrubs, trims, check and watch under systemd, cron or OpenRC
   tune/               tune mode's questions, from measured windows
@@ -93,6 +93,8 @@ Taking a snapshot of `tank/home` from the Datasets view:
 | `internal/ui/modal.go` | `Target`, `Selector`, `Actions`: the boundary between views and the write module |
 | `internal/ui/keys/keys.go` | every action a key triggers, and the default keys |
 | `internal/config/settings.go` | every setting, with its range and default |
+| `internal/config/alerts.go` | the measures alerts can compare (`Metrics`), the built-in alerts (`BuiltinTemplates`), and how alerts and templates are read |
+| `internal/check/alerts.go` | how alerts are evaluated against a backend's measures |
 | `internal/mutate/plan.go`, `tiers.go` | what a change is, and how much each kind asks to confirm |
 | `internal/execute/tools.go` | the programs fstui runs, and how their paths are trusted |
 | `internal/zfs/plan/plan.go` | `Builder` and how a saved change is built again (`Build`) |
@@ -106,7 +108,9 @@ Taking a snapshot of `tank/home` from the Datasets view:
 - **Plan**: a change ready to confirm: steps, what it affects or destroys, what blocks it, the state it depends on (`mutate.Plan`). A plan is never run without its re-check.
 - **Tier**: how much a confirmation asks: a key, y then enter, or typing the name (`mutate.Tier`). Only `mutate/tiers.go` decides it.
 - **Spec**: one setting in the registry (`config.Spec`).
-- **Source**: what a storage backend gives fstui check: its problems and kernel events (`check.Source`).
+- **Source**: what a storage backend gives fstui check: measures of each pool and the kernel's events (`check.Source`).
+- **Measure**: one pool's numbers and states by metric name, such as `capacity` or `devices_down` (`problem.Measure`); a backend reports what it can measure.
+- **Template** and **Alert**: a template is a condition on one measure, with a threshold, a severity and its message (`config.Template`); an alert turns a template on for some pools and channels (`config.Alert`). The Alerts tab shows each template as a line to tick.
 - **Task**: periodic work a backend asks for, such as a scrub, that the Schedules tab runs (`schedule.Task`).
 - **Module**: a part of fstui a build can leave out (a backend, the write module), with its build tag and its stand-in file.
 
@@ -118,7 +122,7 @@ The interface is one Bubble Tea program. `Update` runs on one goroutine and is t
 
 ## Settings
 
-Every setting with a single value is one `Spec` in `internal/config/settings.go`: its path, description, kind, range and default. The YAML parser, the range checks, the Config view, the reference table in `docs/configuration.md` and the editor schema `docs/config.schema.json` come from that list. Lists and maps (keys, colours, event filters, dashboard panels, notification channels) have their own parsers.
+Every setting with a single value is one `Spec` in `internal/config/settings.go`: its path, description, kind, range and default. The YAML parser, the range checks, the Config view, the reference table in `docs/configuration.md` and the editor schema `docs/config.schema.json` come from that list. Lists and maps (keys, colours, event filters, dashboard panels, notification channels, templates and alerts) have their own parsers.
 
 The views share one `*config.Config` and receive `ui.ConfigMsg` when the Config view saves, so a setting applies without a restart unless its `Spec` is marked `Restart`.
 
@@ -127,8 +131,9 @@ The views share one `*config.Config` and receive `ui.ConfigMsg` when the Config 
 - **A setting:** add the field and its default in `internal/config`, a `Spec` in `settings.go`, read it where it is used, apply it on `ui.ConfigMsg`, then `make docs` to regenerate the reference and the schema (tests fail until you do). A number that shapes what fstui shows or does is a setting, not a constant.
 - **A view or tab:** implement `ui.Screen` (`internal/ui/ui.go`); the optional interfaces beside it add activation, selection for changes, typing and clicks. A ZFS view goes in `zfsview`, a backend-neutral one in `ui`.
 - **A change:** a builder returning a `mutate.Plan`, a row in `mutate/tiers.go`, an `Offer` in `ui/actions`, and a case in the backend's `Build` so a saved plan can be rebuilt. Test the builder against a real test pool.
+- **A built-in alert:** a `Template` in `config.BuiltinTemplates` with its category and an `About` for the Alerts tab, using a metric from `config.Metrics`; a new metric also needs each backend's `Measures` to report it.
 - **A notification type:** a sender in `internal/notify` using `post` (HTTP) or the SMTP client, a case in `Send`, the type's fields in `config.Channel` validation, and a test against `httptest`.
-- **A backend:** its readers and parsers, a `check.Source` for fstui check, `schedule.Task`s for its maintenance, its views, a module file pair in `cmd/fstui` behind a `fstui_no<name>` tag, and an entry in the registry.
+- **A backend:** its readers and parsers, a `check.Source` reporting the measures it can (`config.Metrics`), `schedule.Task`s for its maintenance, its views, a module file pair in `cmd/fstui` behind a `fstui_no<name>` tag, and an entry in the registry.
 
 ## Tests
 

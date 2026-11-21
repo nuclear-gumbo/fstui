@@ -29,8 +29,9 @@
           pname = "fstui";
           inherit version;
           src = self;
-          # The development repository vendors its modules; a checkout
-          # without vendor/ fetches them, checked against this hash.
+          # The repository does not vendor its modules: they are fetched
+          # and checked against this hash. The release archive carries
+          # vendor/, so a build from it needs no hash.
           vendorHash = if builtins.pathExists ./vendor then null else "sha256-+tc18Tv2BDN8/X6E7nBm8GEXHpeHUykyEgF0a0IeYdo=";
           env.CGO_ENABLED = "0";
           # buildGoModule already passes -trimpath.
