@@ -69,6 +69,7 @@ var labels = map[string]string{
 	"ui.start_view":     "Open on view",
 	"ui.cursor_blink":   "Blinking cursor",
 	"ui.split_from":     "Side-by-side detail from width",
+	"ui.text_width":     "Text wraps at width",
 
 	"thresholds.capacity_warn":      "Capacity warning at (%)",
 	"thresholds.capacity_error":     "Capacity full at (%)",

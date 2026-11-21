@@ -194,7 +194,10 @@ func (c *Config) panel() Panel {
 func (c *Config) Render(d Display, width, height int) string {
 	c.width = width
 	iw, ih := Inner(width, height)
-	cw, ch := min(max(iw-2*padX, 20), maxText), max(ih-padY, 1)
+	cw, ch := max(iw-2*padX, 20), max(ih-padY, 1)
+	if tw := c.general.cfg.UI.TextWidth; tw > 0 {
+		cw = min(cw, tw)
+	}
 	var body string
 	if c.tab == tabSchedules {
 		body = c.schedules.Render(d, cw, ch)
@@ -206,13 +209,11 @@ func (c *Config) Render(d Display, width, height int) string {
 
 // The Config view's margins inside its frame: two columns each side and
 // a blank line under the top edge, as Posting pads its body and k9s its
-// tables; text is never
-// wider than maxText, so a full-screen terminal does not spread a
-// sentence across it.
+// tables. Text is never wider than ui.text_width, so a full-screen
+// terminal does not spread a sentence across it.
 const (
-	padX    = 2
-	padY    = 1
-	maxText = 110
+	padX = 2
+	padY = 1
 )
 
 // setUpSending turns to the Schedules tab on fstui watch and opens its

@@ -4,6 +4,10 @@ All notable changes to fstui are listed here. The format follows [Keep a Changel
 
 ## [Unreleased]
 
+### Added
+
+- `ui.text_width` (Display group): the widest a line of text runs in the Config view before it wraps, 110 columns by default.
+
 ## [0.8.6] - 2026-11-20
 
 The 0.8 series brings notifications and schedules to fstui, and this is its first public release. In short:

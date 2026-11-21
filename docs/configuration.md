@@ -158,6 +158,7 @@ Durations are written like `30s`, `5m`, `24h`. Keys, colours, event filters, das
 | `ui.start_view` | `pools` | `dashboard`, `pools`, `datasets`, `snapshots`, `volumes`, `arc`, `io`, `events`, `plans`, `config` | The view fstui opens on; --dashboard overrides; applies after a restart |
 | `ui.cursor_blink` | `true` | `true`, `false` | A typing cursor blinks |
 | `ui.split_from` | `120` | 80 to 1000 | Terminal width from which a list and the selected item's detail sit side by side |
+| `ui.text_width` | `110` | 60 to 1000 | The widest a line of text runs in the Config view before it wraps, so a wide terminal does not spread a sentence across it |
 
 #### `events:`
 

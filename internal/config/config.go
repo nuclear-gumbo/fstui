@@ -85,6 +85,7 @@ type UI struct {
 	StartView   string // the view fstui opens on; --dashboard overrides
 	CursorBlink bool
 	SplitFrom   int // terminal width from which a list and its detail sit side by side
+	TextWidth   int // the widest a line of text runs in the Config view before it wraps
 }
 
 // Config is the complete set of settings.
@@ -164,7 +165,7 @@ func Default() Config {
 			ReadTimeout: 30 * time.Second, ListTimeout: 10 * time.Minute, SlowReadFactor: 4,
 			HistoryEntries: 10000, DiffEntries: 20000, HistoryTimeout: 10 * time.Minute, AuditEntries: 2000,
 		},
-		UI:            UI{StartView: "pools", CursorBlink: true, SplitFrom: 120},
+		UI:            UI{StartView: "pools", CursorBlink: true, SplitFrom: 120, TextWidth: 110},
 		Tune:          defaultTune(),
 		Schedules:     defaultSchedules(),
 		Events:        Events{Retention: defaultRetention},

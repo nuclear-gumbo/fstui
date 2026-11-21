@@ -1090,6 +1090,13 @@
             "plans",
             "config"
           ]
+        },
+        "text_width": {
+          "default": 110,
+          "description": "The widest a line of text runs in the Config view before it wraps, so a wide terminal does not spread a sentence across it.",
+          "maximum": 1000,
+          "minimum": 60,
+          "type": "integer"
         }
       },
       "type": "object"

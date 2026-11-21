@@ -74,6 +74,7 @@ var registry = []Spec{
 	restart(choiceSpec("ui.start_view", "The view fstui opens on; --dashboard overrides", Views, func(c *Config) *string { return &c.UI.StartView })),
 	boolSpec("ui.cursor_blink", "A typing cursor blinks", func(c *Config) *bool { return &c.UI.CursorBlink }),
 	intSpec("ui.split_from", "Terminal width from which a list and the selected item's detail sit side by side", 80, 1000, func(c *Config) *int { return &c.UI.SplitFrom }),
+	intSpec("ui.text_width", "The widest a line of text runs in the Config view before it wraps, so a wide terminal does not spread a sentence across it", 60, 1000, func(c *Config) *int { return &c.UI.TextWidth }),
 
 	intSpec("events.retention", "Events kept in memory", retentionMin, retentionMax, func(c *Config) *int { return &c.Events.Retention }),
 	intSpec("dashboard.columns", "Dashboard columns; 0 chooses by the terminal's width", 0, dashboardColumnsMax, func(c *Config) *int { return &c.Dashboard.Columns }),
