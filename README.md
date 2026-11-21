@@ -58,7 +58,7 @@ sudo install -m 0755 fstui-$v-linux-amd64 /usr/local/bin/fstui
 To try fstui without ZFS, the demo container runs it on recorded output:
 
 ```sh
-podman run -it --rm ghcr.io/nuclear-gumbo/fstui-demo
+podman run -it --rm -e COLORTERM ghcr.io/nuclear-gumbo/fstui-demo
 ```
 
 ## Start

@@ -58,7 +58,7 @@ This binary only reads: write mode, the change menus, schedule changes, saved pl
 ## Demo container
 
 ```sh
-podman run -it --rm ghcr.io/nuclear-gumbo/fstui-demo
+podman run -it --rm -e COLORTERM ghcr.io/nuclear-gumbo/fstui-demo
 ```
 
 The demo runs fstui on output recorded from OpenZFS 2.3.9 pools, with simulated I/O and ARC activity. It runs no `zfs` or `zpool` command, needs no ZFS, and behaves as fstui does on a real system:
@@ -68,4 +68,4 @@ The demo runs fstui on output recorded from OpenZFS 2.3.9 pools, with simulated 
 - The Schedules tab changes schedules in a systemd of the demo's own, in a temporary directory removed when fstui exits.
 - `fstui check` and `fstui watch` look at the demo's pools and print each message instead of sending it; a test message from the Notifications tab is not sent either.
 
-`docker run` works the same way.
+`docker run` works the same way. `-e COLORTERM` passes on whether your terminal shows full colour; without it the container sees only `TERM=xterm-256color`, and every colour is drawn from the 256-colour palette, close to but not the theme's own.
