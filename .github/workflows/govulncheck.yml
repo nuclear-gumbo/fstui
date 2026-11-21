@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Known vulnerabilities in the code's dependencies and in the Go standard
+# library it calls: on every push to main, and weekly, since advisories
+# arrive without a code change.
+
+name: govulncheck
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  govulncheck:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.3.0 ./...

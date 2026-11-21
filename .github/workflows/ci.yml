@@ -1,11 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# A quick check of every pull request and every push to main: formatting,
-# vet, the build and the tests. The full checks (race tests, staticcheck,
-# golangci-lint, govulncheck, every build variant, distribution and ZFS
-# integration builds) run on the maintainer's own hardware
-# (.forgejo/workflows). The gofumpt version matches the Nix development
-# shell (flake.nix).
+# Every pull request and push to main: build, race tests, every build
+# variant, and golangci-lint (which also checks gofumpt formatting). The
+# tool versions match the Nix development shell (flake.nix).
 
 name: CI
 
@@ -22,7 +19,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Build
+        run: make build && ./bin/fstui --version
+      - name: Test with the race detector
+        run: make test
+      - name: Build every module combination
+        run: sh scripts/test-build-variants.sh
+
+  lint:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -32,14 +46,8 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - name: Formatting
-        run: |
-          go install mvdan.cc/gofumpt@v0.10.0
-          out=$("$(go env GOPATH)/bin/gofumpt" -l .)
-          if [ -n "$out" ]; then echo "gofumpt would change:"; echo "$out"; exit 1; fi
-      - name: Vet
-        run: go vet ./...
-      - name: Build
-        run: make build && ./bin/fstui --version
-      - name: Test
-        run: go test ./...
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.14.0
+      - name: Lint the demo build
+        run: "$(go env GOPATH)/bin/golangci-lint run --build-tags fstui_demo ./..."
