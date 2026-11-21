@@ -368,7 +368,17 @@ func (a *Alerts) render(d Display, width, height int) string {
 		foot = append(foot, "", ansi.Wrap(a.message, width, ""))
 	}
 	list, lineOf := a.list(d, rs, width)
-	room := max(height-lipgloss.Height(strings.Join(head, "\n"))-len(detail)-len(foot)-1, 3)
+	headH := lipgloss.Height(strings.Join(head, "\n"))
+	// On a short terminal the box gives way to the list, which is what
+	// the tab is for: it keeps as much of the explanation as fits.
+	if spare := height - headH - len(foot) - 1 - minAlertRows; len(detail) > spare {
+		lines := strings.Split(ansi.Wrap(a.effective(rs[a.cursor]).About, width-3, ""), "\n")
+		detail = Box(d, rs[a.cursor].t.Desc, lines[:max(min(len(lines), spare-2), 1)], width)
+		if spare < 3 { // not even a framed line: the list alone
+			detail = nil
+		}
+	}
+	room := max(height-headH-len(detail)-len(foot)-1, 3)
 	at := lineOf[a.cursor]
 	a.top = min(max(a.top, at-room+1), at)
 	if a.cursor == 0 {
@@ -394,7 +404,11 @@ func (a *Alerts) list(d Display, rs []alertRow, width int) ([]string, []int) {
 		descCol = max(descCol, lipgloss.Width(r.t.Desc))
 		whenCol = max(whenCol, lipgloss.Width(a.when(r)))
 	}
-	descCol, whenCol = min(descCol, width/2), min(whenCol, width/4)
+	// The name matters most, then the threshold; where it goes is cut
+	// first, but keeps room for "all pools".
+	const markCol, gaps, scopeMin = 6, 6, len("all pools")
+	whenCol = min(whenCol, max(width/4, len("from 80%, error from 90%")))
+	descCol = max(min(descCol, width-markCol-gaps-whenCol-scopeMin), 20)
 	var out []string
 	lineOf := make([]int, len(rs))
 	group := ""
@@ -498,3 +512,7 @@ func repeatWords(r *time.Duration, def time.Duration) string {
 	}
 	return "Sent again " + repeatShow(config.FormatDuration(d)) + " while it lasts"
 }
+
+// minAlertRows is the list the Alerts tab keeps on screen however short
+// the terminal: a group's heading and a few of its alerts.
+const minAlertRows = 7
