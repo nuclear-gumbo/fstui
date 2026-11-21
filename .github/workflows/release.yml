@@ -14,7 +14,39 @@ on:
 permissions: {}
 
 jobs:
+  # A tag that already has a release, published or draft, is left alone:
+  # pushing old tags again must not publish them. Only the newest version
+  # is marked latest and pushed as the demo image's latest tag. To retry a
+  # failed release, delete its draft first.
+  decide:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+      latest: ${{ steps.decide.outputs.latest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "::notice::$GITHUB_REF_NAME already has a release (published or draft); nothing to do"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+          newest=$(git tag -l 'v[0-9]*' | sort -V | tail -n 1)
+          [ "$GITHUB_REF_NAME" = "$newest" ] && echo "latest=true" >> "$GITHUB_OUTPUT" || echo "latest=false" >> "$GITHUB_OUTPUT"
+
   release:
+    needs: decide
+    if: needs.decide.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -70,17 +102,21 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          LATEST: ${{ needs.decide.outputs.latest }}
         run: |
           gh release create "$GITHUB_REF_NAME" --verify-tag --title "fstui $VERSION" \
-            --notes-file notes.md dist/*
+            --latest="$LATEST" --notes-file notes.md dist/*
       - name: Publish the demo image
         env:
           TOKEN: ${{ github.token }}
+          LATEST: ${{ needs.decide.outputs.latest }}
         run: |
           image=ghcr.io/$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')/fstui-demo
-          docker build -f Containerfile.demo --build-arg VERSION="$VERSION" \
-            -t "$image:$VERSION" -t "$image:latest" .
+          docker build -f Containerfile.demo --build-arg VERSION="$VERSION" -t "$image:$VERSION" .
           echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker push "$image:$VERSION"
-          docker push "$image:latest"
+          if [ "$LATEST" = true ]; then
+            docker tag "$image:$VERSION" "$image:latest"
+            docker push "$image:latest"
+          fi
           docker logout ghcr.io
