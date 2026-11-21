@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Reproducible Nix builds of fstui and of the demo binary. The flake
+# fetches the Go modules itself, checked against vendorHash. Debian and
+# Gentoo builds are in distro.yml.
+
+name: build
+
+on:
+  push:
+  pull_request:
+
+env:
+  NIX_CONFIG: "experimental-features = nix-command flakes"
+  # FSTUI_SRC_URL points the fetch at another clone, for a run outside the
+  # server (forgejo-runner exec); on the server it is unset.
+  SRC_URL: ${{ vars.FSTUI_SRC_URL || format('{0}/{1}', github.server_url, github.repository) }}
+  SRC_REF: ${{ github.event.pull_request && format('refs/pull/{0}/head', github.event.pull_request.number) || github.ref }}
+
+jobs:
+  nix:
+    runs-on: fstui-containers
+    container:
+      image: docker.io/nixos/nix:2.35.4@sha256:05fe61395588e8a11452e9ba4602d4f0eb0ce5db8f7b9fa417c4ec07af79ca42
+      volumes:
+        - fstui-nix:/nix
+    steps:
+      - name: Fetch source
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git init -q .
+          git -c http.extraHeader="Authorization: token $TOKEN" fetch -q --depth=1 "$SRC_URL" "$SRC_REF"
+          git checkout -q FETCH_HEAD
+      - name: nix build
+        run: |
+          nix build -L
+          ./result/bin/fstui --version
+      - name: nix build demo
+        run: |
+          nix build -L .#demo -o demo
+          ./demo/bin/fstui-demo --version

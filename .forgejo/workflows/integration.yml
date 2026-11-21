@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Integration tests against real ZFS pools on sparse files. Runs as root on
+# the CI host's own runner (label fstui-vm), so it never runs for pull
+# requests, and for pushes only to main: a run uses the workflow file of
+# the pushed branch, so any branch could otherwise change this file and run
+# anything as root there. main must be a protected branch.
+#
+# Build unprivileged, execute privileged: the host's unprivileged account
+# "runner" fetches the source and compiles the test binary in rootless
+# Podman with Debian's Go; root only runs that binary (scripts/integration.sh).
+
+name: integration
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  # FSTUI_SRC_URL points the fetch at another clone, for a run outside the
+  # server (forgejo-runner exec); on the server it is unset.
+  SRC_URL: ${{ vars.FSTUI_SRC_URL || format('{0}/{1}', github.server_url, github.repository) }}
+  SRC_REF: ${{ github.ref }}
+
+jobs:
+  zfs:
+    runs-on: fstui-vm
+    steps:
+      - name: Build as runner, test as root
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          uid=$(id -u runner)
+          work=$(runuser -u runner -- mktemp -d /var/tmp/fstui-integration.XXXXXX)
+          trap 'rm -rf "$work"' EXIT
+          as_runner() {
+            runuser -u runner -- env -i -C "$work" HOME=/home/runner PATH=/usr/bin:/bin \
+              XDG_RUNTIME_DIR="/run/user/$uid" "$@"
+          }
+
+          as_runner git init -q "$work/src"
+          as_runner git -C "$work/src" -c http.extraHeader="Authorization: token $TOKEN" \
+            fetch -q --depth=1 "$SRC_URL" "$SRC_REF"
+          as_runner git -C "$work/src" checkout -q FETCH_HEAD
+          as_runner mkdir "$work/out"
+
+          # trixie main ships Go 1.24; go.mod requires 1.27 (distro.yml).
+          as_runner podman run --rm \
+            -v "$work/src:/src:ro" -v "$work/out:/out" -w /src \
+            -e CGO_ENABLED=0 -e GOTOOLCHAIN=local \
+            docker.io/library/debian:trixie@sha256:bfc36aecdece0387418759dba474aa856c026ca8087da3606b41b90ab0509c99 \
+            sh -euc '
+              echo "deb http://deb.debian.org/debian trixie-backports main" >/etc/apt/sources.list.d/backports.list
+              apt-get update -qq
+              apt-get install -y -qq --no-install-recommends -t trixie-backports golang-go >/dev/null
+              go test -c -tags fstui_integration -o /out/integration.test ./internal/zfs
+            '
+
+          # Root runs nothing from the runner-writable checkout: the scripts
+          # are copied out first, and integration.sh copies the binary.
+          scripts=$(mktemp -d)
+          trap 'rm -rf "$work" "$scripts"' EXIT
+          install -m 0644 "$work/src/scripts/integration.sh" "$work/src/scripts/test-clean.sh" "$scripts/"
+          zfs version
+          sh "$scripts/integration.sh" "$work/out/integration.test"
