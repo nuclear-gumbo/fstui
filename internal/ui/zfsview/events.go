@@ -22,8 +22,6 @@ const (
 	eventsView = 7
 	// Polling rates: zpool events is read every 2 seconds while the view is
 	// shown, every 30 otherwise.
-	eventsShown  = 2 * time.Second
-	eventsHidden = 30 * time.Second
 )
 
 // EventSource reads every event the kernel holds. *zfs.Reader
@@ -43,6 +41,7 @@ type EventsOptions struct {
 	Retention int
 	Filters   []config.EventFilter
 	Now       func() time.Time
+	Settings  *config.Config // shared by the views; nil: defaults
 }
 
 // Events lists what the kernel reported (view 7): live, newest first,
@@ -57,13 +56,14 @@ type Events struct {
 	input  *string // the text filter while it is typed
 	before string  // the text filter before typing started
 
-	follow bool   // keep the newest event selected
-	unseen int    // events that arrived while paused
-	cursor int    // index into shown()
-	pinned uint64 // ID of the selected event, kept selected while paused
-	first  int    // first row drawn, for the mouse
-	focus  bool   // the detail has the focus
-	geo    geometry
+	follow   bool   // keep the newest event selected
+	unseen   int    // events that arrived while paused
+	cursor   int    // index into shown()
+	pinned   uint64 // ID of the selected event, kept selected while paused
+	first    int    // first row drawn, for the mouse
+	focus    bool   // the detail has the focus
+	onScreen bool   // the view is shown, which sets the read interval
+	geo      geometry
 }
 
 // NewEvents returns the Events view.
@@ -72,8 +72,9 @@ func NewEvents(src EventSource, o EventsOptions) *Events {
 		evs, dropped, err := src.Events(ctx)
 		return eventRead{evs, dropped}, err
 	}
+	o.Settings = settingsOr(o.Settings)
 	return &Events{
-		poll:   poller[eventRead]{read: read, interval: eventsHidden, now: o.Now},
+		poll:   poller[eventRead]{read: read, interval: o.Settings.Refresh.EventsHidden, now: o.Now},
 		opts:   o,
 		log:    events.NewLog(o.Retention),
 		saved:  -1,
@@ -106,13 +107,15 @@ func (v *Events) Activate() tea.Cmd {
 	if !v.opts.Root {
 		return nil
 	}
-	v.poll.interval = eventsShown
+	v.onScreen = true
+	v.poll.interval = v.opts.Settings.Refresh.Events
 	return v.poll.refresh()
 }
 
 // Deactivate implements ui.Deactivator.
 func (v *Events) Deactivate() tea.Cmd {
-	v.poll.interval = eventsHidden
+	v.onScreen = false
+	v.poll.interval = v.opts.Settings.Refresh.EventsHidden
 	return nil
 }
 
@@ -180,6 +183,10 @@ func (v *Events) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 	case ui.ConfigMsg:
 		v.opts.Filters = msg.Config.Events.Filters
 		v.log.SetRetention(msg.Config.Events.Retention)
+		v.poll.interval = v.opts.Settings.Refresh.EventsHidden
+		if v.onScreen {
+			v.poll.interval = v.opts.Settings.Refresh.Events
+		}
 	case ui.ScrollMsg:
 		v.move(v.cursor + msg.Delta)
 	case ui.ClickMsg:

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"github.com/nuclear-gumbo/fstui/internal/execute"
 	"github.com/nuclear-gumbo/fstui/internal/mutate"
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
@@ -45,7 +47,7 @@ func (b Builder) PoolExport(ctx context.Context, pool string) (*mutate.Plan, err
 		}
 	}
 	affects(p,
-		fmt.Sprintf("the %d mounted %s of %s are unmounted and its volumes go away; the export fails, changing nothing, if one is busy", mounted, plural(mounted, "filesystem", "filesystems"), show(pool)),
+		fmt.Sprintf("the %d mounted %s of %s are unmounted and its volumes go away; the export fails, changing nothing, if one is busy", mounted, format.Plural(mounted, "filesystem", "filesystems"), show(pool)),
 		show(pool)+" leaves this system until it is imported again, here or on another machine")
 	if st.Removing() || st.Expanding() || (st.Scan != nil && st.Scan.State == "SCANNING") {
 		affects(p, "the running scrub, resilver, expansion or removal pauses, and goes on after the next import")

@@ -11,6 +11,8 @@ import (
 	"io/fs"
 	"math/rand/v2"
 	"path"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -42,10 +44,13 @@ const slowDevice = "/dev/disk/by-id/ata-DEMO_TANK_B"
 // Stream implements zfs.Commands: zpool iostat prints made-up activity
 // for the recorded pools once a second until ctx is cancelled.
 func (c *Commands) Stream(ctx context.Context, a execute.Argv, line func([]byte)) error {
+	every := time.Second
 	switch {
-	case a.String() == zfs.IOStatArgv.String():
-	case a.Tool == execute.Zpool && len(a.Options) > 0 && a.Options[0] == "iostat":
-		return fmt.Errorf("%s: %w", a, errNoKstats) // tune mode's reports
+	case a.Tool == execute.Zpool && slices.Equal(a.Options, zfs.IOStatArgv.Options):
+		// The I/O view's stream, or tune mode's: a pool and an interval.
+		if n, err := strconv.Atoi(a.Operands[len(a.Operands)-1]); err == nil && n > 0 {
+			every = time.Duration(n) * time.Second
+		}
 	default: // a recorded command, such as zpool history, streamed as it was recorded
 		res, err := c.Read(ctx, a)
 		if err != nil {
@@ -60,17 +65,31 @@ func (c *Commands) Stream(ctx context.Context, a execute.Argv, line func([]byte)
 	if err != nil {
 		return err
 	}
-	tick := time.NewTicker(time.Second)
+	tick := time.NewTicker(every)
 	defer tick.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-tick.C:
+			c.refreshIO(m) // pools made, exported or changed in the demo
 			for _, l := range m.interval() {
 				line([]byte(l))
 			}
 		}
+	}
+}
+
+// refreshIO gives the model the pools as they are now.
+func (c *Commands) refreshIO(m *ioModel) {
+	b, err := c.pools("zpool-status.json", nil)
+	if err != nil {
+		return // keep the pools it has
+	}
+	if st, err := zfs.ParsePoolStatus(b); err == nil {
+		m.mu.Lock()
+		m.pools = st
+		m.mu.Unlock()
 	}
 }
 

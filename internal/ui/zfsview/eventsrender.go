@@ -34,7 +34,7 @@ func (v *Events) Framed() bool { return true }
 // Render implements ui.Screen.
 func (v *Events) Render(d ui.Display, width, height int) string {
 	shown := v.shown()
-	split := width >= splitWidth && len(shown) > 0
+	split := width >= v.opts.Settings.UI.SplitFrom && len(shown) > 0
 	var out string
 	out, v.geo = splitPanels(d, width, height, split, v.focus && len(shown) > 0, v.listPanel, v.detailPanel)
 	return out

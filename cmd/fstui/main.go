@@ -12,8 +12,12 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"time"
+
+	"github.com/nuclear-gumbo/fstui/internal/execute"
+	"github.com/nuclear-gumbo/fstui/internal/schedule"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/colorprofile"
@@ -21,6 +25,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/nuclear-gumbo/fstui/internal/config"
+	"github.com/nuclear-gumbo/fstui/internal/notify"
 	"github.com/nuclear-gumbo/fstui/internal/registry"
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
 	"github.com/nuclear-gumbo/fstui/internal/theme"
@@ -75,8 +80,12 @@ func main() {
 
 // usageHeader precedes the option list of --help.
 const usageHeader = `Usage: fstui [options]
+       fstui check [options]
+       fstui watch [options]
 
 A terminal UI for looking at ZFS pools, datasets, snapshots and volumes.
+fstui check looks at every pool once and sends notifications; fstui watch
+does so until stopped, for a service.
 `
 
 // opened is what the compiled-in backends opened: their views, and what
@@ -84,9 +93,31 @@ A terminal UI for looking at ZFS pools, datasets, snapshots and volumes.
 type opened struct {
 	screens []ui.Screen
 	write   writeHooks
+	// notifyInfo adds the backend's lines to the Notifications tab;
+	// notifyTest sends its test messages (notify.Test when nil).
+	notifyInfo func() []string
+	notifyTest ui.Tester
+	// poolNames lists the pools, for the Alerts tab's hints.
+	poolNames func() []string
+	// scheduleTasks lists the backend's periodic work for the Schedules
+	// tab. scheduleHost and scheduleRun replace this system and its
+	// systemctl (the demo's own); nil reads the real ones.
+	scheduleTasks func(context.Context) ([]schedule.Task, []schedule.Job, error)
+	scheduleHost  *schedule.Host
+	scheduleRun   schedule.Runner
+	// cleanup runs when fstui exits.
+	cleanup func()
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 {
+		switch args[0] {
+		case "check":
+			return runCheck(args[1:], stdout, stderr)
+		case "watch":
+			return runWatch(args[1:], stdout, stderr)
+		}
+	}
 	// GNU-style options: --long, and -x for the few that have a short form.
 	fs := pflag.NewFlagSet("fstui", pflag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -145,15 +176,13 @@ func optionList(fs *pflag.FlagSet) string {
 
 // start loads the config, opens every compiled-in backend and runs the UI.
 func start(stderr io.Writer, superuserFlag, dashboard bool, wf *writeFlags) int {
-	files := []string{config.SystemFile}
 	var notices []string
 	user, err := config.UserFile()
 	if err != nil {
 		notices = append(notices, err.Error()+"; settings cannot be saved this session")
 		user = ""
-	} else {
-		files = append(files, user)
 	}
+	files := config.Files(user)
 	cfg, problems := config.Load(files...)
 	for _, p := range problems {
 		notices = append(notices, p.String())
@@ -172,20 +201,32 @@ func start(stderr io.Writer, superuserFlag, dashboard bool, wf *writeFlags) int 
 	if err != nil {
 		return report(stderr, exitFailed, "fstui: %v\n", err)
 	}
-	actions, writeScreens, mode, closeWrite, writeNotices := startWrite(wf, backends.write)
+	if backends.cleanup != nil {
+		defer backends.cleanup()
+	}
+	schedules := newSchedules(files, cfg, &backends)
+	actions, writeScreens, mode, closeWrite, writeNotices := startWrite(wf, backends.write, cfg.Limits.AuditEntries)
 	defer closeWrite()
 	notices = append(notices, writeNotices...)
-	screens := append(append(backends.screens, writeScreens...), ui.NewSettings(user, files, cfg, config.ThemeNames(config.ThemeDirs()...), config.Load,
+	general := ui.NewSettings(user, files, cfg, config.ThemeNames(config.ThemeDirs()...), config.Load,
 		func(name string) (theme.Theme, []config.Problem) {
 			return config.LoadTheme(name, config.ThemeDirs()...)
-		}))
+		})
+	tester := backends.notifyTest
+	if tester == nil {
+		tester = notify.Test
+	}
+	secretsFiles := config.SecretsFiles(user)
+	notifications := ui.NewNotifications(user, cfg, func() (config.Secrets, []config.Problem) { return config.LoadSecrets(secretsFiles...) }, backends.notifyInfo, tester)
+	alerts := ui.NewAlerts(user, cfg, backends.poolNames)
+	screens := append(append(backends.screens, writeScreens...), ui.NewConfig(general, notifications, alerts, schedules))
 
 	host, _ := os.Hostname() // empty is shown as empty; nothing depends on it
 	session := ui.Session{Host: termtext.New(host), Privilege: privilege(), Label: buildLabel, Mode: mode, Superuser: cfg.Superuser, Notices: notices}
 	profile := colorProfile()
 	m := ui.New(session, screens, ui.Options{
 		Theme: th, Profile: profile, Overrides: cfg.Colors, Exact: cfg.Units == config.Exact,
-		ASCII: cfg.UseASCII(os.Getenv("TERM")), Mouse: cfg.Mouse, Natural: cfg.NaturalScrolling, Now: time.Now, StartView: startView(dashboard),
+		ASCII: cfg.UseASCII(os.Getenv("TERM")), Mouse: cfg.Mouse, Natural: cfg.NaturalScrolling, Now: time.Now, StartView: startView(dashboard, cfg.UI.StartView), NoBlink: !cfg.UI.CursorBlink,
 		Actions: actions,
 	})
 	if _, err := tea.NewProgram(m, tea.WithColorProfile(profile)).Run(); err != nil {
@@ -265,14 +306,37 @@ func report(w io.Writer, code int, format string, a ...any) int {
 // dashboardView is the dashboard's view number (the 0 key).
 const dashboardView = 10
 
-// poolsView is view 1. fstui opens on it although the dashboard comes
-// first in the view bar; --dashboard opens on the dashboard.
+// poolsView is view 1, where fstui opens unless ui.start_view says
+// otherwise.
 const poolsView = 1
 
-// startView is the view fstui opens on.
-func startView(dashboard bool) int {
-	if dashboard {
+// startView is the view fstui opens on: the dashboard with --dashboard,
+// else ui.start_view, by its place in config.Views (view 0 is number 10).
+func startView(dashboard bool, name string) int {
+	i := slices.Index(config.Views, name)
+	switch {
+	case dashboard || i == 0:
 		return dashboardView
+	case i < 0:
+		return poolsView
 	}
-	return poolsView
+	return i
+}
+
+// newSchedules is the Config view's Schedules tab: the backends' tasks
+// and fstui's own jobs, read from this system (the demo gives its own
+// rows), with the write module's changes added to the backends'.
+func newSchedules(files []string, cfg config.Config, backends *opened) *ui.Schedules {
+	sched := schedule.Reader{
+		Host: schedule.Detect("/"), Tasks: backends.scheduleTasks, Run: backends.scheduleRun,
+		Settings: func() config.Schedules { c, _ := config.Load(files...); return c.Schedules }, // as saved now
+	}
+	if backends.scheduleHost != nil {
+		sched.Host = *backends.scheduleHost
+	} else if t, err := execute.ResolveOptional(nil, []execute.Tool{execute.Systemctl}); err == nil {
+		sched.Run = execute.NewRunner(t)
+	}
+	var cannot string
+	backends.write, cannot = withSchedules(backends.write, sched)
+	return ui.NewSchedules(sched.Jobs, cannot, cfg.Limits.ReadTimeout, time.Now)
 }

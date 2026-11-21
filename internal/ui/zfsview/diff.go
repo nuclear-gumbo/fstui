@@ -130,7 +130,7 @@ func (w *diffWindow) rows(d ui.Display, iw, ih int) []string {
 	}
 	sum := fmt.Sprintf("%d added, %d removed, %d modified, %d renamed", counts['+'], counts['-'], counts['M'], counts['R'])
 	if w.truncated {
-		sum += fmt.Sprintf("; only the first %d are shown", zfs.MaxDiff)
+		sum += fmt.Sprintf("; only the first %d are shown (limits.diff_entries)", len(w.entries))
 	}
 	out := []string{d.Palette.Style(theme.Muted).Render(ansi.Truncate(sum, iw, "…"))}
 	room := max(ih-4, 1)

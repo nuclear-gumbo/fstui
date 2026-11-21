@@ -7,6 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/problem"
+
+	"github.com/nuclear-gumbo/fstui/internal/zfs/health"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"github.com/nuclear-gumbo/fstui/internal/ui/keys"
 
 	"charm.land/lipgloss/v2"
@@ -70,10 +76,6 @@ func layout(pools []zfs.Overview, width int) columns {
 	return c
 }
 
-// splitWidth: from this terminal width the pool list and the selected
-// pool's detail are shown side by side.
-const splitWidth = 120
-
 // List panel width in the split layout: two fifths, within these bounds.
 const (
 	minListPanel = 44
@@ -82,7 +84,7 @@ const (
 
 // Render implements ui.Screen.
 func (p *Pools) Render(d ui.Display, width, height int) string {
-	split := width >= splitWidth && len(p.poll.data) > 0
+	split := width >= p.opts.Settings.UI.SplitFrom && len(p.poll.data) > 0
 	if split && p.detail == nil {
 		p.follow() // the first render picks the selected pool; Topology needs no read
 	}
@@ -175,7 +177,7 @@ var sp = strings.Repeat(" ", gap)
 func (p *Pools) row(d ui.Display, c columns, o zfs.Overview, selected bool) string {
 	pal := d.Palette
 	th := p.opts.Thresholds
-	pct := capacityPct(o)
+	pct := health.CapacityPct(o)
 	level := ui.LevelOf(pct, th.CapacityWarn, th.CapacityError)
 	marker, name := "  ", pad(truncName(o.Pool.Name.String(), c.name), c.name)
 	if selected {
@@ -189,7 +191,7 @@ func (p *Pools) row(d ui.Display, c columns, o zfs.Overview, selected bool) stri
 	levelTok := map[ui.Level]theme.Token{ui.Warning: theme.Warn, ui.Critical: theme.Error}[level]
 	r += lpad(fmt.Sprintf("%d%%", pct), pctWidth) + " " + pal.Style(levelTok).Render(pad(ui.LevelWord(level), levelWidth))
 	if c.space {
-		r += sp + lpad(ui.Size(o.Used, d.Exact), sizeWidth) + sp + lpad(ui.Size(o.Available, d.Exact), sizeWidth)
+		r += sp + lpad(format.Size(o.Used, d.Exact), sizeWidth) + sp + lpad(format.Size(o.Available, d.Exact), sizeWidth)
 	}
 	if c.frag {
 		r += sp + lpad(fragText(o), fragWidth)
@@ -219,16 +221,6 @@ func truncName(s string, w int) string {
 		return s
 	}
 	return s[:w-1] + "…"
-}
-
-// capacityPct is how full the pool is for writers: the root dataset's
-// used share of used plus available.
-func capacityPct(o zfs.Overview) int {
-	total := o.Used + o.Available
-	if total == 0 {
-		return 0
-	}
-	return int((o.Used*100 + total/2) / total) //nolint:gosec // at most 100
 }
 
 // stateToken colours a state word; the word itself always carries the meaning.
@@ -280,7 +272,7 @@ func scanParts(o zfs.Overview, now func() time.Time) (word, state string) {
 	case sc.State == "CANCELED":
 		return word, "cancelled"
 	}
-	state = ui.Age(now().Sub(sc.End)) + " ago"
+	state = format.Age(now().Sub(sc.End)) + " ago"
 	if sc.Errors > 0 {
 		state += fmt.Sprintf(", %d err", sc.Errors)
 	}
@@ -299,14 +291,14 @@ func deviceErrors(st zfs.PoolStatus) uint64 {
 // indented, as many whole warnings as fit in a third of the height (and
 // always the first), and "+N more" for the rest. A warning is never cut
 // short: "1 device O…" at the edge of a narrow list says nothing.
-func warningBlock(d ui.Display, ws []warning, width, height int) []string {
+func warningBlock(d ui.Display, ws []problem.Problem, width, height int) []string {
 	if len(ws) == 0 {
 		return nil
 	}
 	budget := max(height/3, 1) //nolint:mnd // a third of the view
 	out := []string{""}
 	for i, w := range ws {
-		lines := wrapIndented(w.text, width, warnIndent)
+		lines := wrapIndented(w.Text, width, warnIndent)
 		more := 0
 		if i < len(ws)-1 {
 			more = 1 // room for "+N more" if a later one does not fit
@@ -315,7 +307,7 @@ func warningBlock(d ui.Display, ws []warning, width, height int) []string {
 			return append(out, d.Palette.Style(theme.Muted).Render(fmt.Sprintf("+%d more", len(ws)-i)))
 		}
 		tok := theme.Warn
-		if !w.advisory {
+		if !w.Advisory {
 			tok = theme.Error
 		}
 		for _, l := range lines {
@@ -347,7 +339,7 @@ func (p *Pools) figure() string {
 	if p.poll.loaded.IsZero() {
 		return ""
 	}
-	s := fmt.Sprintf("%d %s", len(p.poll.data), plural(len(p.poll.data), "pool", "pools"))
+	s := fmt.Sprintf("%d %s", len(p.poll.data), format.Plural(len(p.poll.data), "pool", "pools"))
 	bad := map[string]int{}
 	for _, o := range p.poll.data {
 		if o.Status.State != "ONLINE" {
@@ -360,7 +352,7 @@ func (p *Pools) figure() string {
 		}
 	}
 	if n := p.hiddenCount(); n > 0 {
-		s += fmt.Sprintf(", %d %s hidden", n, plural(n, "warning", "warnings"))
+		s += fmt.Sprintf(", %d %s hidden", n, format.Plural(n, "warning", "warnings"))
 	}
 	return s
 }

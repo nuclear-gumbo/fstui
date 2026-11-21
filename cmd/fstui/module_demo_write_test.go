@@ -16,7 +16,12 @@ import (
 // files (actions.DemoPaths).
 func TestDemoChangesAreSimulated(t *testing.T) {
 	cmds := demo.New()
-	h := demoWrite(cmds, zfs.NewReader(cmds))
+	sched, err := demo.NewSchedules()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = sched.Close() })
+	h := demoWrite(cmds, zfs.NewReader(cmds), sched)
 	if h.simulate == nil || h.offers == nil || h.tools != nil {
 		t.Fatalf("demo write hooks = %+v", h)
 	}

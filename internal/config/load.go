@@ -11,6 +11,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"go.yaml.in/yaml/v3"
@@ -43,6 +44,60 @@ func UserFile() (string, error) {
 		return "", fmt.Errorf("finding root's home directory: %w", err)
 	}
 	return filepath.Join(u.HomeDir, ".config", "fstui", "config.yaml"), nil
+}
+
+// DropInDir is the directory of drop-in files next to a config.yaml.
+const DropInDir = "config.d"
+
+// Files are the config files in the order they apply, each overriding the
+// ones before it key by key: /etc/fstui/config.yaml, the drop-ins in
+// /etc/fstui/config.d, the user's config.yaml (userFile; empty when it
+// could not be found), then the drop-ins in the user's config.d. Drop-ins
+// are the *.yaml files there, in name order; a missing directory has
+// none.
+func Files(userFile string) []string {
+	out := append([]string{SystemFile}, dropIns(filepath.Dir(SystemFile))...)
+	if userFile != "" {
+		out = append(out, userFile)
+		out = append(out, dropIns(filepath.Dir(userFile))...)
+	}
+	return out
+}
+
+// dropIns lists the *.yaml files in dir's config.d, in name order. Each
+// is checked like config.yaml when it is read.
+func dropIns(dir string) []string {
+	entries, err := os.ReadDir(filepath.Join(dir, DropInDir))
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, e := range entries {
+		if name := e.Name(); strings.HasSuffix(name, ".yaml") && !strings.HasPrefix(name, ".") && !e.IsDir() {
+			out = append(out, filepath.Join(dir, DropInDir, name))
+		}
+	}
+	return out // os.ReadDir sorts by name
+}
+
+// UserOwned reports whether file is the user's config.yaml or one of its
+// drop-ins: a file the Config view may write.
+func UserOwned(userFile, file string) bool {
+	if userFile == "" {
+		return false
+	}
+	dir := filepath.Dir(userFile)
+	return file == userFile || filepath.Dir(file) == filepath.Join(dir, DropInDir)
+}
+
+// Target is the file an edit to path is written to: the user's file that
+// sets it now, so a later drop-in does not override the edit, else the
+// user's config.yaml.
+func (c Config) Target(userFile, path string) string {
+	if src := c.Sources[path]; UserOwned(userFile, src) {
+		return src
+	}
+	return userFile
 }
 
 // Load applies the files in order on top of the defaults. A missing file
@@ -80,7 +135,7 @@ func (t trust) loadFile(c *Config, file string) []Problem {
 	return applyData(c, file, data)
 }
 
-// applyData applies one file's contents to c; the Settings view uses it
+// applyData applies one file's contents to c; the Config view uses it
 // to check an edited file before saving it.
 func applyData(c *Config, file string, data []byte) []Problem {
 	var doc yaml.Node
@@ -99,7 +154,11 @@ func applyData(c *Config, file string, data []byte) []Problem {
 // have been written by anyone but euid or root. The file's owner and mode
 // are checked on the opened descriptor, so the checked file is the one
 // read.
-func (t trust) read(file string) ([]byte, error) {
+func (t trust) read(file string) ([]byte, error) { return t.readWith(file, nil) }
+
+// readWith is read with one more check of the opened file, if extra is
+// set.
+func (t trust) readWith(file string, extra func(string, fs.FileInfo) error) ([]byte, error) {
 	f, err := os.Open(file) //nolint:gosec // the path is fstui's own config location
 	if err != nil {
 		return nil, fmt.Errorf("opening config: %w", err)
@@ -115,9 +174,20 @@ func (t trust) read(file string) ([]byte, error) {
 	if err := t.check(file, info); err != nil {
 		return nil, err
 	}
+	if extra != nil {
+		if err := extra(file, info); err != nil {
+			return nil, err
+		}
+	}
+	// Both the directories the path names and those it resolves to: a
+	// symbolic link in a directory others can write could be swapped
+	// for one to any file root owns.
 	resolved, err := filepath.EvalSymlinks(file)
 	if err != nil {
 		return nil, fmt.Errorf("resolving %s: %w", file, err)
+	}
+	if err := t.checkDirs(filepath.Dir(file)); err != nil {
+		return nil, err
 	}
 	if err := t.checkDirs(filepath.Dir(resolved)); err != nil {
 		return nil, err

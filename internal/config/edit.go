@@ -3,117 +3,30 @@
 package config
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
+	"slices"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
 )
 
-// Setting describes one setting the Settings view can edit. keys: and colors:
-// are edited in the file.
-type Setting struct {
-	Path    string   // dotted path in config.yaml, e.g. "thresholds.capacity_warn"
-	Desc    string   // one line for the view
-	Choices []string // for settings with a fixed set of values; nil for numbers
-	Min     int      // for numbers
-	Max     int
-}
-
-// Settings lists the editable settings; themes lists the theme names to
-// offer.
-func Settings(themes []string) []Setting {
-	onOff := []string{"true", "false"}
-	return []Setting{
-		{Path: "theme", Desc: "Colour theme", Choices: themes},
-		{Path: "units", Desc: "Sizes in IEC units or exact byte counts", Choices: []string{"iec", "exact"}},
-		{Path: "ascii", Desc: "Plain characters instead of box and block glyphs; auto on the Linux console", Choices: []string{"auto", "true", "false"}},
-		{Path: "mouse", Desc: "Clickable tabs and rows, wheel scrolling", Choices: onOff},
-		{Path: "natural_scrolling", Desc: "The wheel moves the content, as on a touchpad set to natural scrolling", Choices: onOff},
-		{Path: "superuser", Desc: "Hide advisory warnings; confirmations are always shown", Choices: onOff},
-		{Path: "thresholds.capacity_warn", Desc: "Capacity shown as WARN from this percentage", Min: 1, Max: percentMax},
-		{Path: "thresholds.capacity_error", Desc: "Capacity shown as FULL from this percentage", Min: 1, Max: percentMax},
-		{Path: "thresholds.fragmentation_warn", Desc: "Warn about free-space fragmentation from this percentage", Min: 1, Max: percentMax},
-		{Path: "thresholds.scrub_overdue_days", Desc: "Warn when the last scrub is older than this many days", Min: 1, Max: scrubDaysMax},
-		{Path: "refresh.pools", Desc: "Seconds between pool reads", Min: refreshPoolsMin, Max: refreshMaxSec},
-		{Path: "refresh.datasets", Desc: "Seconds between dataset reads", Min: refreshDSMin, Max: refreshMaxSec},
-		{Path: "refresh.arc", Desc: "Seconds between ARC reads while the ARC view is shown", Min: refreshARCMin, Max: refreshMaxSec},
-		{Path: "events.retention", Desc: "Events kept in memory", Min: retentionMin, Max: retentionMax},
-		{Path: "dashboard.columns", Desc: "Dashboard columns; 0 chooses by the terminal's width", Min: 0, Max: dashboardColumnsMax},
-	}
-}
-
-// Value returns a setting's current value as it is written in the file.
-func (c Config) Value(path string) string {
-	switch path {
-	case "theme":
-		return c.Theme
-	case "units":
-		return map[Units]string{IEC: "iec", Exact: "exact"}[c.Units]
-	case "ascii":
-		return map[ASCII]string{ASCIIAuto: "auto", ASCIIOn: "true", ASCIIOff: "false"}[c.ASCII]
-	case "mouse":
-		return strconv.FormatBool(c.Mouse)
-	case "superuser":
-		return strconv.FormatBool(c.Superuser)
-	case "natural_scrolling":
-		return strconv.FormatBool(c.NaturalScrolling)
-	case "refresh.arc":
-		return strconv.Itoa(int(c.Refresh.ARC.Seconds()))
-	case "events.retention":
-		return strconv.Itoa(c.Events.Retention)
-	case "dashboard.columns":
-		return strconv.Itoa(c.Dashboard.Columns)
-	case "thresholds.capacity_warn":
-		return strconv.Itoa(c.Thresholds.CapacityWarn)
-	case "thresholds.capacity_error":
-		return strconv.Itoa(c.Thresholds.CapacityError)
-	case "thresholds.fragmentation_warn":
-		return strconv.Itoa(c.Thresholds.FragmentationWarn)
-	case "thresholds.scrub_overdue_days":
-		return strconv.Itoa(c.Thresholds.ScrubOverdueDays)
-	case "refresh.pools":
-		return strconv.Itoa(int(c.Refresh.Pools.Seconds()))
-	case "refresh.datasets":
-		return strconv.Itoa(int(c.Refresh.Datasets.Seconds()))
-	}
-	return ""
-}
-
 // Edit applies edits (dotted path to value) to the YAML of a config file
 // and returns the new document. Comments and the order of existing keys
 // are kept; new keys go at the end of their section.
 func Edit(current []byte, edits map[string]string) ([]byte, error) {
-	var doc yaml.Node
-	if err := yaml.Unmarshal(current, &doc); err != nil {
-		return nil, fmt.Errorf("reading the current file: %w", err)
-	}
-	if len(doc.Content) == 0 {
-		doc = yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{{Kind: yaml.MappingNode, Tag: "!!map"}}}
-	}
-	root := doc.Content[0]
-	if root.Kind != yaml.MappingNode {
-		return nil, errors.New("the current file is not a mapping of settings")
+	doc, root, err := document(current)
+	if err != nil {
+		return nil, err
 	}
 	for path, value := range edits {
 		if err := setPath(root, strings.Split(path, "."), value); err != nil {
 			return nil, err
 		}
 	}
-	var b bytes.Buffer
-	enc := yaml.NewEncoder(&b)
-	enc.SetIndent(yamlIndent)
-	if err := enc.Encode(&doc); err != nil {
-		return nil, fmt.Errorf("writing the new file: %w", err)
-	}
-	if err := enc.Close(); err != nil {
-		return nil, fmt.Errorf("writing the new file: %w", err)
-	}
-	return b.Bytes(), nil
+	return encode(doc)
 }
 
 // yamlIndent matches the examples in the documentation.
@@ -157,6 +70,37 @@ func Parse(file string, data []byte) (Config, []Problem) {
 func Check(file string, data []byte) []Problem {
 	_, problems := Parse(file, data)
 	return problems
+}
+
+// CheckAmong returns the problems of an edited file as fstui would load
+// it: files are read in order, with data in place of file, so an alert
+// in config.yaml may name a channel a drop-in lists. Problems of the
+// other files are left out, and so are problems across files that were
+// there before the edit: they are not this edit's to fix.
+func CheckAmong(files []string, file string, data []byte) []Problem {
+	return trust{euid: uint32(os.Geteuid()), top: "/"}.checkAmong(files, file, data) //nolint:gosec // uids are non-negative
+}
+
+func (t trust) checkAmong(files []string, file string, data []byte) []Problem {
+	if !slices.Contains(files, file) {
+		files = append(slices.Clone(files), file)
+	}
+	_, before := t.load(files)
+	after := Default()
+	var out []Problem
+	for _, f := range files {
+		if f == file {
+			out = append(out, applyData(&after, file, data)...)
+			continue
+		}
+		t.loadFile(&after, f) // another file's problems are not this edit's
+	}
+	for _, p := range after.check() {
+		if !slices.Contains(before, p) {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // Read returns a config file's contents, or nothing if it does not exist.

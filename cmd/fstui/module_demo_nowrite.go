@@ -10,4 +10,4 @@ import (
 )
 
 // demoWrite has nothing to give in a demo built without the write module.
-func demoWrite(*demo.Commands, *zfs.Reader) writeHooks { return writeHooks{} }
+func demoWrite(*demo.Commands, *zfs.Reader, *demo.Schedules) writeHooks { return writeHooks{} }

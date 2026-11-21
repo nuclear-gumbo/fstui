@@ -24,13 +24,13 @@ func (v Verdict) Word() string {
 }
 
 // Finding is the answer to one question: the verdict, the one figure that
-// decides it, what it points at, and the evidence behind it.
+// decides it, what it points at, and the details behind it.
 type Finding struct {
 	Question string
 	Verdict  Verdict
 	Figure   string   // the deciding figure, a short sentence
 	Points   string   // the setting or hardware it points at, or what is missing
-	Evidence []string // the lines enter shows
+	Details  []string // the figures behind the answer, shown by enter
 	Change   *Change  // the change the finding points to, if fstui can make it
 }
 

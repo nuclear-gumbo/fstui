@@ -69,8 +69,9 @@ func ParseTxgs(b []byte) ([]Txg, error) {
 	if len(lines) == 0 || lines[0] == "" {
 		return nil, nil
 	}
+	header := strings.Fields(lines[0])
 	cols := map[string]int{}
-	for i, c := range strings.Fields(lines[0]) {
+	for i, c := range header {
 		cols[c] = i
 	}
 	for _, c := range []string{"txg", "state", "stime"} {
@@ -81,7 +82,9 @@ func ParseTxgs(b []byte) ([]Txg, error) {
 	var out []Txg
 	for _, l := range lines[1:] {
 		f := strings.Fields(l)
-		if len(f) < len(cols) {
+		// Against the header's width, not the column names: a name the
+		// header repeats would leave cols smaller than a row must be.
+		if len(f) < len(header) {
 			continue // a row being written as it was read
 		}
 		num := func(c string) uint64 {

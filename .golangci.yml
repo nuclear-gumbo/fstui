@@ -36,6 +36,20 @@ linters:
           deny:
             - pkg: os/exec
               desc: only internal/execute may start processes
+        # Only internal/notify may open network connections.
+        network:
+          files:
+            - "$all"
+            - "!**/internal/notify/*.go"
+          deny:
+            - pkg: net$
+              desc: only internal/notify may open network connections
+            - pkg: net/http
+              desc: only internal/notify may open network connections
+            - pkg: net/smtp
+              desc: only internal/notify may open network connections
+            - pkg: crypto/tls
+              desc: only internal/notify may open network connections
         # The pool harness creates and destroys pools; it must never be
         # linked into fstui.
         testpool:

@@ -12,6 +12,7 @@ package ui
 import (
 	"sync/atomic"
 	"time"
+	"unicode"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -102,7 +103,7 @@ type Screen interface {
 }
 
 // Typing is implemented by a screen that can be taking typed text, such
-// as a number in Settings. While Typing reports true, every key but quit
+// as a number in the Config view. While Typing reports true, every key but quit
 // goes to the screen: digits, b, q and ? are text there, not view
 // switches or toggles.
 type Typing interface {
@@ -116,6 +117,20 @@ type ScrollMsg struct{ Delta int }
 // ClickMsg is a left click inside the active screen's area, in the
 // screen's own coordinates: row 0 is the first line the screen drew.
 type ClickMsg struct{ X, Y int }
+
+// Claimer is implemented by screens that use a key the root otherwise
+// handles: the Config view's Notifications tab adds a channel with a.
+type Claimer interface {
+	Claims(msg tea.KeyPressMsg) bool
+}
+
+func (m Model) claimed(msg tea.KeyPressMsg) bool {
+	if len(m.screens) == 0 {
+		return false
+	}
+	c, ok := m.screens[m.active].(Claimer)
+	return ok && c.Claims(msg)
+}
 
 // Framed is implemented by screens that draw their own panels, such as
 // list and detail side by side; the root frames all others in one panel
@@ -144,7 +159,7 @@ type Numbered interface {
 	Number() int // 1 to 9, or 10 for the 0 key
 }
 
-// ConfigMsg carries settings saved in the Settings view. The root applies
+// ConfigMsg carries settings saved in the Config view. The root applies
 // the display settings; screens take what concerns them.
 type ConfigMsg struct {
 	Config config.Config
@@ -206,6 +221,7 @@ type Options struct {
 	Natural   bool             // natural scrolling: the wheel moves the content (config: natural_scrolling)
 	Now       func() time.Time // clock for data ages
 	StartView int              // view number to show first (fstui --dashboard: 10); 0 for the first
+	NoBlink   bool             // a typing cursor does not blink (config: ui.cursor_blink)
 	Actions   Actions          // the write module's changes; nil without it
 }
 
@@ -278,7 +294,7 @@ func globalKeys() []key.Binding {
 // blinkCursor blinks only while something takes typed text; otherwise
 // the cursor stays on, so it shows at once when typing starts.
 func (m Model) blinkCursor() Model {
-	m.display.CursorOff = !m.display.CursorOff && (m.modal != nil || m.typing())
+	m.display.CursorOff = !m.display.CursorOff && (m.modal != nil || m.typing()) && !m.opts.NoBlink
 	return m
 }
 
@@ -313,17 +329,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case ThemeMsg:
 		m.opts.Theme = msg.Theme
-		m.display.Palette = theme.Resolve(msg.Theme, m.dark, m.opts.Profile, m.opts.Overrides)
-		return m, nil
+		return m.repaint(), nil
 	case tea.BackgroundColorMsg:
 		m.dark = msg.IsDark()
-		m.display.Palette = theme.Resolve(m.opts.Theme, m.dark, m.opts.Profile, m.opts.Overrides)
-		return m, nil
+		return m.repaint(), nil
 	case tea.KeyPressMsg:
-		if m.modal != nil {
-			return m.modalKey(msg)
-		}
-		return m.key(msg)
+		return m.keyPress(msg)
+	case tea.PasteMsg:
+		return m.paste(msg)
+	case OpenChangesMsg:
+		return m.openChanges()
 	case tea.MouseWheelMsg:
 		if m.modal != nil {
 			return m, nil
@@ -371,6 +386,7 @@ func (m Model) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, keys.Get(keys.Bytes)):
 		m.display.Exact = !m.display.Exact
 		return m, nil
+	case m.claimed(msg):
 	case key.Matches(msg, keys.Get(keys.Actions), keys.Get(keys.WriteMode), keys.Get(keys.NewSnapshot)):
 		if next, cmd, ok := m.actionKey(msg); ok {
 			return next, cmd
@@ -489,7 +505,7 @@ func (m Model) screenFor(n int) int {
 func (m *Model) applyConfig(msg ConfigMsg) {
 	c := msg.Config
 	m.opts.Theme, m.opts.Overrides = msg.Theme, c.Colors
-	m.opts.Mouse, m.opts.Natural = c.Mouse, c.NaturalScrolling
+	m.opts.Mouse, m.opts.Natural, m.opts.NoBlink = c.Mouse, c.NaturalScrolling, !c.UI.CursorBlink
 	m.display.Exact = c.Units == config.Exact
 	m.display.ASCII = msg.ASCII
 	m.display.Palette = theme.Resolve(msg.Theme, m.dark, m.opts.Profile, c.Colors)
@@ -514,4 +530,71 @@ func (m Model) View() tea.View {
 		v.MouseMode = tea.MouseModeCellMotion
 	}
 	return v
+}
+
+// paste types pasted text into the field that has focus, one character
+// at a time, as if typed: each field keeps its own limits and the
+// characters it accepts, and a secret stays hidden. Line breaks and other
+// control characters are left out, so a password manager's trailing
+// newline cannot finish a form. Text pasted where nothing takes typing is
+// dropped: a letter there would be a command.
+func (m Model) paste(msg tea.PasteMsg) (tea.Model, tea.Cmd) {
+	if !m.pasteTarget() {
+		return m, nil
+	}
+	var cmds []tea.Cmd
+	var next tea.Model = m
+	for _, r := range msg.Content {
+		if unicode.IsControl(r) {
+			continue
+		}
+		var cmd tea.Cmd
+		next, cmd = next.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+		cmds = append(cmds, cmd)
+	}
+	return next, tea.Batch(cmds...)
+}
+
+// pasteTarget reports whether a field takes typed text now: in the modal
+// shown, or else the active screen.
+func (m Model) pasteTarget() bool {
+	if m.modal != nil {
+		t, ok := m.modal.(Typing)
+		return ok && t.Typing()
+	}
+	return m.typing()
+}
+
+// keyPress sends a key to the modal shown, or else the view's keys.
+func (m Model) keyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if m.modal != nil {
+		return m.modalKey(msg)
+	}
+	return m.key(msg)
+}
+
+// openChanges opens the change menu on the active view's selection, as
+// the a key does.
+func (m Model) openChanges() (tea.Model, tea.Cmd) {
+	if m.modal != nil {
+		return m, nil
+	}
+	if m.opts.Actions == nil || len(m.screens) == 0 {
+		return m, nil
+	}
+	var cmd tea.Cmd
+	if t, ok := m.selection(); ok {
+		m.modal, cmd = m.opts.Actions.Menu(t)
+	}
+	if m.modal == nil {
+		m.modal = m.noChanges()
+	}
+	return m, cmd
+}
+
+// repaint resolves the palette again after the theme or the terminal's
+// background changed.
+func (m Model) repaint() Model {
+	m.display.Palette = theme.Resolve(m.opts.Theme, m.dark, m.opts.Profile, m.opts.Overrides)
+	return m
 }

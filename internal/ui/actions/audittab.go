@@ -5,9 +5,12 @@
 package actions
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -20,9 +23,6 @@ import (
 	"github.com/nuclear-gumbo/fstui/internal/ui/keys"
 )
 
-// auditShown is how many records the view reads from the end of the log.
-const auditShown = 2000
-
 // Audit lists the audit log, newest first. It only reads; the log is never
 // changed from fstui.
 type Audit struct {
@@ -34,6 +34,7 @@ type Audit struct {
 	cursor  int
 	filter  string
 	typing  bool
+	start   int // the first record shown, for clicks
 }
 
 // NewAudit returns the audit tab of a session.
@@ -46,10 +47,13 @@ type auditMsg struct {
 	at      time.Time
 }
 
+// defaultAuditEntries is limits.audit_entries when none was given.
+const defaultAuditEntries = 2000
+
 func (a *Audit) load() tea.Cmd {
-	dir, now := a.s.paths.AuditDir, a.s.now
+	dir, now, n := a.s.paths.AuditDir, a.s.now, cmp.Or(a.s.auditEntries.Load(), defaultAuditEntries)
 	return func() tea.Msg {
-		recs, skipped, err := audit.Recent(dir, auditShown)
+		recs, skipped, err := audit.Recent(dir, int(n))
 		return auditMsg{recs: recs, skipped: skipped, err: err, at: now()}
 	}
 }
@@ -79,6 +83,8 @@ func (a *Audit) Status() ui.Status {
 // Update handles the tab's messages.
 func (a *Audit) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
+	case ui.ConfigMsg:
+		a.s.auditEntries.Store(int64(msg.Config.Limits.AuditEntries))
 	case auditMsg:
 		a.recs, a.skipped, a.err, a.loaded = msg.recs, msg.skipped, msg.err, msg.at
 		a.cursor = max(min(a.cursor, len(a.shown())-1), 0)
@@ -87,7 +93,7 @@ func (a *Audit) Update(msg tea.Msg) tea.Cmd {
 	case ui.ScrollMsg:
 		a.cursor = max(min(a.cursor+msg.Delta, len(a.shown())-1), 0)
 	case ui.ClickMsg:
-		if row := msg.Y - auditTop; row >= 0 && row < len(a.shown()) {
+		if row := a.start + msg.Y - auditTop; msg.Y >= auditTop && row < len(a.shown()) {
 			a.cursor = row
 		}
 	case tea.KeyPressMsg:
@@ -125,18 +131,32 @@ func (a *Audit) key(msg tea.KeyPressMsg) tea.Cmd {
 	return nil
 }
 
-// line is a record as one row; the filter matches it.
-func line(r audit.Record) string {
+// auditCols are the table's titles.
+var auditCols = []string{"TIME (UTC)", "MODE", "PHASE", "CHANGE", "RESULT", "COMMAND"}
+
+// cells are a record as one row of the table.
+func cells(r audit.Record) []string {
 	t := r.Time
 	if tt, err := time.Parse(time.RFC3339, r.Time); err == nil {
 		t = tt.UTC().Format("2006-01-02 15:04:05")
 	}
-	result := "     "
-	if r.ExitCode != nil {
-		result = fmt.Sprintf("exit %d", *r.ExitCode)
-	}
-	return fmt.Sprintf("%-19s %-7s %-7s %-16s %-7s %s", t, r.Mode, r.Phase, r.Op, result, strings.Join(r.Argv, " "))
+	return []string{t, r.Mode, r.Phase, r.Op, result(r), termtext.New(strings.Join(r.Argv, " ")).Display()}
 }
+
+// result is how a step ended: success, failed, or n/a for the record
+// written before it ran.
+func result(r audit.Record) string {
+	switch {
+	case r.ExitCode == nil:
+		return "n/a"
+	case *r.ExitCode == 0:
+		return "success"
+	}
+	return "failed"
+}
+
+// line is a record as the filter matches it.
+func line(r audit.Record) string { return strings.Join(cells(r), " ") }
 
 func (a *Audit) shown() []audit.Record {
 	if a.filter == "" {
@@ -151,8 +171,9 @@ func (a *Audit) shown() []audit.Record {
 	return out
 }
 
-// auditTop is the first record row in the tab's coordinates.
-const auditTop = 2
+// auditTop is the first record row in the tab's coordinates: under the
+// heading, the table's top edge, titles and rule.
+const auditTop = 1 + ui.GridChrome - 1
 
 // Render draws the tab in width x height.
 func (a *Audit) Render(d ui.Display, width, height int) string {
@@ -165,29 +186,25 @@ func (a *Audit) Render(d ui.Display, width, height int) string {
 		}
 	}
 	if a.skipped > 0 {
-		head += fmt.Sprintf("; %d damaged %s skipped", a.skipped, plural(a.skipped, "line", "lines"))
+		head += fmt.Sprintf("; %d damaged %s skipped", a.skipped, format.Plural(a.skipped, "line", "lines"))
 	}
-	lines := []string{muted.Render(fitW(head, width)), muted.Render(fitW(fmt.Sprintf("%-19s %-7s %-7s %-16s %-7s %s", "TIME (UTC)", "MODE", "PHASE", "CHANGE", "RESULT", "COMMAND"), width))}
+	lines := []string{muted.Render(fitW(head, width))}
 	recs := a.shown()
 	if len(recs) == 0 {
 		return strings.Join(append(lines, "No records."), "\n")
 	}
-	detail := a.detail(d, recs[a.cursor], width)
-	rows := max(height-len(lines)-len(detail)-1, 1)
-	start := max(min(a.cursor-rows/2, len(recs)-rows), 0)
-	for i := start; i < min(start+rows, len(recs)); i++ {
-		row := fitW(termtext.New(line(recs[i])).Display(), width-2)
-		if i == a.cursor {
-			row = d.Palette.Style(theme.Accent).Bold(true).Render("> " + row)
-		} else {
-			if recs[i].ExitCode != nil && *recs[i].ExitCode != 0 {
-				row = d.Palette.Style(theme.Error).Render(row)
-			}
-			row = "  " + row
-		}
-		lines = append(lines, row)
+	detail := a.detail(d, recs[a.cursor], width-2)
+	box := ui.Panel{Title: "record"}.Render(d, strings.Join(detail, "\n"), width, len(detail)+2)
+	rows := max(height-len(lines)-ui.GridChrome-len(detail)-2, 1)
+	a.start = max(min(a.cursor-rows/2, len(recs)-rows), 0)
+	g := ui.Grid{Cols: auditCols, Rows: make([][]string, len(recs)), Cursor: a.cursor, Style: func(i int) (lipgloss.Style, bool) {
+		return d.Palette.Style(theme.Error), result(recs[i]) == "failed"
+	}}
+	for i, r := range recs {
+		g.Rows[i] = cells(r)
 	}
-	return strings.Join(append(append(lines, ""), detail...), "\n")
+	lines = append(lines, g.Render(d, width, a.start, a.start+rows)...)
+	return strings.Join(append(lines, box), "\n")
 }
 
 func (a *Audit) detail(d ui.Display, r audit.Record, width int) []string {
@@ -203,6 +220,9 @@ func (a *Audit) detail(d ui.Display, r audit.Record, width int) []string {
 	if r.PlanSHA256 != "" {
 		out = append(out, muted.Render(fitW("from saved plan "+r.PlanSHA256, width)))
 	}
+	if r.ExitCode != nil {
+		out = append(out, muted.Render(fmt.Sprintf("%s: exit status %d", result(r), *r.ExitCode)))
+	}
 	if r.DurationMS != nil {
 		out = append(out, muted.Render(fmt.Sprintf("took %d ms", *r.DurationMS)))
 	}
@@ -210,11 +230,4 @@ func (a *Audit) detail(d ui.Display, r audit.Record, width int) []string {
 		out = append(out, wrapStyled(d.Palette.Style(theme.Error), termtext.New(r.Stderr).Display(), width)...)
 	}
 	return out
-}
-
-func plural(n int, one, many string) string {
-	if n == 1 {
-		return one
-	}
-	return many
 }

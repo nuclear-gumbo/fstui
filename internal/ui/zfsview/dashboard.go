@@ -7,6 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -20,17 +24,10 @@ import (
 // dashboardView is the 0 key.
 const dashboardView = 10
 
-// Column counts by terminal width.
-const (
-	dashTwoColumns   = 120
-	dashThreeColumns = 200
-)
-
 // DashboardOptions configures the dashboard.
 type DashboardOptions struct {
-	Panels  []string // config.DashboardPanels, in order
-	Columns int      // 0: by width
-	Now     func() time.Time
+	Now      func() time.Time
+	Settings *config.Config // shared by the views; nil: defaults
 }
 
 // Dashboard is a read-only overview meant to stay on a screen all day: the
@@ -50,7 +47,7 @@ type Dashboard struct {
 	// happened at night is still flagged in the morning.
 	seenErrors, seenWarnings, seenProblems int
 
-	focus    int        // index into opts.Panels of the panel keys go to
+	focus    int        // index into dashboard.panels of the panel keys go to
 	evCursor int        // selected row of the events panel
 	evFirst  int        // its first row drawn
 	evShown  []uint64   // event IDs in the events panel, newest first
@@ -65,6 +62,7 @@ type panelBox struct {
 
 // NewDashboard returns the dashboard over the given views.
 func NewDashboard(pools *Pools, evs *Events, io *IO, arc *ARC, o DashboardOptions) *Dashboard {
+	o.Settings = settingsOr(o.Settings)
 	return &Dashboard{pools: pools, evs: evs, io: io, arc: arc, opts: o}
 }
 
@@ -94,8 +92,8 @@ func (d *Dashboard) Keys() []key.Binding {
 }
 
 func (d *Dashboard) focused() string {
-	if d.focus < len(d.opts.Panels) {
-		return d.opts.Panels[d.focus]
+	if d.focus < len(d.opts.Settings.Dashboard.Panels) {
+		return d.opts.Settings.Dashboard.Panels[d.focus]
 	}
 	return ""
 }
@@ -131,7 +129,7 @@ func (d *Dashboard) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 }
 
 func (d *Dashboard) key(msg tea.KeyPressMsg) tea.Cmd {
-	n := len(d.opts.Panels)
+	n := len(d.opts.Settings.Dashboard.Panels)
 	switch {
 	case key.Matches(msg, keys.As(keys.Right, "next panel")):
 		d.focus = (d.focus + 1) % max(n, 1)
@@ -231,17 +229,17 @@ func (d *Dashboard) counts() (errs, warns int) {
 // Render implements ui.Screen: the panels in columns, in the configured
 // order, read across.
 func (d *Dashboard) Render(disp ui.Display, width, height int) string {
-	cols := d.opts.Columns
+	cols := d.opts.Settings.Dashboard.Columns
 	if cols == 0 {
 		cols = 1
-		if width >= dashTwoColumns {
+		if width >= d.opts.Settings.Dashboard.TwoColumnsFrom {
 			cols = 2
 		}
-		if width >= dashThreeColumns {
+		if width >= d.opts.Settings.Dashboard.ThreeColumnsFrom {
 			cols = 3
 		}
 	}
-	panels := d.opts.Panels
+	panels := d.opts.Settings.Dashboard.Panels
 	cols = max(min(cols, len(panels)), 1)
 	d.rects = make([]panelBox, len(panels))
 	d.focus = min(d.focus, max(len(panels)-1, 0))
@@ -260,7 +258,7 @@ func (d *Dashboard) Render(disp ui.Display, width, height int) string {
 		y := 0
 		for i, name := range stack {
 			h := heights[i]
-			idx := c + i*cols // the panel's place in opts.Panels
+			idx := c + i*cols // the panel's place in dashboard.panels
 			d.rects[idx] = panelBox{name: name, x: (width / cols) * c, y: y, w: w, h: h}
 			boxes[i] = d.panel(disp, name, idx == d.focus, w, h)
 			y += h
@@ -303,7 +301,7 @@ func (d *Dashboard) panel(disp ui.Display, name string, focused bool, width, hei
 	case "health":
 		body = d.pools.list(disp, iw, ih)
 		if n := len(d.pools.visibleWarnings()) - d.seenProblems; n > 0 {
-			title = fmt.Sprintf("health: %d new", n)
+			title = fmt.Sprintf("health: %d new %s", n, format.Plural(n, "warning", "warnings"))
 		}
 	case "events":
 		title, body = d.eventsPanel(disp, iw, ih)
@@ -327,9 +325,9 @@ func (d *Dashboard) eventsPanel(disp ui.Display, width, height int) (title, body
 	errs, warns := d.counts()
 	switch {
 	case errs > d.seenErrors:
-		title = fmt.Sprintf("events: %d new %s", errs-d.seenErrors, plural(errs-d.seenErrors, "error", "errors"))
+		title = fmt.Sprintf("events: %d new %s", errs-d.seenErrors, format.Plural(errs-d.seenErrors, "error", "errors"))
 	case warns > d.seenWarnings:
-		title = fmt.Sprintf("events: %d new %s", warns-d.seenWarnings, plural(warns-d.seenWarnings, "warning", "warnings"))
+		title = fmt.Sprintf("events: %d new %s", warns-d.seenWarnings, format.Plural(warns-d.seenWarnings, "warning", "warnings"))
 	}
 	all := d.evs.log.Events()
 	c := d.evs.columns(width)
@@ -374,7 +372,7 @@ func (d *Dashboard) arcPanel(disp ui.Display, width, height int) string {
 		return muted.Render("Reading ARC statistics")
 	}
 	s := a.poll.data
-	sizes := ui.Size(s.Size, disp.Exact) + muted.Render(" of ") + ui.Size(s.Max, disp.Exact)
+	sizes := format.Size(s.Size, disp.Exact) + muted.Render(" of ") + format.Size(s.Max, disp.Exact)
 	gauge := max(width-lipgloss.Width(sizes)-gap, 1)
 	now := muted.Render("no reads")
 	if v, ok := a.hits.last(); ok {
@@ -387,7 +385,7 @@ func (d *Dashboard) arcPanel(disp ui.Display, width, height int) string {
 	if rows := height - len(lines) - 1; rows > 0 {
 		graphW := max(width-axisWidth, 1)
 		lines = append(lines, muted.Render("size, last 5 minutes"))
-		lines = append(lines, axisGraph(disp, a.sizes.slots(a.poll.loaded, arcWindow, ui.GraphSamples(disp, graphW)), "max  ", graphW, rows)...)
+		lines = append(lines, axisGraph(disp, a.sizes.slots(a.poll.loaded, a.set.Charts.ARCWindow, ui.GraphSamples(disp, graphW)), "max  ", graphW, rows)...)
 	}
 	return strings.Join(lines, "\n")
 }

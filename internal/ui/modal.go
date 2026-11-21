@@ -55,6 +55,18 @@ type Selector interface {
 	Selection() (Target, bool)
 }
 
+// Reasoner is implemented by a screen that can say why its selection
+// offers no changes, such as a schedule fstui did not write.
+type Reasoner interface {
+	NoChangeReason() string
+}
+
+// Selects is implemented by a Selector that offers changes only some of
+// the time, such as on one of its tabs.
+type Selects interface {
+	Selects() bool
+}
+
 // Actions is the write module's hook into the UI. Without the module,
 // Options.Actions is nil and fstui offers no changes.
 type Actions interface {
@@ -71,7 +83,8 @@ type Actions interface {
 	// NoChanges returns a modal saying where changes are made, for the
 	// a key in a view that offers none; empty is set for a view that
 	// offers changes but has nothing selected, such as an empty list.
-	NoChanges(view string, empty bool) Modal
+	// reason, when the view gives one, says why the selection has none.
+	NoChanges(view string, empty bool, reason string) Modal
 	// ToggleWrite starts switching between read-only and write mode.
 	ToggleWrite() tea.Cmd
 }
@@ -111,6 +124,9 @@ func (m Model) isSelector() bool {
 	if len(m.screens) == 0 {
 		return false
 	}
+	if s, ok := m.screens[m.active].(Selects); ok {
+		return s.Selects()
+	}
 	_, ok := m.screens[m.active].(Selector)
 	return ok
 }
@@ -149,15 +165,25 @@ func (m Model) actionKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 	case key.Matches(msg, keys.Get(keys.NewSnapshot)) && selected && m.opts.Actions.CanSnapshot(t):
 		md, cmd = m.opts.Actions.Snapshot(t)
 	case key.Matches(msg, keys.Get(keys.Actions)):
-		md = m.opts.Actions.NoChanges(m.screens[m.active].Name(), m.isSelector())
+		md = m.noChanges()
 	default:
 		return m, nil, false // n means nothing to the root here
 	}
 	if md == nil {
-		md = m.opts.Actions.NoChanges(m.screens[m.active].Name(), m.isSelector())
+		md = m.noChanges()
 	}
 	m.modal = md
 	return m, cmd, true
+}
+
+// noChanges is the message for the a key where nothing can change, with the
+// active screen's reason when it gives one.
+func (m Model) noChanges() Modal {
+	var reason string
+	if r, ok := m.screens[m.active].(Reasoner); ok {
+		reason = r.NoChangeReason()
+	}
+	return m.opts.Actions.NoChanges(m.screens[m.active].Name(), m.isSelector(), reason)
 }
 
 // overlay draws box centred over base, both width x height cells.

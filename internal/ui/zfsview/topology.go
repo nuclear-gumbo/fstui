@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
@@ -50,7 +52,7 @@ func (p *Pools) topology(d ui.Display, o zfs.Overview, width int) ([]string, int
 	// Explanations wrap to the panel instead of running off its edge.
 	var wrapped []string
 	for _, l := range lines {
-		wrapped = append(wrapped, strings.Split(ansi.Wrap(l, width, ""), "\n")...)
+		wrapped = append(wrapped, ui.WrapStyled(l, width)...)
 	}
 	if len(wrapped) > 0 {
 		wrapped = append(wrapped, "")
@@ -86,18 +88,18 @@ func checkpointLine(c zfs.Checkpoint, exact bool) string {
 		return "Checkpoint being discarded."
 	}
 	return fmt.Sprintf("Checkpoint taken %s, holds %s. Remove, attach, detach, split and reguid are blocked until it is discarded.",
-		c.Taken.Local().Format("2006-01-02 15:04"), ui.Size(c.Space, exact))
+		c.Taken.Local().Format("2006-01-02 15:04"), format.Size(c.Space, exact))
 }
 
 // expandLine summarises a RAIDZ expansion as zpool status does.
 func expandLine(st zfs.PoolStatus, now time.Time, exact bool) string {
 	e, vdev := *st.Expansion, termtext.New(st.ExpandingName()).Display()
 	if e.State != "SCANNING" {
-		return fmt.Sprintf("Expanded %s %s ago, copying %s in %s.", vdev, ui.Age(now.Sub(e.End)), ui.Size(e.Reflowed, exact), ui.Age(e.End.Sub(e.Start)))
+		return fmt.Sprintf("Expanded %s %s ago, copying %s in %s.", vdev, format.Age(now.Sub(e.End)), format.Size(e.Reflowed, exact), format.Age(e.End.Sub(e.Start)))
 	}
-	s := fmt.Sprintf("Expanding %s: %s of %s copied, started %s ago", vdev, ui.Size(e.Reflowed, exact), ui.Size(e.ToReflow, exact), ui.Age(now.Sub(e.Start)))
+	s := fmt.Sprintf("Expanding %s: %s of %s copied, started %s ago", vdev, format.Size(e.Reflowed, exact), format.Size(e.ToReflow, exact), format.Age(now.Sub(e.Start)))
 	if elapsed := now.Sub(e.Start); e.Reflowed > 0 && e.Reflowed < e.ToReflow && elapsed > 0 {
-		s += ", about " + ui.Age(time.Duration(float64(elapsed)*float64(e.ToReflow-e.Reflowed)/float64(e.Reflowed))) + " left"
+		s += ", about " + format.Age(time.Duration(float64(elapsed)*float64(e.ToReflow-e.Reflowed)/float64(e.Reflowed))) + " left"
 	}
 	if e.Resilver {
 		s += "; waiting for a resilver"
@@ -110,15 +112,15 @@ func removeLine(st zfs.PoolStatus, now time.Time, exact bool) string {
 	r, vdev := *st.Removal, termtext.New(st.RemovingName()).Display()
 	switch r.State {
 	case "SCANNING":
-		s := fmt.Sprintf("Removing %s: %s of %s copied, started %s ago", vdev, ui.Size(r.Copied, exact), ui.Size(r.ToCopy, exact), ui.Age(now.Sub(r.Start)))
+		s := fmt.Sprintf("Removing %s: %s of %s copied, started %s ago", vdev, format.Size(r.Copied, exact), format.Size(r.ToCopy, exact), format.Age(now.Sub(r.Start)))
 		if elapsed := now.Sub(r.Start); r.Copied > 0 && r.Copied < r.ToCopy && elapsed > 0 {
-			s += ", about " + ui.Age(time.Duration(float64(elapsed)*float64(r.ToCopy-r.Copied)/float64(r.Copied))) + " left"
+			s += ", about " + format.Age(time.Duration(float64(elapsed)*float64(r.ToCopy-r.Copied)/float64(r.Copied))) + " left"
 		}
 		return s + "."
 	case "CANCELED":
-		return fmt.Sprintf("Removal of %s cancelled %s ago; it stays in the pool.", vdev, ui.Age(now.Sub(r.End)))
+		return fmt.Sprintf("Removal of %s cancelled %s ago; it stays in the pool.", vdev, format.Age(now.Sub(r.End)))
 	}
-	return fmt.Sprintf("Removed %s %s ago, copying %s; its table of moved blocks uses %s of memory.", vdev, ui.Age(now.Sub(r.End)), ui.Size(r.Copied, exact), ui.Size(r.Mapping, exact))
+	return fmt.Sprintf("Removed %s %s ago, copying %s; its table of moved blocks uses %s of memory.", vdev, format.Age(now.Sub(r.End)), format.Size(r.Copied, exact), format.Size(r.Mapping, exact))
 }
 
 // scanLine summarises a scrub or resilver as zpool status does. Progress
@@ -130,20 +132,20 @@ func scanLine(sc zfs.Scan, now time.Time, exact bool) string {
 	}
 	switch {
 	case sc.State == "SCANNING" && sc.Paused:
-		return fmt.Sprintf("%s paused %s ago at %s of %s.", word, ui.Age(now.Sub(sc.PausedAt)), ui.Size(sc.Issued, exact), ui.Size(sc.ToExamine, exact))
+		return fmt.Sprintf("%s paused %s ago at %s of %s.", word, format.Age(now.Sub(sc.PausedAt)), format.Size(sc.Issued, exact), format.Size(sc.ToExamine, exact))
 	case sc.State == "SCANNING":
 		elapsed := now.Sub(sc.Start)
-		s := fmt.Sprintf("%s running: %s of %s issued, started %s ago", word, ui.Size(sc.Issued, exact), ui.Size(sc.ToExamine, exact), ui.Age(elapsed))
+		s := fmt.Sprintf("%s running: %s of %s issued, started %s ago", word, format.Size(sc.Issued, exact), format.Size(sc.ToExamine, exact), format.Age(elapsed))
 		if sc.Issued > 0 && sc.Issued < sc.ToExamine && elapsed > 0 {
 			left := time.Duration(float64(elapsed) * float64(sc.ToExamine-sc.Issued) / float64(sc.Issued))
-			s += ", about " + ui.Age(left) + " left"
+			s += ", about " + format.Age(left) + " left"
 		}
 		return s + "."
 	case sc.State == "CANCELED":
-		return fmt.Sprintf("%s cancelled %s ago.", word, ui.Age(now.Sub(sc.End)))
+		return fmt.Sprintf("%s cancelled %s ago.", word, format.Age(now.Sub(sc.End)))
 	}
 	return fmt.Sprintf("%s finished %s ago in %s: repaired %s, %d errors.",
-		word, ui.Age(now.Sub(sc.End)), ui.Age(sc.End.Sub(sc.Start)), ui.Size(sc.Processed, exact), sc.Errors)
+		word, format.Age(now.Sub(sc.End)), format.Age(sc.End.Sub(sc.Start)), format.Size(sc.Processed, exact), sc.Errors)
 }
 
 // Device tree columns, as zpool status prints them.

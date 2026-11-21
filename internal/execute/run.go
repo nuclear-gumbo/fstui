@@ -5,6 +5,7 @@ package execute
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -163,6 +164,9 @@ func (e *CommandError) Error() string {
 // Runner runs resolved tools.
 type Runner struct {
 	tools *Tools
+	// ReadTimeout bounds a read whose context has no deadline;
+	// DefaultReadTimeout when zero (limits.read_timeout).
+	ReadTimeout time.Duration
 }
 
 // NewRunner returns a Runner for tools resolved by Resolve.
@@ -180,7 +184,7 @@ func (r *Runner) Read(ctx context.Context, a Argv) (Result, error) {
 	}
 	if _, has := ctx.Deadline(); !has {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, DefaultReadTimeout)
+		ctx, cancel = context.WithTimeout(ctx, cmp.Or(r.ReadTimeout, DefaultReadTimeout))
 		defer cancel()
 	}
 
@@ -235,7 +239,7 @@ func (r *Runner) ReadTo(ctx context.Context, a Argv, consume func(io.Reader) err
 	}
 	if _, has := ctx.Deadline(); !has {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, DefaultReadTimeout)
+		ctx, cancel = context.WithTimeout(ctx, cmp.Or(r.ReadTimeout, DefaultReadTimeout))
 		defer cancel()
 	}
 	cmdCtx, stop := context.WithCancel(ctx) // stops the command when consume gives up

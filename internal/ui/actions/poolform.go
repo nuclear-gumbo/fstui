@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -204,7 +206,7 @@ func newDeviceList(devs []disks.Device) deviceList {
 
 // describe is one device: name, size, model and what it holds.
 func (l deviceList) describe(d ui.Display, dev disks.Device) string {
-	line := deviceName(dev) + "  " + ui.Size(dev.Size, d.Exact)
+	line := deviceName(dev) + "  " + format.Size(dev.Size, d.Exact)
 	if dev.Model != "" {
 		line += "  " + termtext.New(dev.Model).Display()
 	}

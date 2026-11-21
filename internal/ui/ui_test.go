@@ -279,17 +279,6 @@ func TestLightBackground(t *testing.T) {
 	}
 }
 
-func TestAge(t *testing.T) {
-	for d, want := range map[time.Duration]string{
-		-time.Second: "0s", 3 * time.Second: "3s", 14 * time.Minute: "14m",
-		2 * time.Hour: "2h", 5 * 24 * time.Hour: "5d",
-	} {
-		if got := Age(d); got != want {
-			t.Errorf("Age(%v) = %s, want %s", d, got, want)
-		}
-	}
-}
-
 func TestGolden(t *testing.T) {
 	scr := &fakeScreen{name: "Pools", status: Status{Refreshed: epoch.Add(-3 * time.Second), Figure: "2 pools, 1 DEGRADED"}}
 	for _, sz := range [][2]int{{80, 24}, {120, 40}, {200, 60}} {

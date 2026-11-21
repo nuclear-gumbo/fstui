@@ -6,6 +6,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
@@ -14,14 +16,10 @@ import (
 // maxBackoff caps the retry delay after failures at this many intervals.
 const maxBackoff = 10
 
-// A listing (slow set) may take longReads to read: zfs list takes about
-// half a second per thousand snapshots. After a read of d, the next waits
-// at least busyFactor × d, so fstui keeps zfs busy a fifth of the time at
-// most.
-const (
-	longReads  = 10 * time.Minute
-	busyFactor = 4
-)
+// A listing (slow set) may take limits.list_timeout to read: zfs list
+// takes about half a second per thousand snapshots. After a read of d, the
+// next waits at least limits.slow_read_factor × d, so fstui keeps zfs busy
+// a fraction of the time at most.
 
 // poller keeps one source fresh: at most one read in flight,
 // the next one scheduled only when it completes, the interval doubled per
@@ -39,6 +37,9 @@ type poller[T any] struct {
 	// slow marks a listing whose read time grows with the number of
 	// datasets or snapshots; it gets longReads instead of the default.
 	slow bool
+	// limits are limits.list_timeout and slow_read_factor, read when they
+	// are used so a saved change applies; nil uses the defaults.
+	limits *config.Limits
 
 	data     T
 	loaded   time.Time // zero until a read succeeds
@@ -65,11 +66,11 @@ func (p *poller[T]) start() tea.Cmd {
 		return nil
 	}
 	p.inFlight = true
-	read, now, slow := p.read, p.now, p.slow
+	read, now, slow, limit := p.read, p.now, p.slow, p.lim().ListTimeout
 	return func() tea.Msg {
 		ctx, cancel := context.Background(), context.CancelFunc(func() {})
 		if slow {
-			ctx, cancel = context.WithTimeout(ctx, longReads)
+			ctx, cancel = context.WithTimeout(ctx, limit)
 		}
 		defer cancel()
 		start := time.Now()
@@ -118,5 +119,12 @@ func (p *poller[T]) delay() time.Duration {
 	for i := 0; i < p.failures && d < limit; i++ {
 		d *= 2
 	}
-	return max(min(d, limit), busyFactor*p.took)
+	return max(min(d, limit), time.Duration(p.lim().SlowReadFactor)*p.took)
+}
+
+func (p *poller[T]) lim() config.Limits {
+	if p.limits == nil {
+		return config.Default().Limits
+	}
+	return *p.limits
 }

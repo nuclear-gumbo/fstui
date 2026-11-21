@@ -6,7 +6,8 @@ import (
 	"cmp"
 	"fmt"
 	"strings"
-	"time"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
@@ -200,7 +201,7 @@ func block(s string, width, height int) string {
 
 func (m Model) hintBar(bindings []key.Binding) string {
 	muted := m.display.Palette.Style(theme.Muted)
-	keyStyle := m.display.Palette.Style(theme.Accent).Bold(true)
+	keyStyle := m.display.Palette.Style(theme.Key).Bold(true)
 	h := keys.Get(keys.Help).Help()
 	help := keyStyle.Render(h.Key) + " " + muted.Render(h.Desc)
 	// The help key always shows: the screen's hints take what is left,
@@ -249,12 +250,12 @@ func (m Model) statusBar(st Status) string {
 	case st.Static:
 		age = ""
 	case !st.Refreshed.IsZero():
-		age = muted.Render("refreshed " + Age(m.opts.Now().Sub(st.Refreshed)) + " ago")
+		age = muted.Render("refreshed " + format.Age(m.opts.Now().Sub(st.Refreshed)) + " ago")
 	}
 	if line := st.LastError.FirstLine().Display(); line != "" {
 		since := "never loaded"
 		if !st.Refreshed.IsZero() {
-			since = "stale " + Age(m.opts.Now().Sub(st.Refreshed))
+			since = "stale " + format.Age(m.opts.Now().Sub(st.Refreshed))
 		}
 		age = warn.Render(since + ", last error: " + line)
 	}
@@ -317,18 +318,4 @@ func (m Model) helpText(screen []key.Binding) string {
 	section("Everywhere", append(globalKeys(), m.writeKeys()...))
 	b.WriteString(muted.Render("? or esc closes this help"))
 	return b.String()
-}
-
-// Age formats a duration as fstui shows ages: 3s, 14m, 2h, 5d.
-func Age(d time.Duration) string {
-	const day = 24 * time.Hour
-	switch {
-	case d < time.Minute:
-		return fmt.Sprintf("%ds", max(0, int(d/time.Second)))
-	case d < time.Hour:
-		return fmt.Sprintf("%dm", int(d/time.Minute))
-	case d < day:
-		return fmt.Sprintf("%dh", int(d/time.Hour))
-	}
-	return fmt.Sprintf("%dd", int(d/day))
 }

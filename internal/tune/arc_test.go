@@ -59,7 +59,7 @@ func TestARC(t *testing.T) {
 		{"too few", map[string]uint64{"hits": 900, "misses": 100}, full, NotEnough, "1000 lookups"},
 	}
 	for _, c := range cases {
-		f := ARC(arcWindow(t, c.delta, c.now), bytesOnly)
+		f := ARC(arcWindow(t, c.delta, c.now), bytesOnly, dt)
 		if f.Verdict != c.verdict || !strings.Contains(f.Figure+" "+f.Points, c.want) {
 			t.Errorf("%s: %s, %q, %q", c.name, f.Verdict.Word(), f.Figure, f.Points)
 		}

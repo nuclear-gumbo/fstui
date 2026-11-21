@@ -5,7 +5,6 @@
 package demo
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"strconv"
@@ -35,8 +34,20 @@ func (c *Commands) UseARC(a *ARC) {
 	c.arc = a
 }
 
-// ReadFile answers the reader's file reads from the demo's copies.
+// ReadFile answers the reader's file reads from the demo's copies, and
+// the kstats tune mode reads from its replay.
 func (c *Commands) ReadFile(path string) ([]byte, error) {
+	if pool, file, ok := c.kstatPool(path); ok && file != "" {
+		if b, found, err := c.tuneFile(pool, file); found {
+			return b, err
+		}
+	}
+	switch path {
+	case zfs.KstatDir + "/dmu_tx", zfs.KstatDir + "/zil", zfs.KstatDir + "/zfetchstats":
+		if b, found, err := c.tuneFile("", strings.TrimPrefix(path, zfs.KstatDir+"/")); found {
+			return b, err
+		}
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	switch path {
@@ -129,12 +140,12 @@ func (a *ARC) kstat() []byte {
 	return []byte(b.String())
 }
 
-// ReadDir answers the reader's directory listings. The demo has no
-// per-pool kstats to replay, so tune mode says it cannot measure; the
-// host's /proc is never listed.
-func (c *Commands) ReadDir(path string) ([]string, error) {
-	return nil, fmt.Errorf("%s: %w", path, errNoKstats)
+// ReadDir answers the reader's directory listings: a pool's kstat
+// directory, from the replayed recordings (tunefiles.go). The host's
+// /proc is never listed.
+func (c *Commands) ReadDir(p string) ([]string, error) {
+	if pool, file, ok := c.kstatPool(p); ok && file == "" {
+		return c.tuneDir(pool)
+	}
+	return nil, fmt.Errorf("demo: %s: %w", p, fs.ErrNotExist)
 }
-
-// errNoKstats is why tune mode cannot measure in the demo.
-var errNoKstats = errors.New("the demo has no kernel statistics to measure")

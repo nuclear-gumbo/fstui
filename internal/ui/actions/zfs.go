@@ -11,6 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/termtext"
+	"github.com/nuclear-gumbo/fstui/internal/zfs/name"
+
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/nuclear-gumbo/fstui/internal/mutate"
@@ -19,8 +22,75 @@ import (
 	"github.com/nuclear-gumbo/fstui/internal/zfs/plan"
 )
 
-// ZFSOffers returns the changes offered for ZFS selections.
+// ZFSOffers returns the changes offered for ZFS selections. On a pool
+// imported read-only every change but export is unavailable, with the
+// way back (readOnly).
 func ZFSOffers(b plan.Builder, now func() time.Time) func(ui.Target) (string, []Offer) {
+	offers := zfsOffers(b, now)
+	return func(t ui.Target) (string, []Offer) {
+		title, list := offers(t)
+		return title, readOnly(b, poolOf(t), list)
+	}
+}
+
+// poolOf is the pool a selection is in, or "".
+func poolOf(t ui.Target) string {
+	switch {
+	case len(t.Names) == 0 || t.Kind == "arc" || t.Kind == "pools":
+		return ""
+	case t.Kind == "device":
+		return t.Parent
+	case t.Kind == "tune":
+		return t.Names[0]
+	}
+	pool, _, _ := strings.Cut(t.Names[0], "/")
+	pool, _, _ = strings.Cut(pool, "@")
+	return pool
+}
+
+// readOnly marks every change on a pool imported read-only (a look at
+// its checkpoint, or an import with readonly=on) as unavailable but
+// export, import and creating another pool, saying how to return to
+// the present. The pool's state is read once, when the menu opens.
+func readOnly(b plan.Builder, pool string, offers []Offer) []Offer {
+	if pool == "" || b.R == nil {
+		return offers
+	}
+	var once sync.Once
+	var ro bool
+	isRO := func(ctx context.Context) bool {
+		once.Do(func() {
+			pn, err := name.ParsePool(pool)
+			if err != nil {
+				return
+			}
+			props, err := b.R.PoolProperties(ctx, pn)
+			ro = err == nil && props.Properties["readonly"].Text.Raw() == "on"
+		})
+		return ro
+	}
+	why := pool + " is imported read-only (perhaps a look at its checkpoint), so nothing in it can change; to return to the present, export it (x) and import it again (I)"
+	for i := range offers {
+		switch offers[i].Op { //nolint:exhaustive // only these leave a read-only pool alone
+		case mutate.PoolExport, mutate.PoolImport, mutate.PoolCreate:
+			continue
+		}
+		check := offers[i].Check
+		offers[i].Check = func(ctx context.Context) string {
+			if isRO(ctx) {
+				return termtext.New(why).Display()
+			}
+			if check != nil {
+				return check(ctx)
+			}
+			return ""
+		}
+	}
+	return offers
+}
+
+// zfsOffers are the changes for a selection, before the read-only check.
+func zfsOffers(b plan.Builder, now func() time.Time) func(ui.Target) (string, []Offer) {
 	return func(t ui.Target) (string, []Offer) {
 		if t.Backend != "zfs" || len(t.Names) == 0 {
 			return "", nil

@@ -79,6 +79,9 @@ func (v *Plans) load() tea.Cmd {
 
 // Keys implements ui.Screen.
 func (v *Plans) Keys() []key.Binding {
+	if len(v.list) == 0 { // nothing to apply or delete
+		return []key.Binding{keys.Get(keys.Refresh)}
+	}
 	return []key.Binding{
 		keys.As(keys.Select, "apply"), keys.As(keys.Discard, "delete"), keys.As(keys.Down, "next"), keys.As(keys.Up, "previous"),
 		keys.Get(keys.Refresh),

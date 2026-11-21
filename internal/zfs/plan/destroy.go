@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"github.com/nuclear-gumbo/fstui/internal/execute"
 	"github.com/nuclear-gumbo/fstui/internal/mutate"
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
@@ -90,20 +92,13 @@ func (b Builder) blockHeldOrCloned(ctx context.Context, p *mutate.Plan, snaps []
 		f := facts[s]
 		if n, _ := strconv.Atoi(f["userrefs"]); n > 0 {
 			p.Blocked = append(p.Blocked, fmt.Sprintf("%s has %d %s; release %s first", show(s), n,
-				plural(n, "hold", "holds"), plural(n, "it", "them")))
+				format.Plural(n, "hold", "holds"), format.Plural(n, "it", "them")))
 		}
 		if c := f["clones"]; c != "" && c != "-" {
 			p.Blocked = append(p.Blocked, show(s)+" has clones ("+show(c)+"); destroy or promote them first")
 		}
 	}
 	return nil
-}
-
-func plural(n int, one, many string) string {
-	if n == 1 {
-		return one
-	}
-	return many
 }
 
 // Rollback plans "zfs rollback [-r] snap". Without destroyNewer it is
@@ -142,7 +137,7 @@ func (b Builder) Rollback(ctx context.Context, snap string, destroyNewer bool) (
 	}
 	if len(newer) > 0 && !destroyNewer {
 		p.Blocked = append(p.Blocked, fmt.Sprintf("%d newer %s; choose to destroy them to roll back this far",
-			len(newer), plural(len(newer), "snapshot or bookmark exists", "snapshots or bookmarks exist")))
+			len(newer), format.Plural(len(newer), "snapshot or bookmark exists", "snapshots or bookmarks exist")))
 		p.Preview.Destroys = nil
 	}
 	if len(p.Preview.Destroys) > 0 {

@@ -23,6 +23,7 @@ Select something and press `a`. The menu lists the changes possible now, and bel
 | No pool (Pools, 1, when none is imported) | create a new pool; import a pool |
 | Device (Pools, `enter`, Topology, `j` `k` to a device) | bring online, take offline, clear its errors; attach a device (a mirror, or one more device in a raidz vdev); replace it; detach it from its mirror; remove it from the pool with its vdev |
 | ARC (5) | set its limits now, or keep them after reboot in `/etc/modprobe.d/zfs.conf` |
+| Schedule (Config, 9, Schedules tab) | a scrub or trim weekly, monthly or off; `fstui check` or `fstui watch` on or off ([configuration.md](configuration.md#schedules)) |
 | Tune tab (Pools, `enter`, Tune) | what the findings point to: a dataset's `recordsize` or `compression=lz4`; `zfs_prefetch_disable` or `zfs_arc_meta_balance` raised until reboot (never lowered); the ARC limits |
 
 [keys.md](keys.md#change-menus) lists the menu letters.
@@ -46,7 +47,7 @@ How much the confirmation asks depends on the risk:
 | Asks | For example |
 |---|---|
 | `y` | create a snapshot, start a scrub |
-| `y`, then `enter` | rename, destroy one snapshot, unmount, change a layout property such as recordsize |
+| `y`, then `enter` | rename, destroy one snapshot, unmount, change a layout property such as recordsize, change a schedule |
 | typing the name | destroy a dataset, destroy several snapshots ("destroy 3 snapshots"), shrink a volume, take the last redundant device offline, roll back past newer snapshots, create a pool, add a data vdev, write over a device that holds something, widen a raidz vdev, remove a data vdev, rewind to a checkpoint, export, upgrade |
 
 Keys pressed in the first moments after the window opens are ignored, so a key meant for the screen before cannot confirm.
@@ -65,7 +66,7 @@ A checkpoint keeps the whole pool as it was, so a change to its devices can be u
 
 - `C` takes one. "Take a checkpoint first" in the form for adding devices does it as part of that change.
 - `D` discards it, freeing what it held.
-- `L` exports the pool and imports it read-only as it was at the checkpoint, to look before deciding. Exporting and importing it again (`x`, then `I`) returns to the present, with the checkpoint.
+- `L` exports the pool and imports it read-only as it was at the checkpoint, to look before deciding. While it is read-only, every other change to it is listed as unavailable with the way back. Exporting and importing it again (`x`, then `I`) returns to the present, with the checkpoint.
 - `w` rewinds: the pool is exported and imported at the checkpoint. Everything written since is lost, and the confirmation lists the filesystems, volumes and snapshots created since. A pool that holds the running system's `/` cannot be exported, so it cannot be rewound from that system.
 
 ## Running

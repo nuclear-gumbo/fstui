@@ -8,6 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/zfs/health"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"charm.land/lipgloss/v2"
 
 	"charm.land/bubbles/v2/key"
@@ -21,9 +25,6 @@ import (
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
 	"github.com/nuclear-gumbo/fstui/internal/zfs/name"
 )
-
-// propertiesInterval: pool properties rarely change.
-const propertiesInterval = 60 * time.Second
 
 // Tabs of pool detail.
 const (
@@ -229,7 +230,7 @@ func (p *Pools) applyProps(msg propsMsg) tea.Cmd {
 	}
 	d.timer++
 	pool, timer := d.pool, d.timer
-	return tea.Tick(propertiesInterval, func(time.Time) tea.Msg { return propsPollMsg{pool: pool, timer: timer} })
+	return tea.Tick(p.opts.Settings.Refresh.Properties, func(time.Time) tea.Msg { return propsPollMsg{pool: pool, timer: timer} })
 }
 
 func (p *Pools) detailKey(msg tea.KeyPressMsg) tea.Cmd {
@@ -249,8 +250,8 @@ func (p *Pools) detailKey(msg tea.KeyPressMsg) tea.Cmd {
 		return p.enterTab()
 	case key.Matches(msg, keys.Get(keys.MeasureFiles)) && d.tab == tabTune:
 		return p.measureFiles()
-	case key.Matches(msg, keys.As(keys.Select, "evidence")) && d.tab == tabTune && d.tune != nil:
-		d.tune.evidence = !d.tune.evidence
+	case key.Matches(msg, keys.As(keys.Select, "details")) && d.tab == tabTune && d.tune != nil:
+		d.tune.details = !d.tune.details
 	case key.Matches(msg, keys.Get(keys.Internal)) && d.tab == tabHistory:
 		d.internal, d.scroll = !d.internal, 0
 	case d.tab == tabTopology && key.Matches(msg, keys.Get(keys.Down)):
@@ -374,7 +375,7 @@ const summaryLines = 3
 func (p *Pools) summary(d ui.Display, o zfs.Overview, width int) string {
 	pal := d.Palette
 	th := p.opts.Thresholds
-	pct := capacityPct(o)
+	pct := health.CapacityPct(o)
 	level := ui.LevelOf(pct, th.CapacityWarn, th.CapacityError)
 	word := ui.LevelWord(level)
 	if word != "" {
@@ -385,7 +386,7 @@ func (p *Pools) summary(d ui.Display, o zfs.Overview, width int) string {
 		bar = ui.Bar(d, pct, ui.BarWidth, th.CapacityWarn, th.CapacityError) + sp
 	}
 	first := pal.Style(stateToken(o.Status.State)).Render(o.Status.State) + sp + bar +
-		fmt.Sprintf("%d%%", pct) + word + sp + ui.Size(o.Used, d.Exact) + " of " + ui.Size(o.Used+o.Available, d.Exact)
+		fmt.Sprintf("%d%%", pct) + word + sp + format.Size(o.Used, d.Exact) + " of " + format.Size(o.Used+o.Available, d.Exact)
 	muted := pal.Style(theme.Muted)
 	second := muted.Render("frag ") + fragText(o) + sp + muted.Render("dedup ") +
 		o.Pool.Properties["dedupratio"].Text.Display() + "x" + sp + scanSummary(d, o, p.opts.Now) +
@@ -405,7 +406,7 @@ func (p *Pools) nextScrub(d ui.Display, o zfs.Overview) string {
 	case s.Next.IsZero():
 		return sp + muted.Render("next scrub scheduled")
 	}
-	return sp + muted.Render("next ") + "in " + ui.Age(s.Next.Sub(p.opts.Now()))
+	return sp + muted.Render("next ") + "in " + format.Age(s.Next.Sub(p.opts.Now()))
 }
 
 // summaryText is room for the summary's figures beside its bar.
@@ -472,7 +473,7 @@ func propertyValue(d ui.Display, n string, v zfs.Property, bytes map[string]bool
 	case noneWhenZero[n] && v.Number == 0:
 		return "none"
 	case bytes[n]:
-		return ui.Size(v.Number, d.Exact)
+		return format.Size(v.Number, d.Exact)
 	case percentProperties[n]:
 		return fmt.Sprintf("%d%%", v.Number)
 	case ratioProperties[n]:

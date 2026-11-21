@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
@@ -21,10 +23,10 @@ func dashboardOver(t *testing.T, panels ...string) (*Dashboard, *fakeEvents, *fa
 	pools := loaded(t, defaults(), golden(t, "healthy"), golden(t, "scrub-in-progress"))
 	evs, src := loadedEvents(t)
 	io := &fakeIO{samples: goldenIOSamples(t), cancelled: make(chan struct{})}
-	ioView := NewIO(io, func() time.Time { return now })
-	arc := NewARC(func() (zfs.ARCStats, error) { return goldenARC(t, "no-l2arc.txt"), nil }, func() time.Time { return now })
+	ioView := NewIO(io, nil, func() time.Time { return now })
+	arc := NewARC(func() (zfs.ARCStats, error) { return goldenARC(t, "no-l2arc.txt"), nil }, nil, func() time.Time { return now })
 	arc.Update(arc.Init()())
-	d := NewDashboard(pools, evs, ioView, arc, DashboardOptions{Panels: panels, Now: func() time.Time { return now }})
+	d := NewDashboard(pools, evs, ioView, arc, DashboardOptions{Settings: dashSettings(panels), Now: func() time.Time { return now }})
 	return d, src, io
 }
 
@@ -79,7 +81,7 @@ func TestDashboardActivatesItsViews(t *testing.T) {
 		t.Error("the dashboard reads by itself")
 	}
 	cmd := d.Activate()
-	if cmd == nil || !d.io.running || d.arc.poll.interval != arcShown || d.evs.poll.interval != eventsShown {
+	if cmd == nil || !d.io.running || d.arc.poll.interval != config.Default().Refresh.ARC || d.evs.poll.interval != config.Default().Refresh.Events {
 		t.Fatalf("activate: running %v, arc %v, events %v", d.io.running, d.arc.poll.interval, d.evs.poll.interval)
 	}
 	d.Deactivate()
@@ -159,4 +161,11 @@ func TestDashboardClick(t *testing.T) {
 	if d.focus != 1 || d.evCursor != 3 {
 		t.Errorf("click: focus %d, event %d", d.focus, d.evCursor)
 	}
+}
+
+// dashSettings are the defaults with the given panels.
+func dashSettings(panels []string) *config.Config {
+	c := config.Default()
+	c.Dashboard.Panels = panels
+	return &c
 }

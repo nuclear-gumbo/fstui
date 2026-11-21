@@ -10,6 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
@@ -31,6 +35,7 @@ type DatasetSource interface {
 type DatasetsOptions struct {
 	Interval time.Duration
 	Now      func() time.Time
+	Settings *config.Config // shared by the views; nil: defaults
 }
 
 // Datasets is the tree of filesystems and volumes in every pool (view 2).
@@ -50,9 +55,10 @@ type Datasets struct {
 
 // NewDatasets returns the Datasets view reading from src.
 func NewDatasets(src DatasetSource, o DatasetsOptions) *Datasets {
+	o.Settings = settingsOr(o.Settings)
 	return &Datasets{
 		src: src, opts: o, collapsed: map[string]bool{}, marked: marks{},
-		poll: poller[[]zfs.Dataset]{read: src.Datasets, interval: o.Interval, now: o.Now, slow: true},
+		poll: poller[[]zfs.Dataset]{read: src.Datasets, interval: o.Interval, now: o.Now, slow: true, limits: &o.Settings.Limits},
 	}
 }
 
@@ -123,7 +129,7 @@ func (v *Datasets) cursor(rows []*node) int {
 func (v *Datasets) Name() string { return "Datasets" }
 
 // Framed implements ui.Framed: the tree and the selected dataset are
-// drawn side by side from splitWidth columns.
+// drawn side by side from ui.split_from columns.
 func (v *Datasets) Framed() bool { return true }
 
 // Number implements ui.Numbered.
@@ -163,6 +169,7 @@ func (v *Datasets) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 		return v, cmd
 	}
 	if c, ok := msg.(ui.ConfigMsg); ok {
+		*v.opts.Settings = c.Config
 		v.opts.Interval, v.poll.interval = c.Config.Refresh.Datasets, c.Config.Refresh.Datasets
 		return v, nil
 	}
@@ -313,8 +320,8 @@ func (v *Datasets) Status() ui.Status {
 		for _, d := range v.poll.data {
 			pools[d.Pool.String()] = true
 		}
-		st.Figure = fmt.Sprintf("%d %s in %d %s", len(v.poll.data), plural(len(v.poll.data), "dataset", "datasets"),
-			len(pools), plural(len(pools), "pool", "pools"))
+		st.Figure = fmt.Sprintf("%d %s in %d %s", len(v.poll.data), format.Plural(len(v.poll.data), "dataset", "datasets"),
+			len(pools), format.Plural(len(pools), "pool", "pools"))
 	}
 	return st
 }

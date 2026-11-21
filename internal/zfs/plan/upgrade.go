@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"github.com/nuclear-gumbo/fstui/internal/execute"
 	"github.com/nuclear-gumbo/fstui/internal/mutate"
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
@@ -45,7 +47,7 @@ func (b Builder) PoolUpgrade(ctx context.Context, pool string) (*mutate.Plan, er
 		blockIf(p, true, "every feature this system supports is enabled on "+show(pool)+" already")
 	}
 	if len(enable) > 0 {
-		affects(p, fmt.Sprintf("%d %s enabled: %s", len(enable), plural(len(enable), "feature is", "features are"), strings.Join(enable, ", ")),
+		affects(p, fmt.Sprintf("%d %s enabled: %s", len(enable), format.Plural(len(enable), "feature is", "features are"), strings.Join(enable, ", ")),
 			"OpenZFS versions without them (older systems, rescue media) can no longer import "+show(pool)+" once a feature is in use")
 	}
 	if len(held) > 0 {

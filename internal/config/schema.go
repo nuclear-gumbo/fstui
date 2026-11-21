@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"time"
 
 	"go.yaml.in/yaml/v3"
 
@@ -38,36 +37,6 @@ type applier struct {
 
 func (a *applier) report(n *yaml.Node, format string, args ...any) {
 	a.problems = append(a.problems, Problem{File: a.file, Line: n.Line, Msg: fmt.Sprintf(format, args...)})
-}
-
-var topLevel = map[string]setter{
-	"theme":     setTheme,
-	"colors":    setColors,
-	"units":     setUnits,
-	"ascii":     setASCII,
-	"mouse":     func(_ *applier, c *Config, n *yaml.Node) error { return boolean(n, &c.Mouse) },
-	"superuser": func(_ *applier, c *Config, n *yaml.Node) error { return boolean(n, &c.Superuser) },
-	"natural_scrolling": func(_ *applier, c *Config, n *yaml.Node) error {
-		return boolean(n, &c.NaturalScrolling)
-	},
-	"thresholds": nested("thresholds", thresholdKeys),
-	"refresh":    nested("refresh", refreshKeys),
-	"keys":       setKeys,
-	"events":     nested("events", eventKeys),
-	"dashboard":  nested("dashboard", dashboardKeys),
-}
-
-var thresholdKeys = map[string]setter{
-	"capacity_warn":      positive(func(c *Config) *int { return &c.Thresholds.CapacityWarn }, percentMax),
-	"capacity_error":     positive(func(c *Config) *int { return &c.Thresholds.CapacityError }, percentMax),
-	"fragmentation_warn": positive(func(c *Config) *int { return &c.Thresholds.FragmentationWarn }, percentMax),
-	"scrub_overdue_days": positive(func(c *Config) *int { return &c.Thresholds.ScrubOverdueDays }, scrubDaysMax),
-}
-
-var refreshKeys = map[string]setter{
-	"pools":    seconds(func(c *Config) *time.Duration { return &c.Refresh.Pools }, refreshPoolsMin),
-	"datasets": seconds(func(c *Config) *time.Duration { return &c.Refresh.Datasets }, refreshDSMin),
-	"arc":      seconds(func(c *Config) *time.Duration { return &c.Refresh.ARC }, refreshARCMin),
 }
 
 // mapping applies every key of a mapping node. Unknown keys and invalid
@@ -130,29 +99,6 @@ func boolean(n *yaml.Node, dst *bool) error {
 	return nil
 }
 
-// positive sets a whole number from 1 to hi.
-func positive(field func(*Config) *int, hi int) setter {
-	return func(_ *applier, c *Config, n *yaml.Node) error {
-		v, err := intIn(n, 1, hi)
-		if err != nil {
-			return err
-		}
-		*field(c) = v
-		return nil
-	}
-}
-
-func seconds(field func(*Config) *time.Duration, lo int) setter {
-	return func(_ *applier, c *Config, n *yaml.Node) error {
-		v, err := intIn(n, lo, refreshMaxSec)
-		if err != nil {
-			return err
-		}
-		*field(c) = time.Duration(v) * time.Second
-		return nil
-	}
-}
-
 func intIn(n *yaml.Node, lo, hi int) (int, error) {
 	want := fmt.Sprintf("a whole number from %d to %d", lo, hi)
 	s, err := scalar(n, "!!int", want)
@@ -175,36 +121,6 @@ func oneOf(n *yaml.Node, values ...string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("want one of %q, found %q", values, n.Value)
-}
-
-func setTheme(_ *applier, c *Config, n *yaml.Node) error {
-	s, err := scalar(n, "!!str", "a theme name")
-	if err != nil {
-		return err
-	}
-	if !themeName.MatchString(s) {
-		return fmt.Errorf("theme name %q may contain only a-z, 0-9, - and _", s)
-	}
-	c.Theme = s
-	return nil
-}
-
-func setUnits(_ *applier, c *Config, n *yaml.Node) error {
-	s, err := oneOf(n, "iec", "exact")
-	if err != nil {
-		return err
-	}
-	c.Units = map[string]Units{"iec": IEC, "exact": Exact}[s]
-	return nil
-}
-
-func setASCII(_ *applier, c *Config, n *yaml.Node) error {
-	s, err := oneOf(n, "auto", "true", "false")
-	if err != nil {
-		return err
-	}
-	c.ASCII = map[string]ASCII{"auto": ASCIIAuto, "true": ASCIIOn, "false": ASCIIOff}[s]
-	return nil
 }
 
 // setKeys reads action rebindings: each action takes one key or a list,
@@ -248,7 +164,7 @@ func setColors(a *applier, c *Config, n *yaml.Node) error {
 		k, v := n.Content[i], n.Content[i+1]
 		tok, ok := theme.TokenByName(k.Value)
 		if !ok {
-			a.report(k, "colors: unknown token %q (tokens: accent, ok, warn, error, muted, border)", k.Value)
+			a.report(k, "colors: unknown token %q (tokens: accent, ok, warn, error, muted, border, key)", k.Value)
 			continue
 		}
 		col, err := color(v, c.Colors[tok])
@@ -291,4 +207,8 @@ func color(n *yaml.Node, prev theme.Override) (theme.Override, error) {
 		}
 	}
 	return out, nil
+}
+
+func errThemeName(v string) error {
+	return fmt.Errorf("theme name %q may contain only a-z, 0-9, - and _", v)
 }

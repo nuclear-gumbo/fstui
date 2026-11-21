@@ -5,6 +5,7 @@
 package main
 
 import (
+	"github.com/nuclear-gumbo/fstui/internal/schedule"
 	"github.com/spf13/pflag"
 
 	"github.com/nuclear-gumbo/fstui/internal/registry"
@@ -26,6 +27,11 @@ func checkWriteFlags(*writeFlags) error { return nil }
 
 type writeHooks struct{}
 
-func startWrite(*writeFlags, writeHooks) (ui.Actions, []ui.Screen, string, func(), []string) {
+func startWrite(*writeFlags, writeHooks, int) (ui.Actions, []ui.Screen, string, func(), []string) {
 	return nil, nil, "", func() {}, nil
+}
+
+// withSchedules: without the write module, schedules are only shown.
+func withSchedules(h writeHooks, _ schedule.Reader) (writeHooks, string) {
+	return h, "Changing schedules needs the write module, which this build leaves out"
 }

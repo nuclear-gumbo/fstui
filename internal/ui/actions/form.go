@@ -341,3 +341,7 @@ func (f *Form) secretKey(msg tea.KeyPressMsg) {
 		f.secrets[f.focus] = append(s, msg.Text...)
 	}
 }
+
+// Typing implements ui.Typing: a text or passphrase field has focus, so
+// pasted text goes to it.
+func (f *Form) Typing() bool { return len(f.fields) > 0 && !f.fields[f.focus].Switch }

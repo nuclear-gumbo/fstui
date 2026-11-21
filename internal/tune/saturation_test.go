@@ -51,12 +51,12 @@ func TestSaturation(t *testing.T) {
 		{"queues", map[string][2]uint64{"a": {20 * ms, 2 * ms}, "b": {20 * ms, 2 * ms}, "c": {20 * ms, 2 * ms}}, 0, nil, WorthALook, "queue in ZFS"},
 	}
 	for _, c := range cases {
-		f := Saturation(satWindow(t, 120000, c.waits, c.throttle, c.txgs), l)
+		f := Saturation(satWindow(t, 120000, c.waits, c.throttle, c.txgs), l, dt)
 		if f.Verdict != c.verdict || !strings.Contains(f.Figure+" "+f.Points, c.want) {
 			t.Errorf("%s: %s, %q, %q", c.name, f.Verdict.Word(), f.Figure, f.Points)
 		}
 	}
-	if f := Saturation(satWindow(t, 100, even, 0, nil), l); f.Verdict != NotEnough {
+	if f := Saturation(satWindow(t, 100, even, 0, nil), l, dt); f.Verdict != NotEnough {
 		t.Errorf("idle pool: %s", f.Verdict.Word())
 	}
 }

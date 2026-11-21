@@ -9,6 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -45,14 +49,15 @@ type Snapshots struct {
 }
 
 // NewSnapshots returns the global Snapshots view.
-func NewSnapshots(src SnapshotSource, now func() time.Time) *Snapshots {
+func NewSnapshots(src SnapshotSource, settings *config.Config, now func() time.Time) *Snapshots {
+	settings = settingsOr(settings)
 	read := func(ctx context.Context) (allSnapshots, error) {
 		s, err := src.AllSnapshots(ctx)
 		return allSnapshots(s), err
 	}
 	// The interval only spaces retries after a failure; success schedules
 	// no further reads because handle's tick is ignored below.
-	return &Snapshots{src: src, marked: marks{}, poll: poller[allSnapshots]{read: read, interval: time.Minute, now: now, slow: true}, now: now}
+	return &Snapshots{src: src, marked: marks{}, poll: poller[allSnapshots]{read: read, interval: time.Minute, now: now, slow: true, limits: &settings.Limits}, now: now}
 }
 
 // snapshotListTop: the summary line and the column header come first.
@@ -153,7 +158,7 @@ func (v *Snapshots) Render(disp ui.Display, width, height int) string {
 		order = "descending"
 	}
 	lines := []string{
-		muted.Render(fmt.Sprintf("%d %s, sorted by %s, %s; loaded once, r reloads", len(list), plural(len(list), "snapshot", "snapshots"), sortNames[v.sortBy], order)),
+		muted.Render(fmt.Sprintf("%d %s, sorted by %s, %s; loaded once, r reloads", len(list), format.Plural(len(list), "snapshot", "snapshots"), sortNames[v.sortBy], order)),
 		muted.Render(strings.Repeat(" ", markerWidth) + snapshotHeader(nameCol)),
 	}
 	start, end := v.cursor.window(len(list), max(height-len(lines), 1))
@@ -172,7 +177,7 @@ func (v *Snapshots) Render(disp ui.Display, width, height int) string {
 func (v *Snapshots) Status() ui.Status {
 	st := ui.Status{Refreshed: v.poll.loaded, LastError: v.poll.lastErr}
 	if !v.poll.loaded.IsZero() {
-		st.Figure = fmt.Sprintf("%d %s", len(v.poll.data), plural(len(v.poll.data), "snapshot", "snapshots"))
+		st.Figure = fmt.Sprintf("%d %s", len(v.poll.data), format.Plural(len(v.poll.data), "snapshot", "snapshots"))
 	}
 	return st
 }

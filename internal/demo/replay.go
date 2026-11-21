@@ -93,10 +93,25 @@ type Commands struct {
 	st    *state // datasets, snapshots and bookmarks, loaded on first use
 	// poolSt holds the demo's changes to pools (scrubs, cleared errors).
 	poolSt map[string]*poolState
-	arc    *ARC     // the model the ARC view reads (UseARC)
-	files  arcFiles // ARC limits and the modprobe file
-	clock  func() time.Time
+	arc    *ARC       // the model the ARC view reads (UseARC)
+	sched  *Schedules // the demo's systemd, for list-timers (UseSchedules)
+	// made are pools created or imported in the demo, in order; away the
+	// exported ones, whose datasets wait in stashed.
+	made        []string
+	away        map[string]bool
+	stashed     map[string]map[string]*entry
+	oldImported bool // demoImportable's pool was imported
+	// tune is each pool's replay of recorded kstats; tuneLast the pool
+	// sampled last, whose phase the global kstats follow.
+	tune     map[string]*tuneReplay
+	tuneLast string
+	files    arcFiles // ARC limits and the modprobe file
+	clock    func() time.Time
 }
+
+// UseSchedules makes the demo answer systemctl list-timers from s, its
+// own systemd, so the Pools view and the Schedules tab agree.
+func (c *Commands) UseSchedules(s *Schedules) { c.sched = s }
 
 // New returns the demo's commands.
 func New() *Commands { return &Commands{cache: map[string][]byte{}} }
@@ -148,7 +163,7 @@ func (c *Commands) answer(a execute.Argv) ([]byte, error) {
 	if out, ok, err := c.textAnswer(a); ok {
 		return out, err
 	}
-	if out, ok := diskAnswer(a); ok {
+	if out, ok := c.diskAnswer(a); ok {
 		return out, nil
 	}
 	cmd := string(a.Tool) + " " + strings.Join(a.Options, " ")
@@ -165,13 +180,11 @@ func (c *Commands) answer(a execute.Argv) ([]byte, error) {
 		return c.pools("zpool-get-p.json", a.Operands)
 	case cmd == "zfs allow" && len(a.Operands) == 1:
 		return c.allow(a.Operands[0])
-	case cmd == "systemctl list-timers --all --output=json --no-pager":
-		b, err := fs.ReadFile(fstui.Recorded, fstui.RecordedTimers)
-		if err != nil {
-			return nil, fmt.Errorf("demo recording: %w", err)
-		}
-		// The recorded weekly timer of fstuitest_sched becomes tank's.
-		return bytes.ReplaceAll(b, []byte("fstuitest_sched"), []byte("tank")), nil
+	case cmd == "systemctl list-timers --all --output=json --no-pager" && c.sched != nil:
+		// The Pools view's scrub schedules come from the demo's own
+		// systemd, the one the Schedules tab changes.
+		res, err := c.sched.Read(context.Background(), a)
+		return res.Stdout, err
 	case cmd == "zpool events -H -v":
 		return c.file("events", "induced-v.txt")
 	case cmd == "zpool history -i" && len(a.Operands) == 1:
@@ -179,6 +192,9 @@ func (c *Commands) answer(a execute.Argv) ([]byte, error) {
 			if p.name == a.Operands[0] {
 				return c.file(p.dir, "zpool-history.txt")
 			}
+		}
+		if slices.Contains(c.poolNames(), a.Operands[0]) {
+			return []byte("History for '" + a.Operands[0] + "':\n"), nil // made in the demo
 		}
 	case cmd == "zfs get -j -p all" && len(a.Operands) == 1:
 		return c.datasets("zfs get", func(name, _ string) bool { return name == a.Operands[0] })
@@ -190,43 +206,124 @@ func (c *Commands) answer(a execute.Argv) ([]byte, error) {
 	return nil, fmt.Errorf("%w: %s", errNoRecording, a)
 }
 
-// pools merges one recorded zpool file across the scenarios, keeping the
-// pools named in operands, or all of them.
+// pools answers one zpool JSON command for the pools named in operands,
+// or all of them: recorded, made in the demo, less the exported.
 func (c *Commands) pools(file string, operands []string) ([]byte, error) {
-	var head json.RawMessage
 	merged := map[string]json.RawMessage{}
-	for _, p := range pools {
-		if len(operands) > 0 && !slices.Contains(operands, p.name) {
+	var head json.RawMessage
+	for _, name := range c.poolNames() {
+		if len(operands) > 0 && !slices.Contains(operands, name) {
 			continue
 		}
-		b, err := c.file(p.dir, file)
+		h, v, err := c.poolDoc(file, name)
 		if err != nil {
 			return nil, err
 		}
-		var doc struct {
-			Head  json.RawMessage            `json:"output_version"`
-			Pools map[string]json.RawMessage `json:"pools"`
-		}
-		if err := json.Unmarshal(b, &doc); err != nil {
-			return nil, fmt.Errorf("demo recording %s/%s: %w", p.dir, file, err)
-		}
-		head = doc.Head
-		for k, v := range doc.Pools {
-			if file == "zpool-status.json" {
-				c.mu.Lock()
-				v, err = c.patchStatus(k, v)
-				c.mu.Unlock()
-				if err != nil {
-					return nil, err
-				}
-			}
-			merged[k] = v
-		}
+		head, merged[name] = h, v
 	}
 	if head == nil {
 		return nil, fmt.Errorf("%w: no pool %s", errNoRecording, strings.Join(operands, ", "))
 	}
 	return envelope(head, "pools", merged)
+}
+
+// poolNames are the demo's imported pools, recorded ones first.
+func (c *Commands) poolNames() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var out []string
+	for _, p := range pools {
+		if !c.away[p.name] {
+			out = append(out, p.name)
+		}
+	}
+	for _, n := range c.made {
+		if !c.away[n] {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
+// poolDoc is one pool's entry of a recorded zpool JSON file, with the
+// demo's changes; a pool the demo made is modelled on template.
+func (c *Commands) poolDoc(file, name string) (json.RawMessage, json.RawMessage, error) {
+	dir, key := "", name
+	for _, p := range pools {
+		if p.name == name {
+			dir = p.dir
+		}
+	}
+	if dir == "" {
+		dir, key = "healthy", template
+	}
+	b, err := c.file(dir, file)
+	if err != nil {
+		return nil, nil, err
+	}
+	var doc struct {
+		Head  json.RawMessage            `json:"output_version"`
+		Pools map[string]json.RawMessage `json:"pools"`
+	}
+	if err := json.Unmarshal(b, &doc); err != nil {
+		return nil, nil, fmt.Errorf("demo recording %s/%s: %w", dir, file, err)
+	}
+	v := doc.Pools[key]
+	if file == "zpool-status.json" {
+		c.mu.Lock()
+		v, err = c.patchStatus(name, v)
+		c.mu.Unlock()
+	} else {
+		v, err = c.patchProps(name, v)
+	}
+	return doc.Head, v, err
+}
+
+// patchProps gives zpool list and get the size, name and read-only state
+// that the demo's changes to a pool imply.
+func (c *Commands) patchProps(name string, raw json.RawMessage) (json.RawMessage, error) {
+	c.mu.Lock()
+	ps := c.poolSt[name]
+	changed := ps != nil && (len(ps.edits) > 0 || ps.readonly)
+	c.mu.Unlock()
+	if !changed {
+		return raw, nil
+	}
+	st, err := c.currentStatus(name)
+	if err != nil {
+		return nil, err
+	}
+	p, err := decode(raw)
+	if err != nil {
+		return nil, err
+	}
+	p["name"], p["pool_guid"] = name, st["pool_guid"]
+	props := kids(p, "properties")
+	set := func(k string, v any) {
+		if e, ok := props[k].(node); ok {
+			e["value"] = v
+		}
+	}
+	size := dataSize(st)
+	alloc, _ := num(kids(props, "allocated")["value"])
+	alloc = min(alloc, size)
+	set("size", size)
+	set("free", size-alloc)
+	set("allocated", alloc)
+	if size > 0 {
+		set("capacity", alloc*100/size)
+	}
+	set("health", st["state"])
+	set("guid", st["pool_guid"])
+	set("name", name)
+	if ps.readonly {
+		set("readonly", "on")
+	}
+	out, err := json.Marshal(p)
+	if err != nil {
+		return nil, fmt.Errorf("demo pool %s: %w", name, err)
+	}
+	return out, nil
 }
 
 // envelope writes an OpenZFS JSON document: output_version first, as zfs

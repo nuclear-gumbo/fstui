@@ -7,20 +7,14 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+
+	"github.com/nuclear-gumbo/fstui/internal/config"
 )
 
-// Thresholds of the size question. A dataset counts when it moved at
-// least minBytes in at least minOps requests in the window. Requests are
-// small when a record is smallRatio times their average or more, large
-// when they average largeRatio records or more and records are under the
-// 1 MiB the default limits allow without changing a module parameter.
-const (
-	minBytes   = 1 << 20
-	minOps     = 50
-	smallRatio = 8
-	largeRatio = 4
-	bigRecord  = 1 << 20
-)
+// bigRecord is the largest record the default limits allow without
+// changing a module parameter; larger requests than records under it are
+// worth a larger recordsize.
+const bigRecord = 1 << 20
 
 // SizesQuestion is the question Sizes answers.
 const SizesQuestion = "Record size against request size"
@@ -54,11 +48,11 @@ type Cost struct{ Writes, Reads bool }
 // requests made to them. records maps a dataset to its recordsize (or
 // volblocksize) in bytes; cost is what the disks did beyond the requests;
 // size formats a byte count as the view does.
-func Sizes(w *Window, records map[string]uint64, volumes map[string]bool, cost Cost, size func(uint64) string) Finding {
+func Sizes(w *Window, records map[string]uint64, volumes map[string]bool, cost Cost, size func(uint64) string, t config.Tune) Finding {
 	f := Finding{Question: SizesQuestion}
-	io := datasetIO(w, records)
+	io := datasetIO(w, records, t)
 	if len(io) == 0 {
-		f.Figure = fmt.Sprintf("no dataset has read or written %s in %d requests since measuring started", size(minBytes), minOps)
+		f.Figure = fmt.Sprintf("no dataset has read or written %s in %d requests yet; an answer needs that much", size(uint64(t.MinMovedMiB)<<20), t.MinRequests) //nolint:gosec // a positive setting
 		f.Points = "leave the tab open while the pool is in use"
 		return f
 	}
@@ -66,9 +60,9 @@ func Sizes(w *Window, records map[string]uint64, volumes map[string]bool, cost C
 	f.Figure = describe(io[0], size)
 	f.Points = "the record sizes suit the requests; small sequential requests cost nothing extra"
 	for _, d := range io {
-		f.Evidence = append(f.Evidence, describe(d, size))
+		f.Details = append(f.Details, describe(d, size))
 		if f.Verdict == Fits {
-			judgeSize(&f, d, cost, size)
+			judgeSize(&f, d, cost, size, t)
 			if f.Verdict != Fits && !volumes[d.Dataset] {
 				f.Change = &Change{Kind: "property", Dataset: d.Dataset, Name: "recordsize", Value: sizeValue(recordFor(d.Avg()))}
 			}
@@ -79,7 +73,8 @@ func Sizes(w *Window, records map[string]uint64, volumes map[string]bool, cost C
 
 // datasetIO lists the reads and writes of each dataset with a known
 // record size that moved enough to judge, the most bytes first.
-func datasetIO(w *Window, records map[string]uint64) []DatasetIO {
+func datasetIO(w *Window, records map[string]uint64, t config.Tune) []DatasetIO {
+	minBytes, minOps := uint64(t.MinMovedMiB)<<20, uint64(t.MinRequests) //nolint:gosec // positive settings
 	var io []DatasetIO
 	for ds := range w.Now.Objsets {
 		rec := records[ds]
@@ -106,7 +101,8 @@ func datasetIO(w *Window, records map[string]uint64) []DatasetIO {
 
 // judgeSize sets f to "worth a look" when d's requests are much smaller
 // than its records and the disks did more than asked, or much larger.
-func judgeSize(f *Finding, d DatasetIO, cost Cost, size func(uint64) string) {
+func judgeSize(f *Finding, d DatasetIO, cost Cost, size func(uint64) string, t config.Tune) {
+	smallRatio, largeRatio := uint64(t.SmallRatio), uint64(t.LargeRatio) //nolint:gosec // positive settings
 	switch {
 	case d.Record >= smallRatio*d.Avg() && d.Write && cost.Writes:
 		f.Verdict, f.Figure = WorthALook, describe(d, size)
@@ -130,7 +126,8 @@ func describe(d DatasetIO, size func(uint64) string) string {
 // ReadAmplified reports whether the pool's devices read more than
 // twice what applications read in the window, with at least minBytes
 // read: reads fetch more than they need.
-func ReadAmplified(w *Window, l Layout) bool {
+func ReadAmplified(w *Window, l Layout, t config.Tune) bool {
+	minBytes := uint64(t.MinMovedMiB) << 20 //nolint:gosec // a positive setting
 	var asked uint64
 	for ds := range w.Now.Objsets {
 		asked += objset(w, ds, "nread")

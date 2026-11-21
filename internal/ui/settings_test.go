@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/colorprofile"
@@ -54,11 +55,17 @@ func k(s string) tea.KeyPressMsg {
 		return tea.KeyPressMsg{Code: tea.KeyEscape}
 	case "backspace":
 		return tea.KeyPressMsg{Code: tea.KeyBackspace}
+	case "ctrl+enter":
+		return tea.KeyPressMsg{Code: tea.KeyEnter, Mod: tea.ModCtrl}
+	case "tab":
+		return tea.KeyPressMsg{Code: tea.KeyTab}
 	}
 	return tea.KeyPressMsg{Code: rune(s[0]), Text: s}
 }
 
+// to opens the group of path and selects it, as the keys would.
 func (s *Settings) to(path string) {
+	s.open(config.SectionOf(path))
 	for i, set := range s.list {
 		if set.Path == path {
 			s.cursor = i
@@ -104,7 +111,7 @@ func TestSettingsReviewSaveRevert(t *testing.T) {
 	if s.review == nil {
 		t.Fatalf("no review: %q", s.message)
 	}
-	staged := s.review.staged
+	staged := s.review.files[0].staged
 	if _, err := os.Stat(staged); err != nil {
 		t.Fatalf("staged file: %v", err)
 	}
@@ -121,10 +128,10 @@ func TestSettingsReviewSaveRevert(t *testing.T) {
 	}
 
 	s.Update(k("p"))
-	if _, cmd := s.Update(k("y")); cmd != nil || s.review == nil {
+	if cmd := s.Update(k("y")); cmd != nil || s.review == nil {
 		t.Fatal("y wrote the file; w writes it now")
 	}
-	_, cmd := s.Update(k("w"))
+	cmd := s.Update(k("w"))
 	if cmd == nil {
 		t.Fatal("saving sent no settings to the views")
 	}
@@ -164,7 +171,7 @@ func TestSettingsRefusesInvalidFile(t *testing.T) {
 
 func TestSettingsIsViewNine(t *testing.T) {
 	s, _ := newSettings(t, "")
-	m := newModel(colorprofile.ASCII, &fakeScreen{name: "Pools"}, s)
+	m := newModel(colorprofile.ASCII, &fakeScreen{name: "Pools"}, configOf(s))
 	m, _ = press(t, m, "9")
 	if m.active != 1 {
 		t.Fatal("9 did not open Settings")
@@ -186,17 +193,69 @@ func TestSettingsFlagNotEditable(t *testing.T) {
 }
 
 // Settings reads nothing from the system, so the status bar shows no
-// refresh age, and SOURCE is only as wide as the sources shown, leaving
-// room for the descriptions.
+// refresh age. The tab lists the groups first; a group shows its
+// settings by name, not by key, with the selected one explained.
 func TestSettingsLayout(t *testing.T) {
 	s, _ := newSettings(t, "")
-	m := newModel(colorprofile.ASCII, s)
+	m := newModel(colorprofile.ASCII, configOf(s))
 	if got := ansi.Strip(m.statusBar(s.Status())); strings.Contains(got, "loading") || strings.Contains(got, "refreshed") {
 		t.Errorf("status bar: %q", got)
 	}
 	out := ansi.Strip(s.Render(m.display, 100, 20))
-	if !strings.Contains(out, "default  Colour theme") || !strings.Contains(out, "Sizes in IEC units or exact byte counts") {
-		t.Errorf("SOURCE column not sized to its contents:\n%s", out)
+	for _, want := range []string{"Display", "Warnings", "Tune", "enter opens one"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("groups lack %q:\n%s", want, out)
+		}
+	}
+	s.Update(k("j"))
+	s.Update(k("enter"))
+	out = ansi.Strip(s.Render(m.display, 100, 20))
+	if !strings.Contains(out, "Capacity warning at (%)") || !strings.Contains(out, "thresholds.capacity_warn in the file") || strings.Contains(out, "Colour theme") {
+		t.Errorf("Warnings group:\n%s", out)
+	}
+	s.Update(k("esc"))
+	if s.section != -1 || s.Nested() {
+		t.Errorf("esc left the group open: section %d", s.section)
+	}
+}
+
+// A group longer than the screen scrolls: the selected setting is always
+// drawn, down to the last (the list did not scroll in 0.8.0).
+func TestSettingsScroll(t *testing.T) {
+	s, _ := newSettings(t, "")
+	m := newModel(colorprofile.ASCII, configOf(s))
+	s.open(len(config.Sections) - 1) // Tune, the longest
+	n := len(s.items())
+	for i := range n {
+		out := ansi.Strip(s.Render(m.display, 100, 16))
+		label := s.list[s.cursor].Label()
+		if !strings.Contains(out, "> "+label) {
+			t.Fatalf("row %d of %d (%s) not drawn:\n%s", i, n, label, out)
+		}
+		if lines := strings.Count(out, "\n") + 1; lines > 16 {
+			t.Fatalf("%d lines in 16", lines)
+		}
+		s.Update(k("j"))
+	}
+	if !strings.Contains(ansi.Strip(s.Render(m.display, 100, 16)), "Incompressible file below") {
+		t.Error("the last setting is not reachable")
+	}
+}
+
+// Text settings take letters and punctuation: a host name, a time.
+func TestSettingsTypeText(t *testing.T) {
+	s, _ := newSettings(t, "")
+	s.to("schedules.cron_time")
+	s.Update(k("enter"))
+	for range 5 {
+		s.Update(k("backspace"))
+	}
+	for _, c := range []string{"0", "4", ":", "3", "0"} {
+		s.Update(k(c))
+	}
+	s.Update(k("enter"))
+	if s.pending["schedules.cron_time"] != "04:30" {
+		t.Errorf("pending %v, message %q", s.pending, s.message)
 	}
 }
 
@@ -204,7 +263,7 @@ func TestSettingsLayout(t *testing.T) {
 // they belong to the field: typing 75 must not switch to view 7 or 5.
 func TestSettingsTypingThroughRoot(t *testing.T) {
 	s, _ := newSettings(t, "")
-	m := newModel(colorprofile.ASCII, &fakeScreen{name: "Pools"}, s)
+	m := newModel(colorprofile.ASCII, &fakeScreen{name: "Pools"}, configOf(s))
 	m, _ = press(t, m, "9")
 	s.to("thresholds.capacity_warn")
 	m, _ = press(t, m, "enter")
@@ -244,7 +303,7 @@ func themeOf(t *testing.T, cmd tea.Cmd) string {
 func TestSettingsThemePreview(t *testing.T) {
 	s, _ := newSettings(t, "")
 	s.to("theme")
-	_, cmd := s.Update(k("enter"))
+	cmd := s.Update(k("enter"))
 	if got := themeOf(t, cmd); got != "gruvbox" {
 		t.Fatalf("choosing previewed %q", got)
 	}
@@ -254,7 +313,7 @@ func TestSettingsThemePreview(t *testing.T) {
 	if got := themeOf(t, s.Activate()); got != "gruvbox" {
 		t.Errorf("coming back showed %q", got)
 	}
-	_, cmd = s.Update(k("d"))
+	cmd = s.Update(k("d"))
 	if got := themeOf(t, cmd); got != "default" || len(s.pending) != 0 {
 		t.Errorf("discarding showed %q, pending %v", got, s.pending)
 	}
@@ -286,4 +345,38 @@ func TestSettingsWithoutAUserFile(t *testing.T) {
 		t.Error("a review was started without a user file")
 	}
 	_ = s.Render(asciiDisplay(true), 80, 24)
+}
+
+// configOf is view 9 with s as its General tab.
+func configOf(s *Settings) *Config {
+	return NewConfig(s, NewNotifications(s.file, s.cfg, func() (config.Secrets, []config.Problem) { return nil, nil }, nil, nil), NewAlerts(s.file, s.cfg, nil), NewSchedules(nil, "", time.Minute, time.Now))
+}
+
+// An edit goes to the user's file that sets the key: here a drop-in for
+// the theme and config.yaml for the units, reviewed and written together.
+func TestSettingsEditsGoToTheirFile(t *testing.T) {
+	s, file := newSettings(t, "units: iec\n")
+	drop := filepath.Join(filepath.Dir(file), config.DropInDir, "theme.yaml")
+	if err := os.MkdirAll(filepath.Dir(drop), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(drop, []byte("theme: default\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s.cfg.Sources["theme"] = drop
+	s.pending = map[string]string{"theme": "gruvbox", "units": "exact"}
+	s.Update(k("p"))
+	if s.review == nil || len(s.review.files) != 2 {
+		t.Fatalf("review: %+v, %s", s.review, s.message)
+	}
+	s.Update(k("w"))
+	if b, _ := os.ReadFile(drop); string(b) != "theme: gruvbox\n" {
+		t.Errorf("drop-in: %q", b)
+	}
+	if b, _ := os.ReadFile(file); string(b) != "units: exact\n" {
+		t.Errorf("config.yaml: %q", b)
+	}
+	if len(s.lastSaved) != 2 {
+		t.Errorf("last saved %v", s.lastSaved)
+	}
 }

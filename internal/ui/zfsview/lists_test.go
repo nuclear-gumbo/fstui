@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
@@ -70,7 +72,7 @@ func clock() time.Time { return now }
 
 func TestSnapshotsReadOnlyWhenShown(t *testing.T) {
 	src := &countingSnapshots{fake: healthyDatasets(t)}
-	v := NewSnapshots(src, clock)
+	v := NewSnapshots(src, nil, clock)
 	if v.Init() != nil {
 		t.Fatal("the global snapshot list was read at startup")
 	}
@@ -98,7 +100,7 @@ func TestSnapshotsReadOnlyWhenShown(t *testing.T) {
 }
 
 func TestVolumes(t *testing.T) {
-	v := NewVolumes(&countingSnapshots{fake: healthyDatasets(t)}, interval, clock)
+	v := NewVolumes(&countingSnapshots{fake: healthyDatasets(t)}, volumeSettings(interval), clock)
 	v.Update(v.Init()())
 	out := ansi.Strip(v.Render(display(), 140, 10))
 	for _, want := range []string{"fstuitest_g_healthy/vol", "64.0 MiB", "16.0 KiB", "sparse", "/dev/zvol/fstuitest_g_healthy/vol"} {
@@ -120,7 +122,7 @@ func (c *countingSnapshots) Diff(context.Context, string, string) ([]zfs.DiffEnt
 
 func TestDiffWindowFromSnapshots(t *testing.T) {
 	src := &countingSnapshots{fake: healthyDatasets(t)}
-	v := NewSnapshots(src, clock)
+	v := NewSnapshots(src, nil, clock)
 	v.Update(v.Activate()())
 	if _, cmd := v.Update(kp("=")); cmd == nil {
 		t.Fatal("= opened nothing")
@@ -146,7 +148,7 @@ func TestDiffWindowFromSnapshots(t *testing.T) {
 
 func TestSnapshotsMarkSeveral(t *testing.T) {
 	src := &countingSnapshots{fake: healthyDatasets(t)}
-	v := NewSnapshots(src, clock)
+	v := NewSnapshots(src, nil, clock)
 	v.Update(v.Activate()())
 	if len(v.poll.data) < 2 {
 		t.Skip("the fixture has fewer than two snapshots")
@@ -169,4 +171,12 @@ func TestSnapshotsMarkSeveral(t *testing.T) {
 	if len(v.marked) != 0 {
 		t.Error("marks kept after a change ran")
 	}
+}
+
+// volumeSettings are the defaults with the given dataset refresh, which
+// the Volumes view polls at.
+func volumeSettings(interval time.Duration) *config.Config {
+	c := config.Default()
+	c.Refresh.Datasets = interval
+	return &c
 }

@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"github.com/nuclear-gumbo/fstui/internal/execute"
 	"github.com/nuclear-gumbo/fstui/internal/mutate"
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
@@ -138,7 +140,7 @@ func (b Builder) offlinePlan(p *mutate.Plan, device, parent *zfs.Vdev, dev strin
 		affects(p, show(parent.Name.Raw())+" keeps working with no redundancy left: one more failure there loses data")
 	default:
 		affects(p, fmt.Sprintf("%s keeps working; %d more %s can fail there without losing data", show(parent.Name.Raw()), spare-after,
-			plural(spare-after, "device", "devices")))
+			format.Plural(spare-after, "device", "devices")))
 	}
 	affects(p, show(dev)+" stays offline, also after a reboot, until it is brought online")
 }

@@ -20,6 +20,9 @@ import (
 // zfs: the demo's write mode uses it in place of starting a process. It
 // understands the commands fstui's changes produce and refuses others.
 func (c *Commands) Apply(a execute.Argv, stdin []byte) (execute.Result, error) {
+	if res, ok, err := c.applyTopology(a); ok {
+		return res, err
+	}
 	switch a.Tool { //nolint:exhaustive // zfs changes below
 	case execute.Zpool:
 		return c.applyPool(a)

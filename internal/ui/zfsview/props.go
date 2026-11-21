@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/charmbracelet/x/ansi"
 
 	"github.com/nuclear-gumbo/fstui/internal/theme"
 	"github.com/nuclear-gumbo/fstui/internal/ui"
@@ -104,7 +103,7 @@ func (t propTable) helpBlock(disp ui.Display, name string, width int) []string {
 	}
 	out := []string{""}
 	for _, p := range parts {
-		out = append(out, strings.Split(ansi.Wrap(p, width, ""), "\n")...)
+		out = append(out, ui.WrapStyled(p, width)...)
 	}
 	return out
 }

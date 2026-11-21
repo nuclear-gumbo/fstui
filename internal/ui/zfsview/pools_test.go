@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/problem"
+
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
@@ -132,17 +134,17 @@ func display() ui.Display {
 
 func render(p *Pools, w, h int) string { return ansi.Strip(p.Render(display(), w, h)) }
 
-func texts(ws []warning) string {
+func texts(ws []problem.Problem) string {
 	var b strings.Builder
 	for _, w := range ws {
-		b.WriteString(w.text + "\n")
+		b.WriteString(w.Text + "\n")
 	}
 	return b.String()
 }
 
 func TestOverviewRows(t *testing.T) {
 	p := loaded(t, defaults(), golden(t, "healthy"), golden(t, "degraded"), golden(t, "scrub-in-progress"))
-	out := render(p, splitWidth-1, 20) // the full-width list; the split narrows it
+	out := render(p, config.Default().UI.SplitFrom-1, 20) // the full-width list; the split narrows it
 	for _, want := range []string{"fstuitest_g_healthy", "ONLINE", "DEGRADED", "scrub ", "never", "SCRUB", "FRAG", "DEDUP", "1.00x"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("overview lacks %q:\n%s", want, out)
@@ -288,10 +290,10 @@ func TestGolden(t *testing.T) {
 // Warnings wrap in a narrow list instead of being cut; what does not fit
 // in a third of the height is counted.
 func TestWarningsWrap(t *testing.T) {
-	ws := []warning{
-		{text: "fstuitest_demo_backup is DEGRADED: 1 device OFFLINE"},
-		{text: "fstuitest_demo_tank is 85% full (warning from 80%)", advisory: true},
-		{text: "third", advisory: true},
+	ws := []problem.Problem{
+		{Text: "fstuitest_demo_backup is DEGRADED: 1 device OFFLINE"},
+		{Text: "fstuitest_demo_tank is 85% full (warning from 80%)", Advisory: true},
+		{Text: "third", Advisory: true},
 	}
 	got := ansi.Strip(strings.Join(warningBlock(display(), ws, 30, 9), "\n")) // three lines for warnings
 	want := "\nfstuitest_demo_backup is\n  DEGRADED: 1 device OFFLINE\n+2 more"

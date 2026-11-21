@@ -58,7 +58,7 @@ func (f *fakeIO) IOStats(ctx context.Context, sample func(zfs.IOSample)) error {
 func newIO(t *testing.T, src *fakeIO) (*IO, *time.Time) {
 	t.Helper()
 	clock := now
-	return NewIO(src, func() time.Time { clock = clock.Add(time.Second); return clock }), &clock
+	return NewIO(src, nil, func() time.Time { clock = clock.Add(time.Second); return clock }), &clock
 }
 
 // pump runs n messages of the stream through the view.

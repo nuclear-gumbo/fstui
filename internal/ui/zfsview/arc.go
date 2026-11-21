@@ -9,6 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
@@ -21,11 +25,8 @@ import (
 // ARC rates: a file read, every second while the view is shown and every ten
 // seconds otherwise, so the graph has data when the user comes back.
 const (
-	arcShown  = time.Second
-	arcHidden = 10 * time.Second
 	// arcWindow is how far back the hit ratio graph reaches.
-	arcWindow = 5 * time.Minute
-	arcView   = 5
+	arcView = 5
 )
 
 // ARC shows the ARC: its size against its bounds, the hit ratio over the last
@@ -33,6 +34,9 @@ const (
 type ARC struct {
 	poll poller[zfs.ARCStats]
 	now  func() time.Time
+	set  *config.Config // shared; charts.arc_window, refresh.arc, refresh.arc_hidden
+	// shown is whether the view is on screen, which sets the read interval.
+	shown bool
 
 	prev   zfs.ARCStats // the reading before the latest, for rates
 	prevAt time.Time
@@ -43,13 +47,14 @@ type ARC struct {
 }
 
 // NewARC returns the ARC view reading with read, normally zfs.ReadARCStats.
-func NewARC(read func() (zfs.ARCStats, error), now func() time.Time) *ARC {
+func NewARC(read func() (zfs.ARCStats, error), settings *config.Config, now func() time.Time) *ARC {
+	settings = settingsOr(settings)
 	return &ARC{
 		poll: poller[zfs.ARCStats]{
 			read:     func(context.Context) (zfs.ARCStats, error) { return read() },
-			interval: arcHidden, now: now,
+			interval: settings.Refresh.ARCHidden, now: now,
 		},
-		now: now,
+		now: now, set: settings,
 	}
 }
 
@@ -70,13 +75,15 @@ func (a *ARC) Init() tea.Cmd { return a.poll.start() }
 
 // Activate implements ui.Activator: read now and every second.
 func (a *ARC) Activate() tea.Cmd {
-	a.poll.interval = arcShown
+	a.shown = true
+	a.poll.interval = a.set.Refresh.ARC
 	return a.poll.refresh()
 }
 
 // Deactivate implements ui.Deactivator.
 func (a *ARC) Deactivate() tea.Cmd {
-	a.poll.interval = arcHidden
+	a.shown = false
+	a.poll.interval = a.set.Refresh.ARCHidden
 	return nil
 }
 
@@ -94,15 +101,23 @@ func (a *ARC) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 		}
 		return a, cmd
 	}
-	if k, ok := msg.(tea.KeyPressMsg); ok && key.Matches(k, keys.Get(keys.Refresh)) {
-		return a, a.poll.refresh()
+	switch msg := msg.(type) {
+	case tea.KeyPressMsg:
+		if key.Matches(msg, keys.Get(keys.Refresh)) {
+			return a, a.poll.refresh()
+		}
+	case ui.ConfigMsg: // the shared settings are already new
+		a.poll.interval = a.set.Refresh.ARCHidden
+		if a.shown {
+			a.poll.interval = a.set.Refresh.ARC
+		}
 	}
 	return a, nil
 }
 
 // sample records the rates between the previous reading and cur.
 func (a *ARC) sample(cur zfs.ARCStats, at time.Time) {
-	from := at.Add(-arcShown)
+	from := at.Add(-a.poll.interval)
 	if !a.prevAt.IsZero() && at.After(a.prevAt) {
 		from = a.prevAt
 		if r, ok := zfs.HitRatio(a.prev, cur); ok {
@@ -114,8 +129,8 @@ func (a *ARC) sample(cur zfs.ARCStats, at time.Time) {
 		a.sizes.add(from, at, float64(cur.Size)*percent/float64(cur.Max))
 	}
 	a.prev, a.prevAt = cur, at
-	a.hits.trim(at.Add(-arcWindow))
-	a.sizes.trim(at.Add(-arcWindow))
+	a.hits.trim(at.Add(-a.set.Charts.ARCWindow))
+	a.sizes.trim(at.Add(-a.set.Charts.ARCWindow))
 }
 
 const percent = 100
@@ -128,7 +143,7 @@ func (a *ARC) Render(d ui.Display, width, height int) string {
 	s := a.poll.data
 	muted := d.Palette.Style(theme.Muted)
 	label := func(s string) string { return muted.Render(pad(s, arcLabel)) }
-	size := func(n uint64) string { return ui.Size(n, d.Exact) }
+	size := func(n uint64) string { return format.Size(n, d.Exact) }
 
 	gauge := max(width-arcLabel-len("  3.1 GiB of 7.8 GiB maximum")-arcLabel/2, ui.BarMinWidth)
 	head := []string{
@@ -148,9 +163,9 @@ func (a *ARC) Render(d ui.Display, width, height int) string {
 		now = fmt.Sprintf("%.1f%%", v)
 	}
 	lines := append(head, muted.Render("size, last 5 minutes"))
-	lines = append(lines, axisGraph(d, a.sizes.slots(a.poll.loaded, arcWindow, ui.GraphSamples(d, graphW)), "max  ", graphW, rows)...)
+	lines = append(lines, axisGraph(d, a.sizes.slots(a.poll.loaded, a.set.Charts.ARCWindow, ui.GraphSamples(d, graphW)), "max  ", graphW, rows)...)
 	lines = append(lines, "", muted.Render("hit ratio, last 5 minutes   now ")+now+muted.Render("   since load ")+fmt.Sprintf("%.1f%%", sinceLoad(s)))
-	lines = append(lines, axisGraph(d, a.hits.slots(a.poll.loaded, arcWindow, ui.GraphSamples(d, graphW)), "100% ", graphW, rows)...)
+	lines = append(lines, axisGraph(d, a.hits.slots(a.poll.loaded, a.set.Charts.ARCWindow, ui.GraphSamples(d, graphW)), "100% ", graphW, rows)...)
 	lines = append(lines, "")
 	return strings.Join(append(lines, body...), "\n")
 }
@@ -214,9 +229,9 @@ func (a *ARC) contents(d ui.Display, s zfs.ARCStats, label func(string) string, 
 // when the ARC must shrink, shown as a warning.
 func available(s zfs.ARCStats, d ui.Display) string {
 	if s.MemoryFree < 0 {
-		return d.Palette.Style(theme.Warn).Render("-" + ui.Size(uint64(-s.MemoryFree), d.Exact))
+		return d.Palette.Style(theme.Warn).Render("-" + format.Size(uint64(-s.MemoryFree), d.Exact))
 	}
-	return ui.Size(uint64(s.MemoryFree), d.Exact)
+	return format.Size(uint64(s.MemoryFree), d.Exact)
 }
 
 func sinceLoad(s zfs.ARCStats) float64 {

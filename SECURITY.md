@@ -21,4 +21,7 @@ In scope, for example:
 - A user other than root gaining privileges through fstui: its lock, audit log, saved plans, configuration or theme files.
 - A change running without the confirmation it should ask for, or after the system changed since it was shown.
 - A passphrase appearing on a command line, in the audit log, in a saved plan or in an error message.
+- A notification secret (password, token, webhook URL) appearing in `config.yaml`, output, the journal, the audit log or an error; a secrets file read although others can read it.
+- A notification sent somewhere the configuration does not name: over plain HTTP without `insecure_http`, after a redirect, through a proxy, or without checking the certificate.
+- A schedule, unit, cron line or init script that runs as root something other than a root-owned fstui, or that another user can change.
 - The demo build or its container reaching a real pool.

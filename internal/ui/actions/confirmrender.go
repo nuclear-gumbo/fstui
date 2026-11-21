@@ -5,11 +5,14 @@
 package actions
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -67,7 +70,7 @@ func (c *Confirm) body(d ui.Display, w int) []string {
 	section("Outcome", lipgloss.NewStyle(), texts(p.Preview.Affects))
 	section("Destroyed", st(theme.Error), texts(p.Preview.Destroys))
 	if p.Preview.Frees > 0 {
-		section("Space freed", lipgloss.NewStyle(), []string{ui.Size(uint64(p.Preview.Frees), d.Exact)})
+		section("Space freed", lipgloss.NewStyle(), []string{format.Size(uint64(p.Preview.Frees), d.Exact)})
 	}
 	if len(p.Blocked) == 0 { // nothing happens to a blocked change
 		section("Cannot be undone", st(theme.Warn), p.Irreversible)
@@ -89,7 +92,7 @@ func (c *Confirm) body(d ui.Display, w int) []string {
 		for _, l := range strings.Split(raw, "\n") {
 			lines = append(lines, termtext.New(strings.ReplaceAll(l, "\t", "  ")).Display())
 		}
-		section("Dry run", st(theme.Muted), lines)
+		section(cmp.Or(p.Preview.OutputTitle, "Dry run"), st(theme.Muted), lines)
 	}
 	if c.stage == finished {
 		out = append(out, "")

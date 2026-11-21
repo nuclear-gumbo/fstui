@@ -79,7 +79,7 @@ func TestEveryViewDrawsAtEverySize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	screens := append(backends.screens, ui.NewSettings("", nil, cfg, nil, config.Load, nil))
+	screens := append(backends.screens, ui.NewConfig(ui.NewSettings("", nil, cfg, nil, config.Load, nil), ui.NewNotifications("", cfg, func() (config.Secrets, []config.Problem) { return nil, nil }, nil, nil), ui.NewAlerts("", cfg, nil), ui.NewSchedules(nil, "", time.Minute, time.Now)))
 	var m tea.Model = ui.New(ui.Session{Host: termtext.New("demo")}, screens, ui.Options{
 		Profile: colorprofile.TrueColor, Mouse: true, Now: time.Now, StartView: poolsView,
 	})

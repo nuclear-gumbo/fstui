@@ -129,7 +129,7 @@ func (a *applier) themeSet(n *yaml.Node, side string) *theme.Set {
 		default:
 			tok, ok := theme.TokenByName(k.Value)
 			if !ok {
-				a.report(k, "%s: unknown token %q (tokens: accent, ok, warn, error, muted, border; also background, meter)", side, k.Value)
+				a.report(k, "%s: unknown token %q (tokens: accent, ok, warn, error, muted, border, key; also background, meter)", side, k.Value)
 				continue
 			}
 			c, err := theme.ParseHex(v.Value)

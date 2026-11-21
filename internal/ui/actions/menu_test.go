@@ -151,7 +151,7 @@ func TestReasonLinesWrap(t *testing.T) {
 
 // The message for a view without changes names where changes are, briefly.
 func TestNoChangesMessage(t *testing.T) {
-	out := render((&Session{}).NoChanges("I/O", false))
+	out := render((&Session{}).NoChanges("I/O", false, ""))
 	for _, want := range []string{"I/O has nothing to change", "Pools (1)", "ARC (5)", "press a"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("lacks %q:\n%s", want, out)

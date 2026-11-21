@@ -21,7 +21,7 @@ DEMO_BIN := bin/fstui-demo
 # demo container image.
 DEMO_TAGS := fstui_demo
 
-.PHONY: build build-demo install check fmt fmt-check vet staticcheck lint shellcheck prose vuln test test-hooks test-variants integration-build test-clean clean
+.PHONY: build build-demo install check docs fmt fmt-check vet staticcheck lint shellcheck vuln test test-variants integration-build test-clean clean
 
 build:
 	$(GO) build -ldflags "-X main.version=$(VERSION)" -o $(BIN) ./cmd/fstui
@@ -35,9 +35,7 @@ install:
 	@test -x $(BIN) || { echo "$(BIN) does not exist; run make build first (as your user, not root)"; exit 1; }
 	install -Dm0755 $(BIN) $(DESTDIR)$(BINDIR)/fstui
 
-# prose and test-hooks run where their scripts are; the public repository
-# does not carry them.
-check: fmt-check vet staticcheck lint shellcheck $(if $(wildcard scripts/check-prose.sh),prose) vuln test $(if $(wildcard scripts/hooks),test-hooks) test-variants
+check: fmt-check vet staticcheck lint shellcheck vuln test test-variants
 
 fmt:
 	gofumpt -w .
@@ -65,12 +63,7 @@ lint:
 	golangci-lint run --build-tags $(DEMO_TAGS) ./...
 
 shellcheck:
-	shellcheck scripts/*.sh $(wildcard scripts/hooks/*)
-
-# Wording rules a script can check: stock vocabulary, em dashes, design
-# terms in strings shown on screen.
-prose:
-	sh scripts/check-prose.sh
+	shellcheck scripts/*.sh
 
 vuln:
 	govulncheck ./...
@@ -79,10 +72,6 @@ vuln:
 test:
 	CGO_ENABLED=1 $(GO) test -race ./...
 	CGO_ENABLED=1 $(GO) test -race -tags $(DEMO_TAGS) ./internal/demo/ ./cmd/fstui/
-
-test-hooks:
-	sh scripts/test-commit-msg-hook.sh
-	sh scripts/test-check-commit-messages.sh
 
 # Every supported combination of module omit tags builds and reports itself.
 test-variants:
@@ -97,5 +86,11 @@ integration-build:
 test-clean:
 	sh scripts/test-clean.sh
 
+# docs rewrites the settings reference in docs/configuration.md from the
+# registry; a test fails while the two differ.
+docs:
+	FSTUI_UPDATE_DOCS=1 go test -count=1 -run "TestReferenceIsCurrent|TestSchemaIsCurrent" ./internal/config/
+
 clean:
 	rm -rf bin
+

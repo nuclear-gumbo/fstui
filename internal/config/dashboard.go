@@ -13,6 +13,9 @@ import (
 type Dashboard struct {
 	Panels  []string // in order; names from DashboardPanels
 	Columns int      // 1 to 3, or 0 to choose by terminal width
+	// With columns 0: two columns from this terminal width, three from
+	// ThreeColumnsFrom.
+	TwoColumnsFrom, ThreeColumnsFrom int
 }
 
 // DashboardPanels are the panels the dashboard can show.
@@ -21,19 +24,7 @@ var DashboardPanels = []string{"health", "events", "io", "arc", "scans"}
 const dashboardColumnsMax = 3
 
 func defaultDashboard() Dashboard {
-	return Dashboard{Panels: []string{"health", "events", "io", "arc"}}
-}
-
-var dashboardKeys = map[string]setter{
-	"panels": setPanels,
-	"columns": func(_ *applier, c *Config, n *yaml.Node) error {
-		v, err := intIn(n, 0, dashboardColumnsMax)
-		if err != nil {
-			return err
-		}
-		c.Dashboard.Columns = v
-		return nil
-	},
+	return Dashboard{Panels: []string{"health", "events", "io", "arc"}, TwoColumnsFrom: 120, ThreeColumnsFrom: 200}
 }
 
 // setPanels reads the list of panels; an unknown or repeated name is an

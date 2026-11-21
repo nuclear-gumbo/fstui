@@ -75,8 +75,11 @@ type Preview struct {
 	// Outside is set when a destroy reaches objects outside the selected
 	// hierarchy (escalates to High).
 	Outside bool
-	// Output is the native dry run's output, shown as it came.
-	Output termtext.Text
+	// Output is the native dry run's output, shown as it came, under
+	// OutputTitle ("Dry run" when empty): a plan that writes files shows
+	// them there in full.
+	Output      termtext.Text
+	OutputTitle string
 }
 
 // NewID returns a random plan ID for the audit log.

@@ -44,7 +44,7 @@ const (
 	Revert   Action = "revert"
 	Discard  Action = "discard"
 	Confirm  Action = "confirm"
-	Write    Action = "write" // Settings: write the reviewed file
+	Write    Action = "write" // Config: write the reviewed file
 	Cancel   Action = "cancel"
 	// Write module: changes on the selection, write mode.
 	Actions     Action = "actions"
@@ -56,6 +56,10 @@ const (
 	SendSize Action = "send_size"
 	// MeasureFiles measures compression per file in the Tune tab.
 	MeasureFiles Action = "measure_files"
+	// TestChannel sends a test message to a notification channel.
+	TestChannel Action = "test_channel"
+	// Delivery sets up what sends notifications (fstui watch as a service).
+	Delivery Action = "set_up_sending"
 	// Mark and ClearMarks mark items for one change to several.
 	Mark       Action = "mark"
 	ClearMarks Action = "clear_marks"
@@ -97,17 +101,19 @@ var defaults = map[Action]def{
 	Discard:  {[]string{"d"}, "discard unsaved changes"},
 	Confirm:  {[]string{"y"}, "confirm"},
 	Cancel:   {[]string{"n"}, "cancel"},
-	// W, not w: w writes the reviewed file in Settings.
+	// W, not w: w writes the reviewed file in Config.
 	Actions:      {[]string{"a"}, "changes for the selection"},
 	WriteMode:    {[]string{"W"}, "write mode on/off"},
 	NewSnapshot:  {[]string{"n"}, "new snapshot"},
 	Diff:         {[]string{"="}, "what changed since this snapshot"},
 	SendSize:     {[]string{"e"}, "estimate the send size"},
 	MeasureFiles: {[]string{"c"}, "measure compression per file"},
+	TestChannel:  {[]string{"t"}, "send a test message"},
+	Delivery:     {[]string{"s"}, "set up sending notifications"},
 	Mark:         {[]string{"m"}, "mark for a change to several"},
 	ClearMarks:   {[]string{"M"}, "clear the marks"},
 
-	// p is Settings' save, and a key means the same everywhere, so the
+	// p is Config's review, and a key means the same everywhere, so the
 	// pool filter is on P.
 	Filter:         {[]string{"/"}, "filter by text"},
 	FilterPool:     {[]string{"P"}, "next pool"},

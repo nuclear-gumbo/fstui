@@ -3,10 +3,11 @@
 package ui
 
 import (
+	"cmp"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
-	"strconv"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -17,7 +18,7 @@ import (
 	"github.com/nuclear-gumbo/fstui/internal/ui/keys"
 )
 
-// settingsView is the view number of Settings.
+// settingsView is the view number of Config, whose General tab Settings is.
 const settingsView = 9
 
 // Settings edits the user's config.yaml from the UI. Changes stay pending
@@ -25,18 +26,23 @@ const settingsView = 9
 // and shown as a diff; only a confirmation replaces the file,
 // keeping the previous one as a backup that revert restores.
 type Settings struct {
-	file      string // the user's config.yaml
-	files     []string
-	cfg       config.Config
-	list      []config.Setting
-	cursor    int
-	pending   map[string]string
-	input     *numberInput // editing a number
-	review    *review      // a staged file awaiting confirmation
-	message   string       // result of the last save, revert or error
-	term      string       // TERM, for ascii: auto
-	load      Loader
-	loadTheme func(string) (theme.Theme, []config.Problem)
+	file   string // the user's config.yaml
+	files  []string
+	cfg    config.Config
+	list   []config.Spec
+	cursor int // index into list of the selected setting
+	// section is the open group of settings (config.Sections), or -1
+	// for the list of groups, where group is the selected one; top is
+	// the first row drawn of a long group.
+	section, group, top int
+	pending             map[string]string
+	input               *numberInput // editing a number
+	review              *review      // staged files awaiting confirmation
+	lastSaved           []string     // the files the last save wrote, which u reverts
+	message             string       // result of the last save, revert or error
+	term                string       // TERM, for ascii: auto
+	load                Loader
+	loadTheme           func(string) (theme.Theme, []config.Problem)
 }
 
 // Loader reads the config files in order; config.Load in fstui.
@@ -47,16 +53,22 @@ type numberInput struct {
 	text string
 }
 
-// review is a staged file and what it changes.
+// review is the staged files and what each changes: an edit goes to the
+// user's file that sets the key, which may be a drop-in.
 type review struct {
-	staged   string
-	data     []byte // what was staged and shown; saved as is
-	diff     []string
+	files    []reviewFile
 	problems []config.Problem
 	revert   bool
 }
 
-// NewSettings returns the Settings view for the user's config file user;
+// reviewFile is one file of a review.
+type reviewFile struct {
+	file, staged string
+	data         []byte // what was staged and shown; saved as is
+	diff         []string
+}
+
+// NewSettings returns the Config view's General tab for the user's config file user;
 // files are all config files in load order, cfg the loaded settings. user
 // is empty when fstui could not find the user's file: then nothing can be
 // saved, and the system file is never edited in its place.
@@ -65,22 +77,59 @@ func NewSettings(user string, files []string, cfg config.Config, themes []string
 ) *Settings {
 	return &Settings{
 		file: user, files: files, cfg: cfg,
-		list: config.Settings(themes), pending: map[string]string{},
+		list: config.Settings(themes), pending: map[string]string{}, section: -1,
 		term: os.Getenv("TERM"), load: load, loadTheme: loadTheme,
 	}
 }
 
-// Number implements Numbered.
-func (s *Settings) Number() int { return settingsView }
+// Nested implements Screen: esc leaves an edit, a review or an open
+// group first.
+func (s *Settings) Nested() bool { return s.input != nil || s.review != nil || s.section >= 0 }
 
-// Name implements Screen.
-func (s *Settings) Name() string { return "Settings" }
+// items are the indices in list of the open group's settings, in the
+// order the group names them.
+func (s *Settings) items() []int {
+	var out []int
+	for i, set := range s.list {
+		if config.SectionOf(set.Path) == s.section {
+			out = append(out, i)
+		}
+	}
+	slices.SortStableFunc(out, func(a, b int) int {
+		return config.PlaceIn(s.list[a].Path) - config.PlaceIn(s.list[b].Path)
+	})
+	return out
+}
 
-// Init implements Screen.
-func (s *Settings) Init() tea.Cmd { return nil }
+// open shows group g's settings, the first selected.
+func (s *Settings) open(g int) {
+	s.section, s.group, s.top = g, g, 0
+	if it := s.items(); len(it) > 0 {
+		s.cursor = it[0]
+	}
+}
 
-// Nested implements Screen: esc leaves an edit or a review first.
-func (s *Settings) Nested() bool { return s.input != nil || s.review != nil }
+// move moves the selection by delta within the open group, or among the
+// groups; to is a row to jump to when not -1.
+func (s *Settings) move(delta, to int) {
+	if s.section < 0 {
+		n := len(config.Sections)
+		if to >= 0 {
+			s.group = min(to, n-1)
+		} else {
+			s.group = max(min(s.group+delta, n-1), 0)
+		}
+		return
+	}
+	it := s.items()
+	i := slices.Index(it, s.cursor)
+	if to >= 0 {
+		i = min(to, len(it)-1)
+	} else {
+		i = max(min(i+delta, len(it)-1), 0)
+	}
+	s.cursor = it[i]
+}
 
 // Typing implements Typing: while a number is typed, digits are text.
 func (s *Settings) Typing() bool { return s.input != nil }
@@ -100,26 +149,46 @@ func (s *Settings) Keys() []key.Binding {
 		return []key.Binding{keys.Get(keys.Write), keys.As(keys.Cancel, "keep the old file")}
 	case s.input != nil:
 		return []key.Binding{keys.As(keys.Select, "set"), cancelTyping()}
+	case s.section < 0:
+		return []key.Binding{
+			keys.As(keys.Select, "open"), keys.Get(keys.Save), keys.Get(keys.Discard), keys.Get(keys.Revert),
+			keys.As(keys.Down, "next"), keys.As(keys.Up, "previous"),
+		}
 	}
 	return []key.Binding{
-		keys.As(keys.Select, "change"), keys.Get(keys.Save), keys.Get(keys.Discard), keys.Get(keys.Revert),
+		keys.As(keys.Select, "change"), keys.As(keys.Back, "all groups"), keys.Get(keys.Save), keys.Get(keys.Discard), keys.Get(keys.Revert),
 		keys.As(keys.Down, "next"), keys.As(keys.Up, "previous"),
 	}
 }
 
-// Update implements Screen.
-func (s *Settings) Update(msg tea.Msg) (Screen, tea.Cmd) {
+// Update handles the tab's keys and clicks.
+func (s *Settings) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		return s, s.key(msg)
+		return s.key(msg)
 	case ScrollMsg:
-		s.cursor = max(min(s.cursor+msg.Delta, len(s.list)-1), 0)
+		if s.input == nil && s.review == nil {
+			s.move(msg.Delta, -1)
+		}
 	case ClickMsg:
-		if row := msg.Y - settingsTop; s.input == nil && s.review == nil && row >= 0 && row < len(s.list) {
-			s.cursor = row
+		if row := msg.Y - settingsTop; s.input == nil && s.review == nil && row >= 0 {
+			s.click(row)
 		}
 	}
-	return s, nil
+	return nil
+}
+
+// click selects the row clicked; in the list of groups it opens one.
+func (s *Settings) click(row int) {
+	if s.section < 0 {
+		if row < len(config.Sections) {
+			s.open(row)
+		}
+		return
+	}
+	if row+s.top < len(s.items()) {
+		s.move(0, row+s.top)
+	}
 }
 
 func (s *Settings) key(msg tea.KeyPressMsg) tea.Cmd {
@@ -130,9 +199,17 @@ func (s *Settings) key(msg tea.KeyPressMsg) tea.Cmd {
 		s.inputKey(msg)
 		return nil
 	case key.Matches(msg, keys.Get(keys.Down)):
-		s.cursor = min(s.cursor+1, len(s.list)-1)
+		s.move(1, -1)
 	case key.Matches(msg, keys.Get(keys.Up)):
-		s.cursor = max(s.cursor-1, 0)
+		s.move(-1, -1)
+	case key.Matches(msg, keys.Get(keys.First)):
+		s.move(0, 0)
+	case key.Matches(msg, keys.Get(keys.Last)):
+		s.move(0, len(s.list))
+	case key.Matches(msg, keys.Get(keys.Back)) && s.section >= 0:
+		s.section = -1
+	case key.Matches(msg, keys.Get(keys.Select)) && s.section < 0:
+		s.open(s.group)
 	case key.Matches(msg, keys.Get(keys.Select)):
 		s.change(s.list[s.cursor])
 		if s.list[s.cursor].Path == "theme" {
@@ -190,14 +267,14 @@ func (s *Settings) value(path string) string {
 // noFile says why nothing can be saved, when the user's file is unknown.
 func (s *Settings) noFile() bool {
 	if s.file == "" {
-		s.message = "Settings cannot be saved: fstui could not find your config file (the notice at startup says why)."
+		s.message = "Changes cannot be saved: fstui could not find your config file (the notice at startup says why)."
 		return true
 	}
 	return false
 }
 
-// change cycles a choice to its next value, or starts typing a number.
-func (s *Settings) change(set config.Setting) {
+// change steps a setting to its next value, or starts typing one.
+func (s *Settings) change(set config.Spec) {
 	s.message = ""
 	if s.noFile() {
 		return
@@ -206,12 +283,15 @@ func (s *Settings) change(set config.Setting) {
 		s.message = set.Path + " was given on the command line and stays as given for this session."
 		return
 	}
-	if set.Choices == nil {
+	if set.Typed() {
 		s.input = &numberInput{path: set.Path, text: s.value(set.Path)}
 		return
 	}
-	next := set.Choices[(slices.Index(set.Choices, s.value(set.Path))+1)%len(set.Choices)]
-	s.setPending(set.Path, next)
+	opts := set.Options()
+	if len(opts) == 0 {
+		return
+	}
+	s.setPending(set.Path, opts[(slices.Index(opts, s.value(set.Path))+1)%len(opts)])
 }
 
 func (s *Settings) setPending(path, v string) {
@@ -228,19 +308,29 @@ func (s *Settings) inputKey(msg tea.KeyPressMsg) {
 	case key.Matches(msg, cancelTyping()):
 		s.input = nil
 	case msg.String() == "enter":
-		set := s.list[slices.IndexFunc(s.list, func(x config.Setting) bool { return x.Path == in.path })]
-		n, err := strconv.Atoi(in.text)
-		if err != nil || n < set.Min || n > set.Max {
-			s.message = fmt.Sprintf("%s must be a whole number from %d to %d.", set.Path, set.Min, set.Max)
+		set, _ := config.SpecFor(in.path)
+		if err := set.Check(in.text); err != nil {
+			s.message = set.Path + ": " + err.Error() + "."
 			return
 		}
-		s.setPending(in.path, strconv.Itoa(n))
+		s.setPending(in.path, in.text)
 		s.input = nil
 	case msg.String() == "backspace" && in.text != "":
 		in.text = in.text[:len(in.text)-1]
-	case len(msg.Text) == 1 && msg.Text[0] >= '0' && msg.Text[0] <= '9' && len(in.text) < maxDigits:
+	case len(msg.Text) == 1 && typable(in.path, msg.Text) && len(in.text) < maxTyped:
 		in.text += msg.Text
 	}
+}
+
+// typable reports whether a character may be typed into a setting:
+// digits and duration units for numbers, any printable one for text.
+func typable(path, ch string) bool {
+	set, _ := config.SpecFor(path)
+	if set.Kind == config.KindString {
+		r := []rune(ch)[0]
+		return r >= ' ' && r != 0x7f
+	}
+	return strings.ContainsAny(ch, "0123456789.-hmsu")
 }
 
 // cancelTyping is Back without q, which is text while typing.
@@ -249,11 +339,13 @@ func cancelTyping() key.Binding {
 	return key.NewBinding(key.WithKeys(ks...), key.WithHelp(strings.Join(ks, "/"), "cancel"))
 }
 
-// maxDigits bounds a typed number; the largest setting is 3600.
-const maxDigits = 6
+// maxTyped bounds a typed value: a number, a duration such as 720h, or
+// a host name.
+const maxTyped = 64
 
-// startReview writes the pending changes to a temporary file and shows
-// what they change; nothing replaces config.yaml until confirmed.
+// startReview writes the pending changes to temporary files, one per
+// file they go to, and shows what they change; nothing is replaced until
+// confirmed.
 func (s *Settings) startReview() {
 	if s.noFile() {
 		return
@@ -262,48 +354,82 @@ func (s *Settings) startReview() {
 		s.message = "No unsaved changes."
 		return
 	}
-	cur, err := config.Read(s.file)
-	if err != nil {
-		s.message = err.Error()
-		return
+	byFile := map[string]map[string]string{}
+	for path, v := range s.pending {
+		t := s.cfg.Target(s.file, path)
+		if byFile[t] == nil {
+			byFile[t] = map[string]string{}
+		}
+		byFile[t][path] = v
 	}
-	next, err := config.Edit(cur, s.pending)
-	if err != nil {
-		s.message = err.Error()
-		return
+	r := &review{}
+	for _, file := range slices.Sorted(maps.Keys(byFile)) {
+		cur, err := config.Read(file)
+		if err == nil {
+			var next []byte
+			if next, err = config.Edit(cur, byFile[file]); err == nil {
+				err = s.stageFile(r, file, cur, next)
+			}
+		}
+		if err != nil {
+			s.discard(r)
+			s.message = err.Error()
+			return
+		}
 	}
-	s.stage(cur, next, false)
+	s.review, s.message = r, ""
 }
 
-// startRevert shows what restoring the previous file would change.
+// startRevert shows what restoring the files of the last save, or the
+// user's config.yaml, to their previous versions would change.
 func (s *Settings) startRevert() {
 	if s.noFile() {
 		return
 	}
-	bak, err := config.Read(config.Backup(s.file))
-	switch {
-	case err != nil:
-		s.message = err.Error()
-	case bak == nil:
-		s.message = "Nothing to revert: no previous version of " + s.file + " has been kept yet."
-	default:
-		cur, err := config.Read(s.file)
+	files := s.lastSaved
+	if len(files) == 0 {
+		files = []string{s.file}
+	}
+	r := &review{revert: true}
+	for _, file := range files {
+		bak, err := config.Read(config.Backup(file))
+		if err == nil && bak == nil {
+			continue
+		}
+		cur, rerr := config.Read(file)
+		if err = cmp.Or(err, rerr); err == nil {
+			err = s.stageFile(r, file, cur, bak)
+		}
 		if err != nil {
+			s.discard(r)
 			s.message = err.Error()
 			return
 		}
-		s.stage(cur, bak, true)
 	}
-}
-
-func (s *Settings) stage(cur, next []byte, revert bool) {
-	staged, err := config.Stage(s.file, next)
-	if err != nil {
-		s.message = err.Error()
+	if len(r.files) == 0 {
+		s.message = "Nothing to revert: no previous version of " + strings.Join(files, ", ") + " has been kept yet."
 		return
 	}
-	s.review = &review{staged: staged, data: next, diff: config.Diff(cur, next), problems: config.Check(s.file, next), revert: revert}
-	s.message = ""
+	s.review, s.message = r, ""
+}
+
+func (s *Settings) stageFile(r *review, file string, cur, next []byte) error {
+	staged, err := config.Stage(file, next)
+	if err != nil {
+		return err //nolint:wrapcheck // config names the file
+	}
+	r.files = append(r.files, reviewFile{file: file, staged: staged, data: next, diff: config.Diff(cur, next)})
+	r.problems = append(r.problems, config.Check(file, next)...)
+	return nil
+}
+
+// discard removes a review's staged copies.
+func (s *Settings) discard(r *review) {
+	for _, f := range r.files {
+		if err := config.Discard(f.staged); err != nil {
+			s.message = err.Error()
+		}
+	}
 }
 
 func (s *Settings) reviewKey(msg tea.KeyPressMsg) tea.Cmd {
@@ -311,34 +437,41 @@ func (s *Settings) reviewKey(msg tea.KeyPressMsg) tea.Cmd {
 	switch {
 	case key.Matches(msg, keys.Get(keys.Write)) && len(r.problems) == 0:
 		s.review = nil
-		if err := config.Promote(s.file, r.staged, r.data); err != nil {
-			s.message = err.Error()
-			return nil
+		var saved []string
+		for _, f := range r.files {
+			if err := config.Promote(f.file, f.staged, f.data); err != nil {
+				s.message = err.Error()
+				return nil
+			}
+			saved = append(saved, f.file)
 		}
-		s.pending = map[string]string{}
+		s.pending, s.lastSaved = map[string]string{}, saved
 		return s.reload(r.revert)
 	case key.Matches(msg, keys.Get(keys.Cancel)) || key.Matches(msg, keys.Get(keys.Back)):
 		s.review = nil
-		if err := config.Discard(r.staged); err != nil {
-			s.message = err.Error()
-			return nil
+		s.discard(r)
+		if s.message == "" {
+			s.message = "Not saved; the files are unchanged."
 		}
-		s.message = "Not saved; " + s.file + " is unchanged."
 	}
 	return nil
 }
 
-// reload reads the saved settings and hands them to the root and the
-// views, so they apply without restarting.
+// reload reads the settings again, drop-ins included, and hands them to
+// the root and the views, so they apply without restarting.
 func (s *Settings) reload(reverted bool) tea.Cmd {
-	cfg, problems := s.load(s.files...)
+	files := s.files
+	if s.file != "" {
+		files = config.Files(s.file)
+	}
+	cfg, problems := s.load(files...)
 	th, themeProblems := s.loadTheme(cfg.Theme)
 	s.cfg = cfg
 	verb := "Saved"
 	if reverted {
 		verb = "Reverted"
 	}
-	s.message = fmt.Sprintf("%s %s; the previous version is %s (%s reverts).", verb, s.file, config.Backup(s.file), keys.Get(keys.Revert).Keys()[0])
+	s.message = fmt.Sprintf("%s %s; the previous versions are kept as .bak (%s reverts).", verb, strings.Join(s.lastSaved, ", "), keyName(keys.Revert))
 	if all := append(problems, themeProblems...); len(all) > 0 {
 		s.message += " " + all[0].String()
 	}

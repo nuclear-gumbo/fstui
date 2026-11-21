@@ -29,6 +29,10 @@ type poolState struct {
 	// checkpoint replaces checkpoint_stats: a map for one taken, false
 	// for one discarded; nil keeps the recording.
 	checkpoint any
+	// edits change the device tree (topology.go), in order.
+	edits    []func(node)
+	readonly bool        // imported read-only
+	guid     json.Number // of a pool the demo made
 }
 
 // applyPool carries out a zpool change on the demo's pools.
@@ -118,9 +122,12 @@ func (c *Commands) patchStatus(pool string, raw json.RawMessage) (json.RawMessag
 	if ps == nil {
 		return raw, nil
 	}
-	var p map[string]any
-	if err := json.Unmarshal(raw, &p); err != nil {
+	p, err := decode(raw)
+	if err != nil {
 		return nil, fmt.Errorf("demo status of %s: %w", pool, err)
+	}
+	for _, e := range ps.edits {
+		e(p)
 	}
 	if ps.scan != nil {
 		p["scan_stats"] = ps.scan

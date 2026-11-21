@@ -104,7 +104,7 @@ func (f *fakeActions) Offered(Target) []key.Binding { return nil }
 
 func (f *fakeActions) CanSnapshot(Target) bool { return true }
 
-func (f *fakeActions) NoChanges(_ string, empty bool) Modal {
+func (f *fakeActions) NoChanges(_ string, empty bool, _ string) Modal {
 	f.asked = append(f.asked, map[bool]string{true: "empty", false: "none"}[empty])
 	return &boxModal{rows: 1}
 }

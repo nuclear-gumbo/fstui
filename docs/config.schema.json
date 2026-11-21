@@ -1,0 +1,1108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Every key is optional. Files in config.d/ take the same keys. See docs/configuration.md.",
+  "properties": {
+    "ascii": {
+      "default": "auto",
+      "description": "Plain characters instead of box and block glyphs; auto on the Linux console.",
+      "enum": [
+        "auto",
+        "true",
+        true,
+        "false",
+        false
+      ]
+    },
+    "charts": {
+      "additionalProperties": false,
+      "properties": {
+        "arc_window": {
+          "default": "5m",
+          "description": "Time the ARC graphs show, 1m to 1h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "io_keep": {
+          "default": "10m",
+          "description": "I/O history kept per pool and device; at least io_window, 1m to 6h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "io_window": {
+          "default": "2m",
+          "description": "Time the I/O rates show, 30s to 1h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "colors": {
+      "additionalProperties": false,
+      "description": "Override single colours of the theme: one colour, or one for dark and one for light terminals.",
+      "properties": {
+        "accent": {
+          "oneOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "dark": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                },
+                "light": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          ]
+        },
+        "border": {
+          "oneOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "dark": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                },
+                "light": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          ]
+        },
+        "error": {
+          "oneOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "dark": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                },
+                "light": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          ]
+        },
+        "key": {
+          "oneOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "dark": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                },
+                "light": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          ]
+        },
+        "muted": {
+          "oneOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "dark": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                },
+                "light": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          ]
+        },
+        "ok": {
+          "oneOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "dark": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                },
+                "light": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          ]
+        },
+        "warn": {
+          "oneOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "dark": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                },
+                "light": {
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "dashboard": {
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "default": 0,
+          "description": "Dashboard columns; 0 chooses by the terminal's width.",
+          "maximum": 3,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "panels": {
+          "description": "Dashboard panels, in order. A list in a later file replaces this one.",
+          "items": {
+            "enum": [
+              "health",
+              "events",
+              "io",
+              "arc",
+              "scans"
+            ]
+          },
+          "type": "array"
+        },
+        "three_columns_from": {
+          "default": 200,
+          "description": "With columns 0, three columns from this terminal width.",
+          "maximum": 2000,
+          "minimum": 80,
+          "type": "integer"
+        },
+        "two_columns_from": {
+          "default": 120,
+          "description": "With columns 0, two columns from this terminal width.",
+          "maximum": 1000,
+          "minimum": 80,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "events": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "description": "Saved filters, cycled with f in the Events view. A list in a later file replaces this one.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "class": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "pool": {
+                "type": "string"
+              },
+              "severity": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "info",
+                      "notice",
+                      "warn",
+                      "error"
+                    ]
+                  },
+                  {
+                    "items": {
+                      "enum": [
+                        "info",
+                        "notice",
+                        "warn",
+                        "error"
+                      ]
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "retention": {
+          "default": 5000,
+          "description": "Events kept in memory.",
+          "maximum": 100000,
+          "minimum": 100,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "keys": {
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        ]
+      },
+      "description": "Rebind actions: action name to one key or a list of keys (docs/keys.md).",
+      "type": "object"
+    },
+    "limits": {
+      "additionalProperties": false,
+      "properties": {
+        "audit_entries": {
+          "default": 2000,
+          "description": "Audit records the Audit tab reads, newest first.",
+          "maximum": 100000,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "diff_entries": {
+          "default": 20000,
+          "description": "Changes shown from zfs diff.",
+          "maximum": 1000000,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "history_entries": {
+          "default": 10000,
+          "description": "Pool history entries kept, of user commands and of internal events each.",
+          "maximum": 1000000,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "history_timeout": {
+          "default": "10m",
+          "description": "Longest zpool history may take, 30s to 2h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "list_timeout": {
+          "default": "10m",
+          "description": "Longest a listing of datasets or snapshots may take, 30s to 2h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "read_timeout": {
+          "default": "30s",
+          "description": "Longest a zfs or zpool read may take, 5s to 10m.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "slow_read_factor": {
+          "default": 4,
+          "description": "After a read of d seconds, wait at least this many times d before the next.",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "mouse": {
+      "default": true,
+      "description": "Clickable tabs and rows, wheel scrolling.",
+      "type": "boolean"
+    },
+    "natural_scrolling": {
+      "default": false,
+      "description": "The wheel moves the content, as on a touchpad set to natural scrolling.",
+      "type": "boolean"
+    },
+    "notifications": {
+      "additionalProperties": false,
+      "properties": {
+        "alerts": {
+          "description": "What is sent: each alert turns a template on for some pools and channels, or all. None listed: the defaults, from the thresholds. A list in a later file replaces this one.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "channels": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "error_value": {
+                "type": "string"
+              },
+              "pools": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "repeat": {
+                "type": "string"
+              },
+              "resolved": {
+                "type": "boolean"
+              },
+              "resolved_text": {
+                "maxLength": 300,
+                "type": "string"
+              },
+              "severity": {
+                "enum": [
+                  "info",
+                  "warning",
+                  "error"
+                ]
+              },
+              "template": {
+                "type": "string"
+              },
+              "text": {
+                "maxLength": 300,
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "template"
+            ],
+            "type": "object"
+          },
+          "maxItems": 128,
+          "type": "array"
+        },
+        "attempt_timeout": {
+          "default": "10s",
+          "description": "A try at sending that takes longer is given up, 1s to 5m.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "channels": {
+          "description": "Where fstui check and watch send. Secrets go in secrets.yaml. A list in a later file replaces this one.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "ca_file": {
+                "type": "string"
+              },
+              "chat_id": {
+                "type": "string"
+              },
+              "from": {
+                "type": "string"
+              },
+              "host": {
+                "type": "string"
+              },
+              "insecure_http": {
+                "type": "boolean"
+              },
+              "min_severity": {
+                "enum": [
+                  "info",
+                  "warning",
+                  "error"
+                ]
+              },
+              "name": {
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              "port": {
+                "maximum": 65535,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "room": {
+                "type": "string"
+              },
+              "secret_file": {
+                "type": "string"
+              },
+              "to": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "topic": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "ntfy",
+                  "webhook",
+                  "gotify",
+                  "pushover",
+                  "telegram",
+                  "discord",
+                  "slack",
+                  "matrix",
+                  "smtp"
+                ]
+              },
+              "url": {
+                "type": "string"
+              },
+              "user": {
+                "type": "string"
+              },
+              "user_key": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "check_timeout": {
+          "default": "5m",
+          "description": "A check of the pools that takes longer is stopped and reported, 30s to 1h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "events": {
+          "default": "auto",
+          "description": "Who sends ZFS kernel events, such as checksum errors: on, fstui; off, nobody; auto, ZED when it is set up to send them, else fstui.",
+          "enum": [
+            "auto",
+            "on",
+            "off"
+          ]
+        },
+        "events_min": {
+          "default": "error",
+          "description": "The least serious kernel event sent: info, notice, warn or error.",
+          "enum": [
+            "info",
+            "notice",
+            "warn",
+            "error"
+          ]
+        },
+        "heartbeat_url": {
+          "default": "",
+          "description": "Requested after every check, so a service outside this host (Healthchecks, an Uptime Kuma push monitor) warns you when the checks stop, as when the host is down; empty sends none.",
+          "pattern": "^(https://[^\\s]{1,500})?$",
+          "type": "string"
+        },
+        "host": {
+          "default": "",
+          "description": "What messages call this system; empty uses its host name.",
+          "pattern": "^[A-Za-z0-9._-]{0,64}$",
+          "type": "string"
+        },
+        "repeat": {
+          "default": "24h",
+          "description": "While a problem lasts, send it again after this long; 0 sends it once, 0 to 720h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "resolved": {
+          "default": true,
+          "description": "Send a message when a problem goes away.",
+          "type": "boolean"
+        },
+        "retries": {
+          "default": 3,
+          "description": "How many more times a message is tried after a network or server error.",
+          "maximum": 10,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "send_timeout": {
+          "default": "30s",
+          "description": "All the tries of one message together take no longer than this, 5s to 30m.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "templates": {
+          "description": "Your own alert templates, in the form of the built-in ones; one named like a built-in template replaces it. A list in a later file replaces this one.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "error_value": {
+                "type": "string"
+              },
+              "metric": {
+                "enum": [
+                  "capacity",
+                  "free",
+                  "fragmentation",
+                  "health",
+                  "devices_down",
+                  "device_errors",
+                  "data_errors",
+                  "scrub_age",
+                  "resilvering",
+                  "checkpoint_age",
+                  "read_wait",
+                  "write_wait",
+                  "versions_differ",
+                  "events"
+                ]
+              },
+              "name": {
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              "op": {
+                "enum": [
+                  "\u003e",
+                  "\u003e=",
+                  "\u003c",
+                  "\u003c=",
+                  "==",
+                  "!="
+                ]
+              },
+              "resolved_text": {
+                "maxLength": 300,
+                "type": "string"
+              },
+              "severity": {
+                "enum": [
+                  "info",
+                  "warning",
+                  "error"
+                ]
+              },
+              "text": {
+                "maxLength": 300,
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "metric",
+              "value",
+              "text"
+            ],
+            "type": "object"
+          },
+          "maxItems": 64,
+          "type": "array"
+        },
+        "watch_events": {
+          "default": "15s",
+          "description": "How often the service looks for new kernel events between checks, so they go out at once; 0 only at checks, 0 to 1h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "watch_interval": {
+          "default": "5m",
+          "description": "How often the notification service (fstui watch) checks every pool, 30s to 24h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "refresh": {
+      "additionalProperties": false,
+      "properties": {
+        "arc": {
+          "default": 1,
+          "description": "Seconds between ARC reads while the ARC view is shown.",
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "arc_hidden": {
+          "default": 10,
+          "description": "Seconds between ARC reads while its view is not shown (the dashboard's graph).",
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "dataset_detail": {
+          "default": 30,
+          "description": "Seconds between reads of a dataset's properties, snapshots and permissions.",
+          "maximum": 3600,
+          "minimum": 5,
+          "type": "integer"
+        },
+        "datasets": {
+          "default": 15,
+          "description": "Seconds between dataset reads.",
+          "maximum": 3600,
+          "minimum": 5,
+          "type": "integer"
+        },
+        "events": {
+          "default": 2,
+          "description": "Seconds between reads of kernel events while the Events view is shown.",
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "events_hidden": {
+          "default": 30,
+          "description": "Seconds between reads of kernel events while the Events view is not shown.",
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "pools": {
+          "default": 5,
+          "description": "Seconds between pool reads.",
+          "maximum": 3600,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "properties": {
+          "default": 60,
+          "description": "Seconds between reads of a pool's properties and features.",
+          "maximum": 3600,
+          "minimum": 5,
+          "type": "integer"
+        },
+        "schedules": {
+          "default": 60,
+          "description": "Seconds between reads of scrub timers and cron jobs.",
+          "maximum": 3600,
+          "minimum": 5,
+          "type": "integer"
+        },
+        "tune": {
+          "default": 5,
+          "description": "Seconds between the Tune tab's measurements; applies the next time the tab opens.",
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "schedules": {
+      "additionalProperties": false,
+      "properties": {
+        "check_every": {
+          "default": "15m",
+          "description": "How often a schedule written by fstui runs fstui check.",
+          "enum": [
+            "5m",
+            "10m",
+            "15m",
+            "30m",
+            "1h",
+            "2h",
+            "6h",
+            "12h",
+            "24h"
+          ]
+        },
+        "cron_time": {
+          "default": "03:00",
+          "description": "When cron starts scrubs and trims fstui schedules.",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+          "type": "string"
+        },
+        "scrub_monthday": {
+          "default": 1,
+          "description": "Day of the month of a monthly scrub under cron.",
+          "maximum": 28,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "scrub_weekday": {
+          "default": "sun",
+          "description": "Day of a weekly scrub under cron.",
+          "enum": [
+            "sun",
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat"
+          ]
+        },
+        "trim_monthday": {
+          "default": 15,
+          "description": "Day of the month of a monthly trim under cron.",
+          "maximum": 28,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "trim_weekday": {
+          "default": "wed",
+          "description": "Day of a weekly trim under cron.",
+          "enum": [
+            "sun",
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "superuser": {
+      "default": false,
+      "description": "Hide advisory warnings; confirmations are always shown.",
+      "type": "boolean"
+    },
+    "theme": {
+      "default": "default",
+      "description": "Colour theme.",
+      "type": "string"
+    },
+    "thresholds": {
+      "additionalProperties": false,
+      "properties": {
+        "capacity_error": {
+          "default": 90,
+          "description": "Capacity shown as FULL from this percentage.",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "capacity_warn": {
+          "default": 80,
+          "description": "Capacity shown as WARN from this percentage.",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "checkpoint_age": {
+          "default": "24h",
+          "description": "Warn about a checkpoint held longer than this, 1h to 8760h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "fragmentation_warn": {
+          "default": 50,
+          "description": "Warn about free-space fragmentation from this percentage.",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "scrub_overdue_days": {
+          "default": 35,
+          "description": "Warn when the last scrub is older than this many days.",
+          "maximum": 3650,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "tune": {
+      "additionalProperties": false,
+      "properties": {
+        "amplification_fits": {
+          "default": 1.5,
+          "description": "Writes within this many times what the layout explains fit.",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "number"
+        },
+        "amplification_mismatch": {
+          "default": 3,
+          "description": "Writes past this many times what the layout explains are a mismatch.",
+          "maximum": 1000,
+          "minimum": 1,
+          "type": "number"
+        },
+        "compression_gib": {
+          "default": 1,
+          "description": "GiB a dataset holds before its compression is judged.",
+          "maximum": 1048576,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "ghost_share": {
+          "default": 0.25,
+          "description": "Share of ARC misses just evicted that points at a larger ARC.",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "incompressible": {
+          "default": 1.1,
+          "description": "Files saving less than this ratio do not compress.",
+          "maximum": 10,
+          "minimum": 1,
+          "type": "number"
+        },
+        "l2_headers_mib": {
+          "default": 64,
+          "description": "MiB of L2ARC headers worth weighing against its hits.",
+          "maximum": 1048576,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "l2_share": {
+          "default": 0.1,
+          "description": "Share of L2ARC lookups hitting below which it costs more than it gives.",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "large_ratio": {
+          "default": 4,
+          "description": "Requests this many records long are too large for the records.",
+          "maximum": 1024,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "metadata_miss": {
+          "default": 0.1,
+          "description": "Share of metadata lookups missing that points at metadata crowded out.",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "min_lookups": {
+          "default": 10000,
+          "description": "ARC lookups before the memory question answers.",
+          "maximum": 1073741824,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "min_moved_mib": {
+          "default": 1,
+          "description": "MiB read or written by a dataset before its record size is judged.",
+          "maximum": 1048576,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_operations": {
+          "default": 1000,
+          "description": "Device operations before saturation is judged.",
+          "maximum": 1073741824,
+          "minimum": 10,
+          "type": "integer"
+        },
+        "min_prefetch": {
+          "default": 1000,
+          "description": "Prefetched blocks before prefetch is judged.",
+          "maximum": 1073741824,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_requests": {
+          "default": 50,
+          "description": "Requests to a dataset before its record size is judged.",
+          "maximum": 1073741824,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_window": {
+          "default": "1m",
+          "description": "I/O measured before the amplification and saturation questions answer, 10s to 1h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "min_written_mib": {
+          "default": 16,
+          "description": "MiB written by applications before amplification is judged.",
+          "maximum": 1048576,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "poor_ratio": {
+          "default": 1.05,
+          "description": "An expensive compression earning less than this ratio is worth a look.",
+          "maximum": 10,
+          "minimum": 1,
+          "type": "number"
+        },
+        "prefetch_use": {
+          "default": 0.25,
+          "description": "Share of prefetched blocks read below which prefetch is wasted.",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "queueing": {
+          "default": 4,
+          "description": "Total wait this many times the disk wait is queueing in ZFS.",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "number"
+        },
+        "slow_device": {
+          "default": 2,
+          "description": "A device this many times slower than its siblings is worth a look.",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "number"
+        },
+        "slow_txg": {
+          "default": "5s",
+          "description": "A transaction group syncing longer than this is slow, 1s to 10m.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "small_ratio": {
+          "default": 8,
+          "description": "Records this many times the average request are too large for it.",
+          "maximum": 1024,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "walk_files": {
+          "default": 200000,
+          "description": "Files the per-file compression walk reads at most.",
+          "maximum": 100000000,
+          "minimum": 1000,
+          "type": "integer"
+        },
+        "walk_time": {
+          "default": "1m",
+          "description": "Longest the per-file compression walk runs, 5s to 1h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ui": {
+      "additionalProperties": false,
+      "properties": {
+        "cursor_blink": {
+          "default": true,
+          "description": "A typing cursor blinks.",
+          "type": "boolean"
+        },
+        "split_from": {
+          "default": 120,
+          "description": "Terminal width from which a list and the selected item's detail sit side by side.",
+          "maximum": 1000,
+          "minimum": 80,
+          "type": "integer"
+        },
+        "start_view": {
+          "default": "pools",
+          "description": "The view fstui opens on; --dashboard overrides.",
+          "enum": [
+            "dashboard",
+            "pools",
+            "datasets",
+            "snapshots",
+            "volumes",
+            "arc",
+            "io",
+            "events",
+            "plans",
+            "config"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "units": {
+      "default": "iec",
+      "description": "Sizes in IEC units or exact byte counts.",
+      "enum": [
+        "iec",
+        "exact"
+      ]
+    }
+  },
+  "title": "fstui config.yaml",
+  "type": "object"
+}

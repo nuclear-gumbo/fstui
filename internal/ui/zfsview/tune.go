@@ -9,6 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/x/ansi"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -28,10 +32,6 @@ type TuneSource interface {
 	Get(ctx context.Context, names, props []string) (map[string]map[string]string, error)
 }
 
-// tuneEvery is how often the Tune tab reads kstats and zpool iostat
-// reports an interval.
-const tuneEvery = 5 * time.Second
-
 // tuneState is the Tune tab's measuring: started when the tab is shown,
 // stopped when the user leaves it, the pool or the view.
 type tuneState struct {
@@ -46,9 +46,10 @@ type tuneState struct {
 	walk     *tune.WalkResult
 	walking  context.CancelFunc
 	err      termtext.Text
-	evidence bool // enter shows the evidence under each finding
+	details  bool // enter shows the figures under each finding
 	ch       chan tea.Msg
 	src      TuneSource
+	every    time.Duration // refresh.tune when the tab opened
 }
 
 type (
@@ -92,9 +93,10 @@ func (p *Pools) startTune() tea.Cmd {
 	p.tuneGen++
 	gen := p.tuneGen
 	ctx, cancel := context.WithCancel(context.Background())
-	evidence := d.tune != nil && d.tune.evidence
+	details := d.tune != nil && d.tune.details
 	ch := make(chan tea.Msg, 8)
-	d.tune = &tuneState{gen: gen, cancel: cancel, evidence: evidence, ch: ch, src: src}
+	every := p.opts.Settings.Refresh.Tune
+	d.tune = &tuneState{gen: gen, cancel: cancel, details: details, ch: ch, src: src, every: every}
 	pool, now := d.pool, p.opts.Now
 	send := func(m tea.Msg) {
 		select {
@@ -104,7 +106,7 @@ func (p *Pools) startTune() tea.Cmd {
 	}
 	go func() {
 		defer close(ch)
-		err := src.TuneIO(ctx, pool, tuneEvery, func(r zfs.IOPool) { send(tuneIOMsg{gen: gen, rep: r}) })
+		err := src.TuneIO(ctx, pool, every, func(r zfs.IOPool) { send(tuneIOMsg{gen: gen, rep: r}) })
 		send(tuneEndMsg{gen: gen, err: err})
 	}()
 	sample := func() tea.Msg {
@@ -134,8 +136,8 @@ func (p *Pools) measureFiles() tea.Cmd {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	t.walking, t.walk = cancel, nil
-	gen, roots := t.gen, t.roots
-	return func() tea.Msg { return tuneWalkMsg{gen: gen, result: tune.Walk(ctx, roots)} }
+	gen, roots, tc := t.gen, t.roots, p.opts.Settings.Tune
+	return func() tea.Msg { return tuneWalkMsg{gen: gen, result: tune.Walk(ctx, roots, tc)} }
 }
 
 // updateTune handles the Tune tab's messages; ok is false for others.
@@ -165,7 +167,7 @@ func (p *Pools) updateTune(msg tea.Msg) (tea.Cmd, bool) {
 		if !live(msg.gen) {
 			return nil, true // a stopped stream's last report
 		}
-		t.win.AddIO(msg.rep, tuneEvery.Seconds())
+		t.win.AddIO(msg.rep, t.every.Seconds())
 		return next(t.ch), true
 	case tuneRecordsMsg:
 		if live(msg.gen) {
@@ -191,14 +193,14 @@ func (p *Pools) updateTune(msg tea.Msg) (tea.Cmd, bool) {
 func (p *Pools) tuneSample(t *tuneState, msg tuneSampleMsg) tea.Cmd {
 	if msg.err != nil {
 		t.setErr(msg.err)
-		return p.tuneTick(msg.gen)
+		return tuneTick(t, msg.gen)
 	}
 	first := t.win.Start.At.IsZero()
 	t.win.Sample(msg.sample)
 	if first {
-		return tea.Batch(p.tuneTick(msg.gen), t.readRecords(msg.gen, p.detail.pool.String(), msg.sample))
+		return tea.Batch(tuneTick(t, msg.gen), t.readRecords(msg.gen, p.detail.pool.String(), msg.sample))
 	}
-	return p.tuneTick(msg.gen)
+	return tuneTick(t, msg.gen)
 }
 
 func (t *tuneState) setErr(err error) {
@@ -207,8 +209,8 @@ func (t *tuneState) setErr(err error) {
 	}
 }
 
-func (p *Pools) tuneTick(gen int) tea.Cmd {
-	return tea.Tick(tuneEvery, func(time.Time) tea.Msg { return tuneTickMsg{gen: gen} })
+func tuneTick(t *tuneState, gen int) tea.Cmd {
+	return tea.Tick(t.every, func(time.Time) tea.Msg { return tuneTickMsg{gen: gen} })
 }
 
 // readRecords reads the record size of every dataset in the sample, and
@@ -266,23 +268,23 @@ func (p *Pools) tuneLines(disp ui.Display, width int) []string {
 	if w.Start.At.IsZero() {
 		return []string{muted.Render("Starting to measure " + p.detail.pool.String())}
 	}
-	head := fmt.Sprintf("Measured over %s; r starts again, enter shows the evidence.", ui.Age(w.Now.At.Sub(w.Start.At)))
-	lines := []string{muted.Render(head)}
+	head := fmt.Sprintf("Measured for %s. enter shows the figures behind each answer; r starts over.", format.Age(w.Now.At.Sub(w.Start.At)))
+	lines := []string{muted.Render(ansi.Wrap(head, width, ""))}
 	if t.walking != nil {
 		lines = append(lines, muted.Render("Reading file metadata for the compression question; leaving the tab stops it."))
 	}
 	if w.Restarted {
 		lines = append(lines, muted.Render("Measuring started again: "+p.detail.pool.String()+"'s counters were reset (an export and import)."))
 	}
-	for _, f := range p.findings(func(n uint64) string { return ui.Size(n, disp.Exact) }) {
+	for _, f := range p.findings(func(n uint64) string { return format.Size(n, disp.Exact) }) {
 		lines = append(lines, "", verdictStyle(disp, f.Verdict).Render(f.Verdict.Word())+"  "+f.Question)
 		lines = append(lines, indented(termtext.New(f.Figure).Display(), width, 2, nil)...)
 		lines = append(lines, indented(termtext.New(f.Points).Display(), width, 2, &muted)...)
 		if f.Change != nil {
 			lines = append(lines, indented(muted.Render("a offers this change"), width, 2, nil)...)
 		}
-		if t.evidence {
-			for _, e := range f.Evidence {
+		if t.details {
+			for _, e := range f.Details {
 				lines = append(lines, indented(termtext.New(e).Display(), width, 4, nil)...)
 			}
 		}
@@ -325,11 +327,12 @@ func (p *Pools) findings(size func(uint64) string) []tune.Finding {
 	if o, ok := p.overview(); ok {
 		layout = tune.LayoutOf(o.Status)
 	}
-	amp := tune.WriteAmplification(w, layout, t.compress, size)
-	cost := tune.Cost{Writes: amp.Verdict >= tune.WorthALook, Reads: tune.ReadAmplified(w, layout)}
+	tc := p.opts.Settings.Tune
+	amp := tune.WriteAmplification(w, layout, t.compress, size, tc)
+	cost := tune.Cost{Writes: amp.Verdict >= tune.WorthALook, Reads: tune.ReadAmplified(w, layout, tc)}
 	return []tune.Finding{
-		amp, tune.Sizes(w, t.records, t.volumes, cost, size), tune.ARC(w, size),
-		tune.Saturation(w, layout), tune.Compression(t.comp, t.walk, size),
+		amp, tune.Sizes(w, t.records, t.volumes, cost, size, tc), tune.ARC(w, size, tc),
+		tune.Saturation(w, layout, tc), tune.Compression(t.comp, t.walk, size, tc),
 	}
 }
 

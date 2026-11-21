@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
@@ -40,7 +42,7 @@ type arcFeed struct {
 
 func newARCFeed(t *testing.T) *arcFeed {
 	f := &arcFeed{t: t, clock: now}
-	f.a = NewARC(func() (zfs.ARCStats, error) { return f.next, nil }, func() time.Time { return f.clock })
+	f.a = NewARC(func() (zfs.ARCStats, error) { return f.next, nil }, nil, func() time.Time { return f.clock })
 	return f
 }
 
@@ -110,14 +112,14 @@ func TestARCL2(t *testing.T) {
 // Shown, the ARC is read every second; hidden, every ten.
 func TestARCRates(t *testing.T) {
 	f := newARCFeed(t)
-	if f.a.poll.interval != arcHidden {
+	if f.a.poll.interval != config.Default().Refresh.ARCHidden {
 		t.Fatalf("starts at %v", f.a.poll.interval)
 	}
-	if cmd := f.a.Activate(); cmd == nil || f.a.poll.interval != arcShown {
+	if cmd := f.a.Activate(); cmd == nil || f.a.poll.interval != config.Default().Refresh.ARC {
 		t.Fatalf("activate: %v, cmd %v", f.a.poll.interval, cmd != nil)
 	}
 	f.a.Deactivate()
-	if f.a.poll.interval != arcHidden {
+	if f.a.poll.interval != config.Default().Refresh.ARCHidden {
 		t.Fatalf("deactivate: %v", f.a.poll.interval)
 	}
 	var _ ui.Deactivator = f.a
@@ -183,5 +185,26 @@ func TestARCGraphRows(t *testing.T) {
 	}
 	if tiny, mid, tall := graphRows(6), graphRows(30), graphRows(40); tiny != arcGraphMin || mid != 10 || tall != arcGraphMax {
 		t.Errorf("graph rows: %d at 6 lines, %d at 30, %d at 40", tiny, mid, tall)
+	}
+}
+
+// refresh.arc sets the interval while the view is shown and
+// refresh.arc_hidden while it is not, including after a saved change.
+func TestARCIntervalsFollowSettings(t *testing.T) {
+	set := config.Default()
+	set.Refresh.ARC, set.Refresh.ARCHidden = 7*time.Second, 70*time.Second
+	a := NewARC(func() (zfs.ARCStats, error) { return zfs.ARCStats{}, nil }, &set, time.Now)
+	a.Activate()
+	if a.poll.interval != 7*time.Second {
+		t.Fatalf("shown interval %v", a.poll.interval)
+	}
+	set.Refresh.ARC = 3 * time.Second
+	a.Update(ui.ConfigMsg{Config: set})
+	if a.poll.interval != 3*time.Second {
+		t.Errorf("after a saved change: %v", a.poll.interval)
+	}
+	a.Deactivate()
+	if a.poll.interval != 70*time.Second {
+		t.Errorf("hidden interval %v", a.poll.interval)
 	}
 }

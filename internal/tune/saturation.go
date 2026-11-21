@@ -7,29 +7,27 @@ import (
 	"slices"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
 )
 
 // SaturationQuestion is the question Saturation answers.
 const SaturationQuestion = "What limits the pool"
 
-// Thresholds of the saturation question: at least minWindow seconds and
-// minOpsSeen operations; a device is slow at slowFactor times its
-// siblings' median disk wait; ZFS queues matter when the total wait is
-// queueFactor times the disk wait; transaction groups are slow past
-// txgTimeout, zfs_txg_timeout's default.
+// minLatency: waits below a millisecond are never a limit; leafOps: a
+// device with fewer operations has too few to compare.
 const (
-	minOpsSeen  = 1000
-	slowFactor  = 2.0
-	queueFactor = 4.0
-	txgTimeout  = 5 * time.Second
-	minLatency  = float64(time.Millisecond) // waits below this are never a limit
+	minLatency = float64(time.Millisecond)
+	leafOps    = 50
 )
 
 // Saturation answers what limits the pool, if anything: the write
 // throttle, transaction groups that sync too slowly, memory, a slow
 // device, ZFS's own queues, or ZIL stalls.
-func Saturation(w *Window, l Layout) Finding {
+func Saturation(w *Window, l Layout, t config.Tune) Finding {
 	f := Finding{Question: SaturationQuestion}
 	var ops float64
 	for _, leaf := range l.Leaves {
@@ -37,8 +35,8 @@ func Saturation(w *Window, l Layout) Finding {
 			ops += t.ReadOps + t.WriteOps
 		}
 	}
-	if w.Seconds < minWindow || ops < minOpsSeen {
-		f.Figure = fmt.Sprintf("the pool's devices did %.0f operations in %.0f s of measuring; it takes %d over a minute", ops, w.Seconds, minOpsSeen)
+	if w.Seconds < t.MinWindow.Seconds() || ops < float64(t.MinOperations) {
+		f.Figure = fmt.Sprintf("the pool's devices have done %.0f operations in %.0f s; an answer needs %d over %s", ops, w.Seconds, t.MinOperations, format.Age(t.MinWindow))
 		f.Points = "leave the tab open while the pool is busy"
 		return f
 	}
@@ -49,8 +47,8 @@ func Saturation(w *Window, l Layout) Finding {
 	stalls := g(func(s zfs.TuneSample) zfs.Kstat { return s.ZIL }, "zil_commit_stall_count")
 	syncAvg, synced := txgSync(w)
 	slow, slowWait, median := slowestLeaf(w, l.Leaves)
-	queued, total, disk := queueing(w, l.Leaves)
-	f.Evidence = []string{
+	queued, total, disk := queueing(w, l.Leaves, t.Queueing)
+	f.Details = []string{
 		fmt.Sprintf("writes delayed by the write throttle: %d", throttled),
 		fmt.Sprintf("transaction groups synced: %d, %s on average (zfs_txg_timeout is 5 s by default)", synced, syncAvg.Round(time.Millisecond)),
 		fmt.Sprintf("ARC memory throttles: %d", memory),
@@ -58,19 +56,19 @@ func Saturation(w *Window, l Layout) Finding {
 		fmt.Sprintf("ZIL commit stalls: %d", stalls),
 	}
 	if slow != "" {
-		f.Evidence = append(f.Evidence, fmt.Sprintf("slowest device %s: disk wait %s, the others' median %s", slow, time.Duration(slowWait).Round(time.Microsecond), time.Duration(median).Round(time.Microsecond)))
+		f.Details = append(f.Details, fmt.Sprintf("slowest device %s: disk wait %s, the others' median %s", slow, time.Duration(slowWait).Round(time.Microsecond), time.Duration(median).Round(time.Microsecond)))
 	}
 	switch {
 	case throttled > 0:
 		f.Verdict, f.Figure = Mismatch, fmt.Sprintf("the write throttle delayed writers %d times", throttled)
 		f.Points = "dirty data reached its limit: the devices cannot write as fast as data arrives (faster devices or more vdevs; zfs_dirty_data_max only moves the point)"
-	case synced > 0 && syncAvg > txgTimeout:
-		f.Verdict, f.Figure = Mismatch, fmt.Sprintf("transaction groups take %s to sync, more than the %s between them", syncAvg.Round(time.Millisecond), txgTimeout)
+	case synced > 0 && syncAvg > t.SlowTXG:
+		f.Verdict, f.Figure = Mismatch, fmt.Sprintf("transaction groups take %s to sync, more than the %s between them", syncAvg.Round(time.Millisecond), t.SlowTXG)
 		f.Points = "the pool cannot write a group before the next is due: faster devices or more vdevs"
 	case memory > 0:
 		f.Verdict, f.Figure = Mismatch, fmt.Sprintf("the ARC was throttled for memory %d times", memory)
 		f.Points = "the system is short of memory: zfs_arc_max lower than now, or more RAM"
-	case slow != "" && slowWait >= slowFactor*median && slowWait >= minLatency:
+	case slow != "" && slowWait >= t.SlowDevice*median && slowWait >= minLatency:
 		f.Verdict, f.Figure = WorthALook, fmt.Sprintf("%s waits %.1f times as long as the other devices", slow, slowWait/max(median, 1))
 		f.Points = "one slow device holds back its vdev: check its health (smartctl) and its cabling"
 	case queued:
@@ -113,7 +111,7 @@ func slowestLeaf(w *Window, leaves []string) (name string, wait, median float64)
 	waits := map[string]float64{}
 	for _, leaf := range leaves {
 		t := w.IO[leaf]
-		if t == nil || t.ReadOps+t.WriteOps < minOps {
+		if t == nil || t.ReadOps+t.WriteOps < leafOps {
 			continue
 		}
 		waits[leaf] = (t.DiskWait[0] + t.DiskWait[1]) / (t.ReadOps + t.WriteOps)
@@ -138,7 +136,7 @@ func slowestLeaf(w *Window, leaves []string) (name string, wait, median float64)
 
 // queueing reports whether requests wait in ZFS much longer than at the
 // disks, with the average total and disk wait (ns) over all leaves.
-func queueing(w *Window, leaves []string) (queued bool, total, disk float64) {
+func queueing(w *Window, leaves []string, factor float64) (queued bool, total, disk float64) {
 	var ops float64
 	for _, leaf := range leaves {
 		if t := w.IO[leaf]; t != nil {
@@ -151,5 +149,5 @@ func queueing(w *Window, leaves []string) (queued bool, total, disk float64) {
 		return false, 0, 0
 	}
 	total, disk = total/ops, disk/ops
-	return total >= queueFactor*disk && total >= minLatency, total, disk
+	return total >= factor*disk && total >= minLatency, total, disk
 }

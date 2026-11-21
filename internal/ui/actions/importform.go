@@ -268,3 +268,6 @@ func (f *importForm) details(d ui.Display, p zfs.Importable, iw int) []string {
 	}
 	return out
 }
+
+// Typing implements ui.Typing: the directory or the new name has focus.
+func (f *importForm) Typing() bool { return f.focus == 0 || f.option() == importNewName }

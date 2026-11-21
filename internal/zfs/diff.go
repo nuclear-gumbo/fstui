@@ -4,6 +4,7 @@ package zfs
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"fmt"
 	"strconv"
@@ -24,7 +25,7 @@ type DiffEntry struct {
 	NewPath termtext.Text // for a rename
 }
 
-// MaxDiff bounds how many entries Diff keeps; Truncated says so.
+// MaxDiff bounds how many entries Diff keeps by default; Truncated says so.
 const MaxDiff = 20000
 
 // Diff reads what changed between snapshot from and to (a later
@@ -39,14 +40,16 @@ func (r *Reader) Diff(ctx context.Context, from, to string) (entries []DiffEntry
 	if err != nil {
 		return nil, false, err
 	}
-	return ParseDiff(out)
+	return parseDiff(out, cmp.Or(r.DiffMax, MaxDiff))
 }
 
-// ParseDiff parses zfs diff -H -F -t output.
-func ParseDiff(data []byte) ([]DiffEntry, bool, error) {
+// ParseDiff parses zfs diff -H -F -t output, keeping MaxDiff entries.
+func ParseDiff(data []byte) ([]DiffEntry, bool, error) { return parseDiff(data, MaxDiff) }
+
+func parseDiff(data []byte, keep int) ([]DiffEntry, bool, error) {
 	var out []DiffEntry
 	for line := range bytes.Lines(data) {
-		if len(out) == MaxDiff {
+		if len(out) == keep {
 			return out, true, nil
 		}
 		f := strings.Split(strings.TrimRight(string(line), "\n"), "\t")

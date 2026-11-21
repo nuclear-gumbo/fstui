@@ -149,9 +149,19 @@ func TestStageInTempDir(t *testing.T) {
 // and highest value is accepted on load and read back unchanged.
 func TestEverySettingRoundTrips(t *testing.T) {
 	for _, s := range Settings([]string{"default"}) {
-		values := s.Choices
-		if values == nil {
+		var values []string
+		switch s.Kind {
+		case KindInt, KindSeconds:
 			values = []string{strconv.Itoa(s.Min), strconv.Itoa(s.Max)}
+		case KindDuration:
+			values = []string{fmtDuration(s.MinDur), fmtDuration(s.MaxDur)}
+		case KindFloat:
+			values = []string{strconv.FormatFloat(s.MinFloat, 'g', -1, 64), strconv.FormatFloat(s.MaxFloat, 'g', -1, 64)}
+		case KindBool, KindChoice:
+			values = s.Options()
+		case KindString:
+			d := Default()
+			values = []string{s.get(&d)}
 		}
 		for _, v := range values {
 			out, err := Edit(nil, map[string]string{s.Path: v})
@@ -160,9 +170,10 @@ func TestEverySettingRoundTrips(t *testing.T) {
 			}
 			c, problems := Parse("config.yaml", out)
 			if len(problems) > 0 {
-				// The capacity thresholds are also checked against each
-				// other; that is not this setting's range.
-				if strings.Contains(problems[0].String(), "must be below") {
+				// Some settings are also checked against each other
+				// (capacity, chart spans, dashboard widths, tune
+				// margins); that is not this setting's range.
+				if p := problems[0].String(); strings.Contains(p, "must be below") || strings.Contains(p, "must be at least") {
 					continue
 				}
 				t.Fatalf("%s=%s: %v", s.Path, v, problems)

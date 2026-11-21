@@ -285,7 +285,9 @@ func describe(e *events.Event) {
 		}
 	case class == syseventPrefix+"history_event":
 		e.Severity = events.Info
-		e.Summary = termtext.New(strings.TrimSpace(field(e, "history_internal_name") + " " + field(e, "history_internal_str")))
+		// ZFS's own record, kept as it wrote it ("scan done errors=0"),
+		// labelled so it is not read as fstui's wording.
+		e.Summary = termtext.New("History: " + strings.TrimSpace(field(e, "history_internal_name")+" "+field(e, "history_internal_str")))
 		if s := field(e, "history_str"); s != "" {
 			e.Summary = termtext.New(s)
 		}

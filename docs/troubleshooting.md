@@ -30,7 +30,7 @@ Make the window larger; the screen comes back as soon as it fits. `q` quits.
 
 ## `context deadline exceeded after 30s`
 
-A read did not finish in time: 30 seconds for most reads, 10 minutes for listings of datasets and snapshots, which take `zfs` about half a second per thousand snapshots. A pool whose devices stopped answering also hangs `zfs` and `zpool`; `zpool status` in a shell shows whether it is suspended. fstui keeps the last data it read and tries again; `r` tries now.
+A read did not finish in time: by default 30 seconds for most reads (`limits.read_timeout`), 10 minutes for listings of datasets and snapshots (`limits.list_timeout`), which take `zfs` about half a second per thousand snapshots. A pool whose devices stopped answering also hangs `zfs` and `zpool`; `zpool status` in a shell shows whether it is suspended. fstui keeps the last data it read and tries again; `r` tries now.
 
 ## A change is listed under "Unavailable"
 
@@ -48,11 +48,31 @@ Just before running, fstui reads the system again. Something the change depends 
 
 A configuration file, or a directory above it, can be written by someone other than you or root, so fstui does not read it. Fix the mode, for example `chmod 644 ~/.config/fstui/config.yaml` and `chmod 755` on its directories.
 
+## `no secret: add the channel to secrets.yaml, or set secret_file`
+
+The channel needs a password or token and fstui found none for its name. Add `name: the secret` to `secrets.yaml` next to your `config.yaml` (mode 0600), or point the channel's `secret_file` at a file of its own; the Notifications tab (Config, 9) does the first for you ([configuration.md](configuration.md#secrets)).
+
+## `can be read by group or others ... it must be 0600`
+
+`secrets.yaml`, or a channel's `secret_file`, must belong to the user fstui runs as and be readable by no one else: `chmod 600` it. Until then fstui ignores the file.
+
+## `not an https:// URL` and `the server redirected the request`
+
+fstui sends to `https://` addresses only, unless the channel sets `insecure_http: true`, and does not follow redirects, so credentials go only where the configuration says. Use the final `https://` address of the service.
+
+## `another fstui watch is running`
+
+Only one `fstui watch` runs per user; the message names the process that holds `watch.lock` in the state directory. Stop the other one, or its service (Config, 9, Schedules).
+
+## `fstui would run as root from a file others could replace`
+
+A schedule names the fstui that writes it and runs it as root, so fstui refuses while its own file, or a directory above it, belongs to someone other than root or can be written by others. Install fstui under `/usr` (for example `/usr/local/bin/fstui`, owned by root, mode 0755) and change the schedule from that copy.
+
 ## Colours or box characters look wrong
 
 - `NO_COLOR` set to anything turns colours off.
 - On the Linux console (`TERM=linux`) fstui uses plain characters; elsewhere, `ascii: true` in the configuration does the same.
-- fstui asks the terminal for its background colour and uses the theme's dark or light colours to match. A terminal that does not answer gets the dark colours; another theme (Settings, 9) or a theme file with a `light` block may read better there ([configuration.md](configuration.md#themes)).
+- fstui asks the terminal for its background colour and uses the theme's dark or light colours to match. A terminal that does not answer gets the dark colours; another theme (Config, 9) or a theme file with a `light` block may read better there ([configuration.md](configuration.md#themes)).
 
 ## Creating a pool says it needs `lsblk`
 

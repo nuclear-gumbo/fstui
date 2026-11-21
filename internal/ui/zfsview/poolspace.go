@@ -8,6 +8,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/nuclear-gumbo/fstui/internal/zfs/health"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"github.com/nuclear-gumbo/fstui/internal/theme"
 	"github.com/nuclear-gumbo/fstui/internal/ui"
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
@@ -28,7 +32,7 @@ func newSpacePoller(src Source, pool name.Pool, o PoolsOptions) poller[poolSpace
 			l, err := src.PoolDatasets(ctx, pool)
 			return poolSpace{pool: p, list: l}, err
 		},
-		interval: o.DatasetInterval, now: o.Now, slow: true,
+		interval: o.DatasetInterval, now: o.Now, slow: true, limits: &settingsOr(o.Settings).Limits,
 		accept: func(s poolSpace) bool { return s.pool == p },
 	}
 }
@@ -69,7 +73,7 @@ func spaceRanking(disp ui.Display, o zfs.Overview, list []zfs.Dataset, th thresh
 	for _, d := range rows {
 		w, _ := d.Properties.Number("written")
 		lines = append(lines, pad(leftTrunc(d.Name, nameCol), nameCol)+sp+heldGauge(disp, d, largest)+sp+
-			lpad(ui.Size(held(d), disp.Exact), sizeWidth)+sp+lpad(ui.Size(w, disp.Exact), sizeWidth))
+			lpad(format.Size(held(d), disp.Exact), sizeWidth)+sp+lpad(format.Size(w, disp.Exact), sizeWidth))
 	}
 	return lines
 }
@@ -78,7 +82,7 @@ func spaceRanking(disp ui.Display, o zfs.Overview, list []zfs.Dataset, th thresh
 type thresholdsView struct{ warn, crit int }
 
 func spaceHeader(disp ui.Display, o zfs.Overview, th thresholdsView) string {
-	pct := capacityPct(o)
+	pct := health.CapacityPct(o)
 	level := ui.LevelOf(pct, th.warn, th.crit)
 	word := ui.LevelWord(level)
 	if word != "" {
@@ -87,7 +91,7 @@ func spaceHeader(disp ui.Display, o zfs.Overview, th thresholdsView) string {
 	}
 	freeing, _ := o.Pool.Properties.Number("freeing")
 	return fmt.Sprintf("%s  %d%% full%s  %s of %s used  %s freeing", o.Pool.Name, pct, word,
-		ui.Size(o.Used, disp.Exact), ui.Size(o.Used+o.Available, disp.Exact), ui.Size(freeing, disp.Exact))
+		format.Size(o.Used, disp.Exact), format.Size(o.Used+o.Available, disp.Exact), format.Size(freeing, disp.Exact))
 }
 
 func legend(disp ui.Display) string {

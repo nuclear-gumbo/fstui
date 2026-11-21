@@ -18,7 +18,7 @@ func benchSnapshots(b *testing.B, cold bool) {
 	for i := range data {
 		data[i] = zfs.SnapshotRow{Name: fmt.Sprintf("tank/home/u%d@auto-%06d", i%50, i), CreateTXG: uint64(100000 - i), Used: uint64(i), Referenced: 5, Creation: 1794800000}
 	}
-	v := NewSnapshots(nil, time.Now)
+	v := NewSnapshots(nil, nil, time.Now)
 	v.poll.data, v.poll.loaded = data, time.Now()
 	d := ui.Display{}
 	b.ReportAllocs()

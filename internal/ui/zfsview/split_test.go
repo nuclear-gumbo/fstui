@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -19,7 +21,7 @@ func splitPools(t *testing.T) *Pools {
 	t.Helper()
 	p := opened(t, "healthy", "degraded")
 	pressKey(p, "esc")
-	render(p, splitWidth, 30)
+	render(p, config.Default().UI.SplitFrom, 30)
 	if !p.geo.split || p.focus {
 		t.Fatalf("not a split with the list focused: split %v focus %v", p.geo.split, p.focus)
 	}
@@ -35,7 +37,7 @@ func TestSplitDetailFollowsCursor(t *testing.T) {
 	if p.detail.pool != p.poll.data[1].Pool.Name || p.detail.tab != tabHistory {
 		t.Fatalf("detail shows %s on tab %d after j", p.detail.pool, p.detail.tab)
 	}
-	out := render(p, splitWidth, 30)
+	out := render(p, config.Default().UI.SplitFrom, 30)
 	top := strings.Split(out, "\n")[0]
 	if !strings.Contains(top, "+-pools-") || !strings.Contains(top, "| History |") {
 		t.Errorf("top edges: %q", top)
@@ -68,7 +70,7 @@ func TestSplitFocus(t *testing.T) {
 // edge, a row in the list.
 func TestSplitClicks(t *testing.T) {
 	p := splitPools(t)
-	top := strings.Split(render(p, splitWidth, 30), "\n")[0]
+	top := strings.Split(render(p, config.Default().UI.SplitFrom, 30), "\n")[0]
 	// The shortened title holds a "…", so count cells, not bytes.
 	p.Update(ui.ClickMsg{X: lipgloss.Width(top[:strings.Index(top, "Features")]), Y: 0})
 	if !p.focus || p.detail.tab != tabFeatures {
@@ -84,7 +86,7 @@ func TestSplitClicks(t *testing.T) {
 // Datasets uses the same layout: the detail follows the tree cursor.
 func TestSplitDatasets(t *testing.T) {
 	v := loadedDatasets(t)
-	out := ansi.Strip(v.Render(display(), splitWidth, 20))
+	out := ansi.Strip(v.Render(display(), config.Default().UI.SplitFrom, 20))
 	if !v.geo.split || v.detail == nil || !strings.Contains(strings.Split(out, "\n")[0], "| Capacity |") {
 		t.Fatalf("no split detail:\n%s", out)
 	}

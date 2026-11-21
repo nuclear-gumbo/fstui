@@ -5,6 +5,7 @@ package zfs
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"fmt"
 	"regexp"
@@ -51,6 +52,10 @@ type History struct {
 // years; the commands people ran are kept apart so these never push them
 // out.
 const keepHistory = 10000
+
+// defaultHistoryTimeout bounds zpool history, which grows with the
+// pool's age, when limits.history_timeout is not given.
+const defaultHistoryTimeout = 10 * time.Minute
 
 // historyParser reads zpool history -i line by line, keeping the most
 // recent keep entries of each kind.
@@ -163,9 +168,9 @@ func historyEntry(m []string) (HistoryEntry, error) {
 // the most recent entries (keepHistory of each kind). It needs root: on
 // 2.3.9 unprivileged users get "permission denied".
 func (r *Reader) PoolHistory(ctx context.Context, pool name.Pool) (History, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute) // grows with the pool's age
+	ctx, cancel := context.WithTimeout(ctx, cmp.Or(r.HistoryTimeout, defaultHistoryTimeout))
 	defer cancel()
-	p := historyParser{keep: keepHistory}
+	p := historyParser{keep: cmp.Or(r.HistoryKeep, keepHistory)}
 	var parseErr error
 	err := r.run.Stream(ctx, execute.Argv{Tool: execute.Zpool, Options: []string{"history", "-i"}, Operands: []string{pool.String()}}, func(b []byte) {
 		if parseErr == nil {

@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -279,7 +281,7 @@ func (w *sendWindow) Render(d ui.Display, width, height int) string {
 	case w.typing != nil:
 		capLine = "capacity: " + *w.typing + ui.Cursor(d) + muted.Render("   18TB decimal, 16T binary; enter sets, empty clears")
 	case w.capacity > 0:
-		capLine = "t capacity: " + ui.Size(w.capacity, d.Exact)
+		capLine = "t capacity: " + format.Size(w.capacity, d.Exact)
 	}
 	lines = append(lines, ansi.Truncate(capLine, iw, "…"))
 	if w.message != "" {
@@ -319,7 +321,7 @@ func (w *sendWindow) streamLines(d ui.Display, iw int) []string {
 		case w.loading:
 			size = d.Palette.Style(theme.Muted).Render(lpad("…", sizeWidth))
 		case i < len(w.sizes):
-			size = lpad(ui.Size(w.sizes[i], d.Exact), sizeWidth)
+			size = lpad(format.Size(w.sizes[i], d.Exact), sizeWidth)
 		}
 		out = append(out, ansi.Truncate(pad(ansi.Truncate(labels[i], col, "…"), col)+"  "+size, iw, "…"))
 	}
@@ -344,13 +346,13 @@ func streamLabel(s zfs.SendStep) string {
 // totalLine is the sum, and how much of the capacity it takes.
 func (w *sendWindow) totalLine(d ui.Display, iw int) string {
 	sum, failed := w.total()
-	line := "Total " + ui.Size(sum, d.Exact)
+	line := "Total " + format.Size(sum, d.Exact)
 	if failed > 0 {
 		line += fmt.Sprintf(" (%d stream(s) without an estimate)", failed)
 	}
 	if w.capacity > 0 {
 		pct := int(min(sum*100/w.capacity, 999)) //nolint:gosec // bounded above
-		line += fmt.Sprintf(" of %s, %d%%", ui.Size(w.capacity, d.Exact), pct)
+		line += fmt.Sprintf(" of %s, %d%%", format.Size(w.capacity, d.Exact), pct)
 		if sum > w.capacity {
 			return d.Palette.Style(theme.Warn).Render(ansi.Truncate(line+": does not fit", iw, "…"))
 		}
@@ -376,3 +378,6 @@ func (w *sendWindow) commands() []string {
 	}
 	return out
 }
+
+// Typing implements ui.Typing: a capacity is being typed.
+func (w *sendWindow) Typing() bool { return w.typing != nil }

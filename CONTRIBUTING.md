@@ -61,6 +61,8 @@ Test pool rules:
 - Do not run pool tests in containers. A container shares the host's kernel and pools.
 - No test touches a real block device unless you list its `/dev/disk/by-id` path, one per line, in `testdata/allowed-devices.conf` (ignored by git). `scripts/integration.sh` wipes every listed device before the tests (`wipefs -a` on its partitions and the disk) and refuses to run if one is mounted or in an imported pool. List only a disk whose contents you do not need.
 
+Schedules under OpenRC and cron run in throwaway rootless containers (Gentoo with OpenRC, Debian with cron), since a development machine usually has only one of them: `sh scripts/test-schedules-container.sh`, as your own user, with Podman. These tests change the system they run on; never run them outside a container.
+
 ## Measuring memory
 
 A build with the tag `fstui_profile` writes a heap profile every 5 seconds to `$FSTUI_HEAPPROFILE`. Release builds do not have it.
@@ -101,6 +103,9 @@ CI must pass.
 
 ## Code
 
+[docs/codebase.md](docs/codebase.md) maps the packages, how a read and a change flow through them, and what to touch to add a setting, a view, a change, a notification type or a backend.
+
+- A number or choice that shapes what fstui shows or does is a setting in `internal/config/settings.go`, not a constant; `make docs` adds it to the reference.
 - Only `internal/execute` starts processes: argument lists with `--` before operands, never a shell.
 - Text from ZFS is untrusted. Keep it in `termtext.Text` until it is drawn.
 - Wrap errors with context and keep the command's error output.

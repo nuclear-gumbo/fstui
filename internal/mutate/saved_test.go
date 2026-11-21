@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/statedir"
+
 	"github.com/nuclear-gumbo/fstui/internal/execute"
 )
 
@@ -127,14 +129,14 @@ func TestStoreRefusesAnOpenDirectory(t *testing.T) {
 	if _, err := s.List(); err == nil {
 		t.Error("List read a group-accessible directory")
 	}
-	if err := PrivateDir(s.Dir); err == nil {
-		t.Error("PrivateDir accepted a group-accessible directory")
+	if err := statedir.Private(s.Dir); err == nil {
+		t.Error("Private accepted a group-accessible directory")
 	}
 	link := filepath.Join(t.TempDir(), "link")
 	if err := os.Symlink(t.TempDir(), link); err != nil {
 		t.Fatal(err)
 	}
-	if err := PrivateDir(link); err == nil {
-		t.Error("PrivateDir accepted a symlink")
+	if err := statedir.Private(link); err == nil {
+		t.Error("Private accepted a symlink")
 	}
 }

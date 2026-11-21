@@ -7,22 +7,15 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
 )
 
 // AmplificationQuestion is the question WriteAmplification answers.
 const AmplificationQuestion = "Write amplification"
-
-// Thresholds of the amplification question: at least minWindow seconds
-// streamed and minWritten bytes written by applications; within
-// fitsMargin of what the layout costs it fits, past mismatchMargin it is
-// a mismatch.
-const (
-	minWindow      = 60
-	minWritten     = 16 << 20
-	fitsMargin     = 1.5
-	mismatchMargin = 3.0
-)
 
 // Layout is what a pool's data layout costs for each byte written, and
 // which devices hold data or the ZIL (cache devices write L2ARC copies,
@@ -77,7 +70,8 @@ func parity(name string) int {
 // WriteAmplification answers whether the disks write more than the
 // layout explains for what applications wrote. compress is the pool's
 // compression ratio (1 without compression).
-func WriteAmplification(w *Window, l Layout, compress float64, size func(uint64) string) Finding {
+func WriteAmplification(w *Window, l Layout, compress float64, size func(uint64) string, t config.Tune) Finding {
+	minWritten := uint64(t.MinWrittenMiB) << 20 //nolint:gosec // a positive setting
 	f := Finding{Question: AmplificationQuestion}
 	var logical, logicalRead, zilNormal, zilSlog uint64
 	for ds := range w.Now.Objsets {
@@ -93,8 +87,8 @@ func WriteAmplification(w *Window, l Layout, compress float64, size func(uint64)
 			diskRead += t.ReadBytes
 		}
 	}
-	if w.Seconds < minWindow || logical < minWritten {
-		f.Figure = fmt.Sprintf("applications wrote %s in %.0f s of measuring; it takes %s over a minute", size(logical), w.Seconds, size(minWritten))
+	if w.Seconds < t.MinWindow.Seconds() || logical < minWritten {
+		f.Figure = fmt.Sprintf("applications have written %s in %.0f s; an answer needs %s written over %s", size(logical), w.Seconds, size(minWritten), format.Age(t.MinWindow))
 		f.Points = "leave the tab open while the pool is written to"
 		return f
 	}
@@ -102,7 +96,7 @@ func WriteAmplification(w *Window, l Layout, compress float64, size func(uint64)
 	ratio := physical / float64(logical)
 	f.Figure = fmt.Sprintf("the disks wrote %.1f times what applications wrote (%s for %s); %s with compression %.2fx accounts for %.1f", ratio,
 		size(uint64(physical)), size(logical), l.Desc, max(compress, 1), expected)
-	f.Evidence = []string{
+	f.Details = []string{
 		"written by applications: " + size(logical),
 		"written to the disks: " + size(uint64(physical)),
 		fmt.Sprintf("expected from the layout: %.2f (%s), divided by the compression ratio %.2f", l.Factor, l.Desc, max(compress, 1)),
@@ -110,10 +104,10 @@ func WriteAmplification(w *Window, l Layout, compress float64, size func(uint64)
 		"read from the disks: " + size(uint64(diskRead)) + "; read by applications: " + size(logicalRead),
 	}
 	switch {
-	case ratio <= expected*fitsMargin:
+	case ratio <= expected*t.AmplificationFits:
 		f.Verdict, f.Points = Fits, "the layout explains what the disks write"
 		return f
-	case ratio <= expected*mismatchMargin:
+	case ratio <= expected*t.AmplificationMismatch:
 		f.Verdict = WorthALook
 	default:
 		f.Verdict = Mismatch

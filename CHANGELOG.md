@@ -4,6 +4,125 @@ All notable changes to fstui are listed here. The format follows [Keep a Changel
 
 ## [Unreleased]
 
+## [0.8.6] - 2026-11-20
+
+The 0.8 series brings notifications and schedules to fstui, and this is its first public release. In short:
+
+- fstui tells you when a pool needs attention: a pool that is not ONLINE, a device that dropped out, data errors, a pool filling up, slow disks, an overdue scrub, and more. Each alert is turned on per pool and per channel, with its own threshold and message, and you can add your own.
+- Messages go to ntfy, a webhook, Gotify, Pushover, Telegram, Discord, Slack, Matrix or email, from `fstui watch`, a service fstui sets up for you on systemd or OpenRC, or from `fstui check` on a timer or cron job. An optional heartbeat URL lets a service outside the host warn you when the host itself goes down.
+- View 9 is now Config: grouped settings, channels, alerts and schedules, each change shown as a diff before it is written. Scrub and trim schedules per pool are set there too.
+- Every former fixed value is a setting, and settings can be split into drop-in files.
+
+The sections below, from 0.8.0, list every change. Tested with OpenZFS 2.3.9 on Debian 13; schedules also under OpenRC (Gentoo) and cron (Debian) in containers.
+
+### Changed
+
+- Keys are a soft orchid in every shipped theme, a colour nothing else on the screen uses, quiet enough not to pull the eye from the content. A theme file sets it with `key`.
+- Dashboard: the I/O panel leaves out the peak columns when it is too narrow for them, so pool names are no longer cut to three letters. The health panel's title says what is new ("2 new warnings").
+- Events view: records from ZFS's own pool history read "History: scan done errors=0", so they are not taken for fstui's wording.
+- Plans view: with no saved plans, the key bar offers only `r` (refresh).
+
+### Fixed
+
+- Text that was coloured and wrapped lost its colour after the first line, as in the Pools view's "No scrub is scheduled" line. Every wrapped line now keeps it.
+- In the I/O view, the read chart's label showed the higher of the two peaks. Each chart now shows its own peak, and the title gives the scale both are drawn to.
+
+## [0.8.5] - 2026-11-20
+
+Keys get a colour of their own.
+
+### Changed
+
+- Keys, in the key bar and wherever text names one, have their own colour token, `key`, instead of the accent, which also marks the selected tab, the cursor and headings. A theme file can set `key` like any other token. 0.8.6 changes its value.
+
+### Fixed
+
+- In a muted sentence, the words after a key showed in the terminal's own colour. They now keep the sentence's colour.
+
+## [0.8.4] - 2026-11-20
+
+Wording and boxes in the Config view.
+
+### Changed
+
+- Config view: keys named in sentences ("`space` turns an alert on or off") are drawn like the key bar's, so they stand out from the words around them.
+- Config view, Alerts tab: the box under the list says what each built-in alert means for the pool and why it is worth hearing of, instead of what it measures.
+
+### Fixed
+
+- A box holding a wrapped paragraph cut off its last lines and lost the indent of the wrapped ones.
+
+## [0.8.3] - 2026-11-20
+
+Notifications that say how they are delivered, alerts as a checklist, and room in the Config view.
+
+### Added
+
+- Config view, Notifications tab: "Getting notified" shows where messages go, which alerts are on, and whether anything sends them: the `fstui watch` service, a timer or cron job running `fstui check`, or nothing. When nothing does, `s` opens the Schedules tab on `fstui watch` with its change ready.
+- `notifications.heartbeat_url`: requested after every check that read the pools, so Healthchecks or an Uptime Kuma push monitor warns you when the checks stop, as when the host is down.
+
+### Changed
+
+- Config view: the Alerts and Templates tabs are one Alerts tab, a checklist of every kind of alert in groups, in plain words, with its threshold and where it goes. `space` turns one on or off; `enter` opens a form where pools and channels are ticked from lists and "how often" is a choice (once, every hour, every day, every week). Your own alerts, formerly in the Templates tab, are added with `a` in the same form. Configuration files need no change.
+- Config view: margins inside the frame, blank lines between sections, the selected setting described in a box of its own, and text no wider than 110 columns. Forms put their fields under headings and scroll when taller than the screen.
+- The notification settings say what they do in plain words ("Repeat an open problem every", "Kernel events sent by").
+
+## [0.8.2] - 2026-11-20
+
+### Fixed
+
+- Pasting into a field did nothing, so a password from a password manager could not be entered. A paste is now typed into the field that has focus (a channel's password or token, a passphrase, a name, a filter), without line breaks, so a trailing newline does not finish the form. A paste where no field takes text is ignored. The name typed to confirm a high-risk change still has to be typed.
+
+## [0.8.1] - 2026-11-19
+
+Alerts, and a Config view that reads well.
+
+### Added
+
+- Alerts: what `fstui check` and `fstui watch` send. fstui ships alerts for the usual cases, among them a device down, device errors, low free space, a resilver and slow reads or writes, each turned on for chosen pools and channels, with its own threshold, severity, messages and how often it repeats. `notifications.templates` adds your own and `notifications.alerts` lists the ones turned on; messages take placeholders such as `{pool}` and `{value}`. Without `notifications.alerts`, what 0.8.0 sent is still sent.
+- Config view, Alerts and Templates tabs, to set them with a form, a diff and a backup, as for channels. 0.8.3 makes them one tab.
+
+### Changed
+
+- Config view, General tab: the settings are in groups; `enter` opens one. Each setting has a plain name, and the selected one is described below the list.
+- Config view, Notifications tab: the channel form works like every other form: typing goes to the selected field, `enter` moves to the next and finishes on the last, a choice changes with `space`, the arrows or its first letter.
+- Pools view, Tune tab: "evidence" is now "details", and an answer still missing says what it waits for.
+- Plans view, audit log tab: a table with a box per column; RESULT reads success, failed or n/a (the record written before a step runs), with the exit status in the record's own box below.
+
+### Fixed
+
+- Config view, General tab: the list did not scroll past the bottom of the screen.
+
+### Upgrading
+
+- What `fstui check` and `fstui watch` remember is carried over: problems open under 0.8.0 are not sent again, and none is reported as cleared.
+
+## [0.8.0] - 2026-11-18
+
+Notifications and schedules.
+
+### Added
+
+- `fstui check`: looks at every pool once and sends what changed (health, data errors, capacity, fragmentation, overdue scrubs, held checkpoints, kernel events) to ntfy, a webhook, Gotify, Pushover, Telegram, Discord, Slack, Matrix or SMTP. `--test NAME` sends a test message.
+- `fstui watch`: the same as a service, every 5 minutes and within 15 seconds of a kernel event.
+- Config view, Notifications tab: add, edit, remove and test channels. Passwords and tokens go in `secrets.yaml` (mode 0600) and are never shown.
+- Config view, Schedules tab: scrub and trim per pool, `fstui check` and `fstui watch`, on systemd timers, cron or OpenRC. Each change is confirmed and audited.
+- Drop-in configuration files in `config.d/`, read in name order after the `config.yaml` beside them.
+- Settings for most former fixed values: refresh intervals, timeouts, chart spans, layout widths, notification timing, the Tune tab's limits. `docs/configuration.md` lists them all.
+
+### Changed
+
+- View 9, Settings, is now Config, with tabs.
+- The demo does what fstui does on a real system: every pool change (create, import, export, add, attach, replace, detach, remove, rewind) is carried out on its recorded pools, the Tune tab measures replayed kernel statistics, schedules change, and `fstui check` and `fstui watch` run, printing their messages instead of sending them.
+
+### Fixed
+
+- `refresh.arc` had no effect: the ARC view read every second.
+- A saved change to `dashboard.panels` or `dashboard.columns` waited for a restart.
+- On a pool imported read-only (a look at its checkpoint), changes were offered and then failed with zpool's error; they are now unavailable, with the way back.
+- A configuration file reached through a symbolic link was read even when the directory holding the link could be written by others.
+- The Tune tab's transaction-group reader could crash on a malformed kernel statistic.
+
 ## [0.7.1] - 2026-11-16
 
 Memory and large systems. Measured with 331 datasets and 66,200 snapshots on OpenZFS 2.3.9.
@@ -112,10 +231,11 @@ First public release. Earlier versions were not published.
 - A demo container that runs on recorded output without ZFS.
 - `fstui --version` reports the module version for binaries built with `go install`.
 
-[Unreleased]: https://github.com/nuclear-gumbo/fstui/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/nuclear-gumbo/fstui/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/nuclear-gumbo/fstui/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/nuclear-gumbo/fstui/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/nuclear-gumbo/fstui/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/nuclear-gumbo/fstui/compare/v0.5.6...v0.6.1
-[0.6.0]: https://github.com/nuclear-gumbo/fstui/compare/v0.5.6...v0.6.1
+[0.6.0]: https://github.com/nuclear-gumbo/fstui/compare/v0.5.6...v0.6.0
 [0.5.6]: https://github.com/nuclear-gumbo/fstui/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/nuclear-gumbo/fstui/releases/tag/v0.5.5

@@ -22,12 +22,12 @@ func TestCompression(t *testing.T) {
 	}{
 		{"zstd on video", []DatasetCompression{{"tank/video", "zstd", 1.01, 50 * gib, 51 * gib}}, nil, WorthALook, "tank/video barely compresses; lz4"},
 		{"lz4 on video", []DatasetCompression{{"tank/video", "lz4", 1.01, 50 * gib, 51 * gib}}, nil, Fits, "c measures"},
-		{"text", []DatasetCompression{{"tank/logs", "zstd", 3.2, 2 * gib, 6 * gib}}, nil, Fits, "3.20x with zstd"},
+		{"text", []DatasetCompression{{"tank/logs", "zstd", 3.2, 2 * gib, 6 * gib}}, nil, Fits, "3.20x (compression=zstd)"},
 		{"walk", []DatasetCompression{{"tank/media", "lz4", 1.2, 10 * gib, 12 * gib}}, &WalkResult{Files: 10, Bytes: 100, Poor: 80, Dirs: map[string]uint64{}}, WorthALook, "80% of the data"},
 		{"small", []DatasetCompression{{"tank/a", "zstd", 1.0, 10 << 20, 10 << 20}}, nil, NotEnough, "holds"},
 	}
 	for _, c := range cases {
-		f := Compression(c.ds, c.walk, bytesOnly)
+		f := Compression(c.ds, c.walk, bytesOnly, dt)
 		if f.Verdict != c.verdict || !strings.Contains(f.Figure+" "+f.Points, c.want) {
 			t.Errorf("%s: %s, %q, %q", c.name, f.Verdict.Word(), f.Figure, f.Points)
 		}
@@ -60,7 +60,7 @@ func TestWalk(t *testing.T) {
 	if err := os.Symlink("/etc", filepath.Join(dir, "etc")); err != nil {
 		t.Fatal(err)
 	}
-	r := Walk(t.Context(), []string{dir})
+	r := Walk(t.Context(), []string{dir}, dt)
 	if r.Files != 2 || r.Bytes != 256<<10+1<<20 || r.Poor != 256<<10 || r.Dirs[filepath.Join(dir, "media")] != 256<<10 {
 		t.Errorf("walk %+v", r)
 	}
@@ -70,7 +70,7 @@ func TestWalk(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	if r := Walk(ctx, []string{dir}); r.Stopped != "cancelled" {
+	if r := Walk(ctx, []string{dir}, dt); r.Stopped != "cancelled" {
 		t.Errorf("cancelled walk: %+v", r)
 	}
 }

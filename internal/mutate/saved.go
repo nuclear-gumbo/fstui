@@ -16,8 +16,9 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 	"time"
+
+	"github.com/nuclear-gumbo/fstui/internal/statedir"
 )
 
 // SavedFormat is the version of the saved plan file format.
@@ -105,31 +106,8 @@ func (s Store) Save(p *Plan) (string, error) {
 
 // dir creates the plan directory if needed and checks it.
 func (s Store) dir() error {
-	if err := PrivateDir(s.Dir); err != nil {
+	if err := statedir.Private(s.Dir); err != nil {
 		return fmt.Errorf("saved plans: %w", err)
-	}
-	return nil
-}
-
-// PrivateDir creates dir (mode 0700) if it is missing and refuses it
-// unless it is a real directory owned by the effective user with no
-// access for anyone else. A directory another user created first, for
-// example under /tmp, is refused, not used.
-func PrivateDir(dir string) error {
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err //nolint:wrapcheck // callers say what the directory is for
-	}
-	return checkPrivate(dir)
-}
-
-func checkPrivate(dir string) error {
-	fi, err := os.Lstat(dir)
-	if err != nil {
-		return err //nolint:wrapcheck // as above
-	}
-	st, ok := fi.Sys().(*syscall.Stat_t)
-	if !fi.IsDir() || !ok || int(st.Uid) != os.Geteuid() || fi.Mode().Perm()&0o077 != 0 {
-		return fmt.Errorf("%s must be a directory owned by uid %d with no access for others", dir, os.Geteuid())
 	}
 	return nil
 }
@@ -168,7 +146,7 @@ func (s Store) Load(sha string) (Saved, error) {
 	if !validSHA(sha) {
 		return Saved{}, fmt.Errorf("%q is not a plan's SHA-256", sha)
 	}
-	if err := checkPrivate(s.Dir); err != nil {
+	if err := statedir.Check(s.Dir); err != nil {
 		return Saved{}, fmt.Errorf("saved plans: %w", err)
 	}
 	data, err := os.ReadFile(filepath.Join(s.Dir, sha+".json")) //nolint:gosec // sha is checked to be hex above
@@ -197,7 +175,7 @@ func (s Store) List() ([]Entry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("saved plans: %w", err)
 	}
-	if err := checkPrivate(s.Dir); err != nil {
+	if err := statedir.Check(s.Dir); err != nil {
 		return nil, fmt.Errorf("saved plans: %w", err)
 	}
 	var out []Entry

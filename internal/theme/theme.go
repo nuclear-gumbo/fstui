@@ -23,10 +23,11 @@ const (
 	Error               // FAULTED, UNAVAIL, errors, failed operations
 	Muted               // secondary text, units, commands in previews, visible escapes
 	Border              // pane divider, modal border, capacity bar track
+	Key                 // a key, in the key bar and wherever text names one
 	numTokens
 )
 
-var tokenNames = [numTokens]string{"accent", "ok", "warn", "error", "muted", "border"}
+var tokenNames = [numTokens]string{"accent", "ok", "warn", "error", "muted", "border", "key"}
 
 func (t Token) String() string { return tokenNames[t] }
 
@@ -63,6 +64,7 @@ const (
 	ansiGreen        = 2
 	ansiYellow       = 3
 	ansiBlue         = 4
+	ansiMagenta      = 5
 	ansiBrightBlack  = 8
 	ansiDefaultFaint = -1 // default foreground with the faint attribute
 )
@@ -91,6 +93,11 @@ var Default = [numTokens]Pair{
 	Error:  {Dark: Value{RGB{0xC4, 0x7A, 0x6C}, 167, ansiRed}, Light: Value{RGB{0x9E, 0x4A, 0x3C}, 131, ansiRed}},
 	Muted:  {Dark: Value{RGB{0x8A, 0x8F, 0x98}, 246, ansiDefaultFaint}, Light: Value{RGB{0x5F, 0x66, 0x70}, 241, ansiDefaultFaint}},
 	Border: {Dark: Value{RGB{0x4B, 0x50, 0x59}, 239, ansiBrightBlack}, Light: Value{RGB{0xC8, 0xCC, 0xD2}, 252, ansiBrightBlack}},
+	// Keys are a soft orchid (OKLCH hue 320, chroma 0.075): a hue no
+	// other token or shipped theme uses, as light as the space between
+	// muted and body text, saturated enough to notice and too little to
+	// pull the eye. Measured in OKLCH against every shipped theme.
+	Key: {Dark: Value{RGB{0xC0, 0x9C, 0xC9}, 182, ansiMagenta}, Light: Value{RGB{0x66, 0x43, 0x6E}, 96, ansiMagenta}},
 }
 
 // xterm's 256-colour palette: 16 system colours, a 6x6x6 cube, then 24

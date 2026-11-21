@@ -15,11 +15,25 @@ if [ "$(id -u)" -ne 0 ]; then
 	exit 1
 fi
 
+# A pool left by a run that was cancelled can stay busy for a few seconds
+# while that run's processes are killed, so a destroy that fails is tried
+# again for up to 30 seconds before the cleanup gives up.
+destroy() {
+	tries=0
+	until zpool destroy -f "$1"; do
+		tries=$((tries + 1))
+		if [ "$tries" -ge 10 ]; then
+			return 1
+		fi
+		sleep 3
+	done
+}
+
 zpool list -H -o name | while IFS= read -r pool; do
 	case $pool in
 	"$prefix"?*)
 		echo "destroying pool $pool"
-		zpool destroy -f "$pool"
+		destroy "$pool"
 		;;
 	esac
 done

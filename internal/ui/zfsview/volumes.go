@@ -8,6 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -32,13 +36,14 @@ type Volumes struct {
 	cursor listCursor
 }
 
-// NewVolumes returns the Volumes view, polled at interval.
-func NewVolumes(src VolumeSource, interval time.Duration, now func() time.Time) *Volumes {
+// NewVolumes returns the Volumes view, polled at refresh.datasets.
+func NewVolumes(src VolumeSource, settings *config.Config, now func() time.Time) *Volumes {
+	settings = settingsOr(settings)
 	read := func(ctx context.Context) (allVolumes, error) {
 		v, err := src.AllVolumes(ctx)
 		return allVolumes(v), err
 	}
-	return &Volumes{poll: poller[allVolumes]{read: read, interval: interval, now: now, slow: true}}
+	return &Volumes{poll: poller[allVolumes]{read: read, interval: settings.Refresh.Datasets, now: now, slow: true, limits: &settings.Limits}}
 }
 
 // Name implements ui.Screen.
@@ -138,9 +143,9 @@ func volumeRow(disp ui.Display, d zfs.Dataset, selected bool, nameCol, devCol in
 	if num("refreservation") == 0 {
 		alloc = "sparse"
 	}
-	row := marker + label + sp + lpad(ui.Size(num("volsize"), disp.Exact), sizeWidth) + sp +
-		lpad(ui.Size(num("used"), disp.Exact), sizeWidth) + sp + lpad(ui.Size(num("referenced"), disp.Exact), sizeWidth) + sp +
-		lpad(ui.Size(num("volblocksize"), disp.Exact), blockWidth) + sp + pad(alloc, sparseWidth) + sp + pad(encryption(disp, d), encWidth)
+	row := marker + label + sp + lpad(format.Size(num("volsize"), disp.Exact), sizeWidth) + sp +
+		lpad(format.Size(num("used"), disp.Exact), sizeWidth) + sp + lpad(format.Size(num("referenced"), disp.Exact), sizeWidth) + sp +
+		lpad(format.Size(num("volblocksize"), disp.Exact), blockWidth) + sp + pad(alloc, sparseWidth) + sp + pad(encryption(disp, d), encWidth)
 	if devCol > 0 {
 		row += sp + pal.Style(theme.Muted).Render(leftTrunc(zfs.ZvolDevice(d.Name), devCol))
 	}
@@ -151,7 +156,7 @@ func volumeRow(disp ui.Display, d zfs.Dataset, selected bool, nameCol, devCol in
 func (v *Volumes) Status() ui.Status {
 	st := ui.Status{Refreshed: v.poll.loaded, LastError: v.poll.lastErr}
 	if !v.poll.loaded.IsZero() {
-		st.Figure = fmt.Sprintf("%d %s", len(v.poll.data), plural(len(v.poll.data), "volume", "volumes"))
+		st.Figure = fmt.Sprintf("%d %s", len(v.poll.data), format.Plural(len(v.poll.data), "volume", "volumes"))
 	}
 	return st
 }

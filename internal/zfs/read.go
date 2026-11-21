@@ -36,6 +36,12 @@ type Reader struct {
 	// ReadDir, if set, lists a directory's entries instead of the host's
 	// (the demo); tune mode lists a pool's kstat directory with it.
 	ReadDir func(string) ([]string, error)
+	// HistoryKeep and DiffMax bound pool history and zfs diff
+	// (limits.history_entries, limits.diff_entries); defaults when zero.
+	HistoryKeep, DiffMax int
+	// HistoryTimeout bounds zpool history (limits.history_timeout);
+	// defaultHistoryTimeout when zero.
+	HistoryTimeout time.Duration
 }
 
 // Commands runs zfs and zpool for a Reader. *execute.Runner implements

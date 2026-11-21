@@ -5,6 +5,8 @@ package zfsview
 import (
 	"strings"
 
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"charm.land/lipgloss/v2"
 
 	"github.com/nuclear-gumbo/fstui/internal/theme"
@@ -104,7 +106,7 @@ func datasetRow(disp ui.Display, n *node, selected, marked, collapsed bool, c ds
 	}
 	size := func(prop string) string {
 		v, _ := d.Properties.Number(prop)
-		return lpad(ui.Size(v, disp.Exact), sizeWidth)
+		return lpad(format.Size(v, disp.Exact), sizeWidth)
 	}
 	row := marker + pad(label, c.name) + sp + size("used")
 	if c.avail {

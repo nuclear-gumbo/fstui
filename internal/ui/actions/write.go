@@ -12,7 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/nuclear-gumbo/fstui/internal/statedir"
 
 	"github.com/nuclear-gumbo/fstui/internal/ui/keys"
 
@@ -41,7 +44,7 @@ type Paths struct {
 // demo never touches a real installation's files or syslog.
 func DemoPaths() (Paths, error) {
 	dir := filepath.Join(os.TempDir(), fmt.Sprintf("fstui-demo-%d", os.Geteuid()))
-	if err := mutate.PrivateDir(dir); err != nil {
+	if err := statedir.Private(dir); err != nil {
 		return Paths{}, fmt.Errorf("demo files: %w", err)
 	}
 	return Paths{
@@ -51,24 +54,18 @@ func DemoPaths() (Paths, error) {
 
 // DefaultPaths returns the paths for the effective user.
 func DefaultPaths() (Paths, error) {
+	state, err := statedir.Dir()
+	if err != nil {
+		return Paths{}, fmt.Errorf("audit log and saved plans: %w", err)
+	}
 	if os.Geteuid() == 0 {
-		return Paths{Lock: "/run/fstui.lock", AuditDir: audit.DefaultDir, Plans: "/var/lib/fstui/plans"}, nil
+		return Paths{Lock: "/run/fstui.lock", AuditDir: audit.DefaultDir, Plans: filepath.Join(state, "plans")}, nil
 	}
 	run := os.Getenv("XDG_RUNTIME_DIR")
-	state := os.Getenv("XDG_STATE_HOME")
-	if state == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return Paths{}, fmt.Errorf("no state directory for the audit log: %w", err)
-		}
-		state = filepath.Join(home, ".local", "state")
-	}
 	if run == "" {
 		return Paths{}, errors.New("XDG_RUNTIME_DIR is not set, so there is nowhere for the write-mode lock")
 	}
-	return Paths{
-		Lock: filepath.Join(run, "fstui.lock"), AuditDir: filepath.Join(state, "fstui"), Plans: filepath.Join(state, "fstui", "plans"),
-	}, nil
+	return Paths{Lock: filepath.Join(run, "fstui.lock"), AuditDir: state, Plans: filepath.Join(state, "plans")}, nil
 }
 
 // Session is the write module's state for one fstui process: the mode,
@@ -82,6 +79,8 @@ type Session struct {
 	rebuild  mutate.Rebuilder
 	store    mutate.Store
 	now      func() time.Time
+	// auditEntries is limits.audit_entries, set as settings change.
+	auditEntries atomic.Int64
 
 	mu    sync.Mutex
 	lock  *Lock
@@ -102,6 +101,8 @@ type Config struct {
 	Host        string // recorded in saved plans
 	Version     string
 	Now         func() time.Time
+	// AuditEntries is how many records the Audit tab reads.
+	AuditEntries int
 	// Simulate, if set, carries out changes instead of running zfs (the
 	// demo build).
 	Simulate func(execute.Argv, []byte) (execute.Result, error)
@@ -118,6 +119,7 @@ func NewSession(c Config) *Session {
 		mut = execute.NewSimulatedMutator(s.mode, recorder{s}, c.Simulate)
 	}
 	s.pipeline = &mutate.Pipeline{Mode: s.mode, Mutator: mut}
+	s.auditEntries.Store(int64(c.AuditEntries))
 	return s
 }
 
@@ -279,7 +281,9 @@ func (s *Session) Snapshot(t ui.Target) (ui.Modal, tea.Cmd) {
 
 // CanSnapshot implements ui.Actions: everything but the ARC belongs to
 // a dataset that can have one.
-func (s *Session) CanSnapshot(t ui.Target) bool { return t.Kind != "arc" && len(t.Names) > 0 }
+func (s *Session) CanSnapshot(t ui.Target) bool {
+	return t.Backend != "system" && t.Kind != "arc" && len(t.Names) > 0
+}
 
 // Offered implements ui.Actions.
 func (s *Session) Offered(t ui.Target) []key.Binding {
@@ -292,13 +296,16 @@ func (s *Session) Offered(t ui.Target) []key.Binding {
 }
 
 // NoChanges implements ui.Actions: why a has nothing to offer here.
-func (s *Session) NoChanges(view string, empty bool) ui.Modal {
+func (s *Session) NoChanges(view string, empty bool, reason string) ui.Modal {
 	act := keys.Get(keys.Actions).Help().Key
+	if reason != "" {
+		return NewMessage("no changes", reason+".")
+	}
 	if empty {
 		return NewMessage("nothing selected", "Select an item in "+view+", then press "+act+".")
 	}
 	return NewMessage("no changes in "+strings.ToLower(view),
-		view+" has nothing to change. Changes are in Pools (1), Datasets (2), Snapshots (3), Volumes (4) and ARC (5): select an item there and press "+act+".")
+		view+" has nothing to change. Changes are in Pools (1), Datasets (2), Snapshots (3), Volumes (4), ARC (5) and the Schedules tab of Config (9): select an item there and press "+act+".")
 }
 
 // Confirm opens the preview of p, run through the pipeline; the plan

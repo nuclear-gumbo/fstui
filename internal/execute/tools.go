@@ -23,17 +23,21 @@ type Tool string
 const (
 	ZFS   Tool = "zfs"
 	Zpool Tool = "zpool"
-	// Systemctl lists the scrub timers OpenZFS ships for systemd; it is
-	// optional, since not every system runs systemd.
+	// Systemctl lists and enables timers and services; it is optional,
+	// since not every system runs systemd.
 	Systemctl Tool = "systemctl"
-	// Tee, Cp, Chmod and Mv write module parameters and /etc/modprobe.d
-	// for the ARC limits; optional, like systemctl.
+	// Tee, Cp, Chmod and Mv write module parameters, /etc/modprobe.d
+	// and schedule files; optional, like systemctl.
 	Tee   Tool = "tee"
 	Cp    Tool = "cp"
 	Chmod Tool = "chmod"
 	Mv    Tool = "mv"
 	// Lsblk lists block devices for pool creation, read only; optional.
 	Lsblk Tool = "lsblk"
+	// RcUpdate and RcService enable and start fstui watch under OpenRC;
+	// optional, present only there.
+	RcUpdate  Tool = "rc-update"
+	RcService Tool = "rc-service"
 )
 
 // systemDirs are searched in order. PATH from the environment is ignored, so
@@ -82,6 +86,26 @@ func ResolveOptional(required, optional []Tool) (*Tools, error) {
 		}
 	}
 	return t, nil
+}
+
+// Trusted checks a program that another program will run as root, such
+// as fstui itself named in a systemd unit or a cron line: a regular
+// executable owned by root and writable by no one else, in directories
+// with the same owner and mode, found the same way through symlinks. It
+// returns the path with symlinks resolved.
+func Trusted(path string) (string, error) {
+	r := resolver{trustedUID: rootUID, top: "/"}
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", fmt.Errorf("resolving symlinks in %s: %w", path, err)
+	}
+	if err := r.checkDirs(filepath.Dir(resolved)); err != nil {
+		return "", err
+	}
+	if err := r.checkFile(resolved); err != nil {
+		return "", err
+	}
+	return resolved, nil
 }
 
 // resolver carries the parameters of Resolve so tests can point it at a

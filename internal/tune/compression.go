@@ -6,20 +6,12 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
+
+	"github.com/nuclear-gumbo/fstui/internal/config"
 )
 
 // CompressionQuestion is the question Compression answers.
 const CompressionQuestion = "How well data compresses"
-
-// Thresholds of the compression question: datasets holding at least
-// minUsed count; an expensive algorithm earning under poorRatio is worth a
-// look; files whose allocation saves under incompressible of their size
-// count as incompressible in the walk.
-const (
-	minUsed        = 1 << 30
-	poorRatio      = 1.05
-	incompressible = 1.1
-)
 
 // DatasetCompression is a dataset's compression as zfs get reports it.
 type DatasetCompression struct {
@@ -42,7 +34,8 @@ func expensive(alg string) bool {
 
 // Compression answers whether compression pays for itself per dataset;
 // walk is the result of the per-file walk, if one was run.
-func Compression(ds []DatasetCompression, walk *WalkResult, size func(uint64) string) Finding {
+func Compression(ds []DatasetCompression, walk *WalkResult, size func(uint64) string, t config.Tune) Finding {
+	minUsed := uint64(t.CompressionGiB) << 30 //nolint:gosec // a non-negative setting
 	f := Finding{Question: CompressionQuestion}
 	var big []DatasetCompression
 	for _, d := range ds {
@@ -59,16 +52,16 @@ func Compression(ds []DatasetCompression, walk *WalkResult, size func(uint64) st
 		return cmp.Or(cmp.Compare(b.Used, a.Used), cmp.Compare(a.Dataset, b.Dataset))
 	})
 	for _, d := range big {
-		f.Evidence = append(f.Evidence, fmt.Sprintf("%s: %s, ratio %.2fx, %s stored for %s of data", d.Dataset, d.Algorithm, d.Ratio, size(d.Used), size(d.LogicalUsed)))
+		f.Details = append(f.Details, fmt.Sprintf("%s: %s, ratio %.2fx, %s stored for %s of data", d.Dataset, d.Algorithm, d.Ratio, size(d.Used), size(d.LogicalUsed)))
 	}
 	if walk != nil {
-		f.Evidence = append(f.Evidence, walk.lines(size)...)
+		f.Details = append(f.Details, walk.lines(size)...)
 	}
 	f.Verdict = Fits
-	f.Figure = fmt.Sprintf("%s compresses %.2fx with %s", big[0].Dataset, big[0].Ratio, big[0].Algorithm)
+	f.Figure = fmt.Sprintf("%s compresses %.2fx (compression=%s)", big[0].Dataset, big[0].Ratio, big[0].Algorithm)
 	f.Points = "c measures, per file, how much of the data does not compress"
 	for _, d := range big {
-		if expensive(d.Algorithm) && d.Ratio < poorRatio {
+		if expensive(d.Algorithm) && d.Ratio < t.PoorRatio {
 			f.Verdict = WorthALook
 			f.Figure = fmt.Sprintf("%s holds %s compressed with %s at %.2fx", d.Dataset, size(d.Used), d.Algorithm, d.Ratio)
 			f.Points = d.Dataset + " barely compresses; lz4 gives nearly the same space for less CPU, on data written from then on"

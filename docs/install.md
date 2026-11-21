@@ -11,7 +11,7 @@ Each [release](https://github.com/nuclear-gumbo/fstui/releases) has:
 - `SHA256SUMS`: checksums of both.
 
 ```sh
-v=0.7.1
+v=0.8.6
 curl -LO https://github.com/nuclear-gumbo/fstui/releases/download/v$v/fstui-$v-linux-amd64
 curl -LO https://github.com/nuclear-gumbo/fstui/releases/download/v$v/SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS
@@ -53,7 +53,7 @@ Distribution packages of OpenZFS 2.3: on Debian 13, `zfsutils-linux` and `zfs-dk
 go build -tags fstui_nowrite -o fstui ./cmd/fstui
 ```
 
-This binary only reads: write mode, the change menus, saved plans and the audit log are not in it. `fstui --version` lists the compiled-in modules; `write` is absent from this build.
+This binary only reads: write mode, the change menus, schedule changes, saved plans and the audit log are not in it. `fstui check` and `fstui watch` are, since they change nothing. `fstui --version` lists the compiled-in modules; `write` is absent from this build.
 
 ## Demo container
 
@@ -61,4 +61,11 @@ This binary only reads: write mode, the change menus, saved plans and the audit 
 podman run -it --rm ghcr.io/nuclear-gumbo/fstui-demo
 ```
 
-The demo runs fstui on output recorded from OpenZFS 2.3.9 pools, with simulated I/O and ARC activity. It runs no `zfs` or `zpool` command and needs no ZFS. In write mode, changes to snapshots, filesystems, volumes, scrubs, device states, checkpoints (taking and discarding) and the ARC are carried out on the demo's copy of the pools, in memory. Creating, importing, exporting and upgrading pools, adding, attaching, replacing, detaching and removing devices, and looking at or rewinding to a checkpoint are planned and shown; confirming one says the demo does not carry it out. The Tune tab does not measure in the demo, which has no kernel statistics to replay. `docker run` works the same way.
+The demo runs fstui on output recorded from OpenZFS 2.3.9 pools, with simulated I/O and ARC activity. It runs no `zfs` or `zpool` command, needs no ZFS, and behaves as fstui does on a real system:
+
+- In write mode every change is carried out on the demo's copy of the pools, in memory: snapshots, filesystems and volumes; scrubs, device states and checkpoints; creating, importing, exporting and upgrading pools; adding, attaching, replacing, detaching and removing devices; rewinding to a checkpoint; the ARC limits.
+- The Tune tab measures kernel statistics replayed from a real pool under known workloads.
+- The Schedules tab changes schedules in a systemd of the demo's own, in a temporary directory removed when fstui exits.
+- `fstui check` and `fstui watch` look at the demo's pools and print each message instead of sending it; a test message from the Notifications tab is not sent either.
+
+`docker run` works the same way.

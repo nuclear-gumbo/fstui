@@ -40,6 +40,7 @@ type PoolsOptions struct {
 	Version         zfs.Version // for the userland/kernel mismatch warning
 	Root            bool        // zpool history and events need root
 	Now             func() time.Time
+	Settings        *config.Config // shared by the views; nil: defaults
 }
 
 // Pools is the overview of every imported pool.
@@ -68,9 +69,6 @@ type ScheduleSource interface {
 // scrubPlans is a read of the scrub schedules, by pool name.
 type scrubPlans map[string]zfs.ScrubSchedule
 
-// scheduleInterval: timers and cron files change rarely.
-const scheduleInterval = time.Minute
-
 // geometry is where the last render put the panels.
 type geometry struct {
 	split bool // list and detail side by side
@@ -88,6 +86,7 @@ func (g geometry) detail() (left, width int) {
 
 // NewPools returns the Pools view reading from src.
 func NewPools(src Source, o PoolsOptions) *Pools {
+	o.Settings = settingsOr(o.Settings)
 	p := &Pools{
 		src: src, opts: o, hidden: map[string]string{},
 		poll: poller[[]zfs.Overview]{read: src.Overviews, interval: o.Interval, now: o.Now},
@@ -102,7 +101,7 @@ func NewPools(src Source, o PoolsOptions) *Pools {
 			}
 			return ss.ScrubSchedules(ctx, ov)
 		}
-		p.sched = &poller[scrubPlans]{read: read, interval: scheduleInterval, now: o.Now}
+		p.sched = &poller[scrubPlans]{read: read, interval: o.Settings.Refresh.Schedules, now: o.Now}
 	}
 	return p
 }
@@ -123,7 +122,7 @@ const (
 func (p *Pools) Number() int { return poolsView }
 
 // Framed implements ui.Framed: Pools draws its own panels, side by side
-// from splitWidth columns.
+// from ui.split_from columns.
 func (p *Pools) Framed() bool { return true }
 
 // Keys implements ui.Screen.
@@ -138,7 +137,7 @@ func (p *Pools) Keys() []key.Binding {
 		case tabHistory:
 			bs = append([]key.Binding{keys.Get(keys.Internal)}, bs...)
 		case tabTune:
-			bs = append([]key.Binding{keys.As(keys.Select, "evidence"), keys.As(keys.Refresh, "measure again"), keys.Get(keys.MeasureFiles)}, bs[:len(bs)-2]...)
+			bs = append([]key.Binding{keys.As(keys.Select, "show details"), keys.As(keys.Refresh, "measure again"), keys.Get(keys.MeasureFiles)}, bs[:len(bs)-2]...)
 			bs = append(bs, keys.As(keys.Back, "back"))
 		}
 		return bs
@@ -223,6 +222,10 @@ func (p *Pools) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 		return p, p.poll.refresh() // a scrub or clear shows at once
 	}
 	if c, ok := msg.(ui.ConfigMsg); ok {
+		*p.opts.Settings = c.Config
+		if p.sched != nil {
+			p.sched.interval = c.Config.Refresh.Schedules
+		}
 		p.opts.Thresholds, p.opts.Superuser = c.Config.Thresholds, c.Config.Superuser
 		p.opts.Interval, p.opts.DatasetInterval = c.Config.Refresh.Pools, c.Config.Refresh.Datasets
 		p.poll.interval = c.Config.Refresh.Pools
@@ -262,8 +265,8 @@ func (p *Pools) key(msg tea.KeyPressMsg) tea.Cmd {
 		return p.poll.refresh()
 	case key.Matches(msg, keys.Get(keys.Hide)):
 		for _, w := range p.visibleWarnings() {
-			if w.advisory {
-				p.hidden[w.id] = w.state
+			if w.Advisory {
+				p.hidden[w.Key] = w.State
 			}
 		}
 	}

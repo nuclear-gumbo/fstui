@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/format"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
@@ -19,10 +21,6 @@ import (
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
 	"github.com/nuclear-gumbo/fstui/internal/zfs/name"
 )
-
-// datasetDetailInterval: properties and snapshot lists of the open dataset
-// are re-read this often.
-const datasetDetailInterval = 30 * time.Second
 
 // Dataset detail tabs.
 const (
@@ -85,7 +83,7 @@ func newDSDetail(src DatasetSource, ds name.Dataset, typ zfs.DatasetType, o Data
 				d, err := src.DatasetProperties(ctx, ds)
 				return dsProps{ds: s, d: d}, err
 			},
-			interval: datasetDetailInterval, now: o.Now,
+			interval: o.Settings.Refresh.DatasetDetail, now: o.Now,
 			accept: func(p dsProps) bool { return p.ds == s },
 		},
 		snaps: poller[dsSnaps]{
@@ -93,7 +91,7 @@ func newDSDetail(src DatasetSource, ds name.Dataset, typ zfs.DatasetType, o Data
 				l, err := src.DatasetSnapshots(ctx, ds)
 				return dsSnaps{ds: s, list: l}, err
 			},
-			interval: datasetDetailInterval, now: o.Now, slow: true,
+			interval: o.Settings.Refresh.DatasetDetail, now: o.Now, slow: true, limits: &o.Settings.Limits,
 			accept: func(p dsSnaps) bool { return p.ds == s },
 		},
 		allow: poller[dsAllow]{
@@ -101,7 +99,7 @@ func newDSDetail(src DatasetSource, ds name.Dataset, typ zfs.DatasetType, o Data
 				l, err := src.Allow(ctx, ds)
 				return dsAllow{ds: s, delegs: l}, err
 			},
-			interval: datasetDetailInterval, now: o.Now,
+			interval: o.Settings.Refresh.DatasetDetail, now: o.Now,
 			accept: func(p dsAllow) bool { return p.ds == s },
 		},
 	}
@@ -162,7 +160,7 @@ func (d *dsDetail) key(msg tea.KeyPressMsg, refreshList func() tea.Cmd) tea.Cmd 
 
 // Render implements ui.Screen.
 func (v *Datasets) Render(disp ui.Display, width, height int) string {
-	split := width >= splitWidth && len(v.poll.data) > 0
+	split := width >= v.opts.Settings.UI.SplitFrom && len(v.poll.data) > 0
 	if split && v.detail == nil {
 		v.adopt() // Capacity draws from the listing; reads start on the next message
 	}
@@ -191,7 +189,7 @@ func dsSummary(disp ui.Display, d zfs.Dataset, width int) string {
 	muted := disp.Palette.Style(theme.Muted)
 	size := func(prop string) string {
 		n, _ := d.Properties.Number(prop)
-		return ui.Size(n, disp.Exact)
+		return format.Size(n, disp.Exact)
 	}
 	where := muted.Render("volume ") + zfs.ZvolDevice(d.Name)
 	if d.Type == zfs.Filesystem {
@@ -312,7 +310,7 @@ func spaceLines(disp ui.Display, d zfs.Dataset) []string {
 	gauge, _ := partsGauge(disp, d, spaceParts, used)
 	size := func(prop string) string {
 		n, _ := d.Properties.Number(prop)
-		return lpad(ui.Size(n, disp.Exact), sizeWidth)
+		return lpad(format.Size(n, disp.Exact), sizeWidth)
 	}
 	lines := []string{pad("used", spaceLabel) + size("used") + sp + gauge}
 	for _, p := range spaceParts {
@@ -358,7 +356,7 @@ func (d *dsDetail) snapshotLines(disp ui.Display, now time.Time) []string {
 		order = "descending"
 	}
 	lines := []string{
-		muted.Render(fmt.Sprintf("%d %s, sorted by %s, %s", len(list), plural(len(list), "snapshot", "snapshots"), sortNames[d.sortBy], order)),
+		muted.Render(fmt.Sprintf("%d %s, sorted by %s, %s", len(list), format.Plural(len(list), "snapshot", "snapshots"), sortNames[d.sortBy], order)),
 		muted.Render(snapshotHeader(nameCol)),
 	}
 	for _, s := range list {
@@ -417,6 +415,6 @@ func snapshotRow(disp ui.Display, s zfs.SnapshotRow, label string, nameCol int, 
 	if clones == "" {
 		clones = pal.Style(theme.Muted).Render("-")
 	}
-	return pad(label, nameCol) + sp + when + sp + lpad(ui.Size(used, disp.Exact), sizeWidth) + sp +
-		lpad(ui.Size(refer, disp.Exact), sizeWidth) + sp + holdText + sp + clones
+	return pad(label, nameCol) + sp + when + sp + lpad(format.Size(used, disp.Exact), sizeWidth) + sp +
+		lpad(format.Size(refer, disp.Exact), sizeWidth) + sp + holdText + sp + clones
 }

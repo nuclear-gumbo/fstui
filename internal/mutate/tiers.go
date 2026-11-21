@@ -87,6 +87,7 @@ const (
 	PoolExport
 	PoolImport
 	PoolUpgrade
+	ScheduleSet
 	opEnd // not an operation: one past the last
 )
 
@@ -193,6 +194,8 @@ var table = map[Op]row{
 	PoolImport: {name: "pool-import", base: Medium},
 	// Features never go back to disabled.
 	PoolUpgrade: {name: "pool-upgrade", base: High},
+	// Writes system files and enables units that run as root.
+	ScheduleSet: {name: "schedule-set", base: Medium},
 	PoolAdd: {name: "pool-add", base: Medium, refine: func(p *Plan) Tier {
 		if p.Params["data"] != "" || p.Params["special"] != "" {
 			return High

@@ -11,15 +11,12 @@ import (
 	"slices"
 	"syscall"
 	"time"
+
+	"github.com/nuclear-gumbo/fstui/internal/config"
 )
 
-// Limits of the file walk: it stops at maxFiles files or after maxWalk,
-// whichever comes first, and says so.
-const (
-	maxFiles = 200000
-	maxWalk  = 60 * time.Second
-	topDirs  = 5
-)
+// topDirs is how many directories the walk names.
+const topDirs = 5
 
 // WalkResult is what the file walk found: for the files it read, their
 // size against their allocation, which on ZFS is the size after
@@ -32,6 +29,9 @@ type WalkResult struct {
 	Dirs       map[string]uint64
 	Stopped    string // why the walk ended early, or ""
 	Unreadable int    // directories the walk could not read
+	// incompressible is tune.incompressible: files saving less than this
+	// ratio count in Poor.
+	incompressible float64
 }
 
 // Share is the part of the bytes read that does not compress.
@@ -42,8 +42,8 @@ func (r *WalkResult) Share() float64 { return float64(r.Poor) / float64(max(r.By
 // follows a symbolic link, and stays on each root's filesystem, so child
 // datasets mounted below are left to their own root. It stops at the
 // limits or when ctx ends.
-func Walk(ctx context.Context, roots []string) *WalkResult {
-	wk := walker{ctx: ctx, deadline: time.Now().Add(maxWalk), r: &WalkResult{Dirs: map[string]uint64{}}}
+func Walk(ctx context.Context, roots []string, t config.Tune) *WalkResult {
+	wk := walker{ctx: ctx, deadline: time.Now().Add(t.WalkTime), t: t, r: &WalkResult{Dirs: map[string]uint64{}, incompressible: t.Incompressible}}
 	for _, root := range roots {
 		st, ok := lstat(root)
 		if !ok {
@@ -63,6 +63,7 @@ type walker struct {
 	ctx      context.Context //nolint:containedctx // one walk's cancellation
 	deadline time.Time
 	dev      uint64 // the current root's filesystem
+	t        config.Tune
 	r        *WalkResult
 }
 
@@ -74,11 +75,11 @@ func (wk *walker) visit(p string, d fs.DirEntry, err error) error {
 	case wk.ctx.Err() != nil:
 		r.Stopped = "cancelled"
 		return fs.SkipAll
-	case r.Files >= maxFiles:
-		r.Stopped = fmt.Sprintf("after %d files", maxFiles)
+	case r.Files >= wk.t.WalkFiles:
+		r.Stopped = fmt.Sprintf("after %d files", wk.t.WalkFiles)
 		return fs.SkipAll
 	case time.Now().After(wk.deadline):
-		r.Stopped = fmt.Sprintf("after %s", maxWalk)
+		r.Stopped = fmt.Sprintf("after %s", wk.t.WalkTime)
 		return fs.SkipAll
 	case err != nil:
 		r.Unreadable++
@@ -110,13 +111,13 @@ func (r *WalkResult) add(dir string, size, alloc uint64) {
 	// A file whose allocation is close to its size did not compress.
 	// Sparse files and files small enough to live in their dnode look
 	// compressed; the result says so.
-	if float64(size) < incompressible*float64(alloc) {
+	if float64(size) < r.incompressible*float64(alloc) {
 		r.Poor += size
 		r.Dirs[dir] += size
 	}
 }
 
-// lines are the walk's evidence lines.
+// lines are the walk's details lines.
 func (r *WalkResult) lines(size func(uint64) string) []string {
 	out := []string{fmt.Sprintf("files read: %d, %s in them, %s allocated; %s (%.0f%%) in files that do not compress",
 		r.Files, size(r.Bytes), size(r.Allocated), size(r.Poor), 100*r.Share())}

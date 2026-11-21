@@ -76,11 +76,11 @@ refresh:
 	if len(ps) != 0 {
 		t.Fatalf("problems: %v", ps)
 	}
-	want := Thresholds{CapacityWarn: 70, CapacityError: 85, FragmentationWarn: 40, ScrubOverdueDays: 14}
+	want := Thresholds{CapacityWarn: 70, CapacityError: 85, FragmentationWarn: 40, ScrubOverdueDays: 14, CheckpointAge: 24 * time.Hour}
 	if c.Theme != "nord" || c.Units != Exact || c.ASCII != ASCIIOn || c.Mouse || !c.Superuser || c.Thresholds != want {
 		t.Fatalf("config = %+v", c)
 	}
-	if c.Refresh != (Refresh{Pools: 10 * time.Second, Datasets: 30 * time.Second, ARC: 2 * time.Second}) {
+	if r := c.Refresh; r.Pools != 10*time.Second || r.Datasets != 30*time.Second || r.ARC != 2*time.Second || r.DatasetDetail != Default().Refresh.DatasetDetail {
 		t.Fatalf("refresh = %+v", c.Refresh)
 	}
 	acc := c.Colors[theme.Accent]
@@ -181,6 +181,22 @@ func TestUnsafeFilesIgnored(t *testing.T) {
 	}
 	ignored(t, tr, f, "writable by group or others")
 
+	// A link in a directory others can write, to a file that passes on
+	// its own, is refused too.
+	shared := filepath.Join(dir, "shared-links")
+	if err := os.Mkdir(shared, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	good := write(t, dir, "good.yaml", "theme: default\n")
+	link := filepath.Join(shared, "config.yaml")
+	if err := os.Symlink(good, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(shared, 0o777); err != nil { //nolint:gosec // the point of the test
+		t.Fatal(err)
+	}
+	ignored(t, tr, link, "writable by group or others")
+
 	f = write(t, dir, "foreign.yaml", "theme: evil\n")
 	foreign := tr
 	if os.Geteuid() == rootUID {
@@ -231,5 +247,38 @@ func TestKeys(t *testing.T) {
 	}
 	if strings.Join(c.Keys["select"], ",") != "enter" || strings.Join(c.Keys["left"], ",") != "h,left" {
 		t.Fatalf("keys = %v", c.Keys)
+	}
+}
+
+// Drop-ins apply after config.yaml in name order, and an edit goes to the
+// user's file that sets the key.
+func TestDropIns(t *testing.T) {
+	dir := t.TempDir()
+	user := write(t, dir, "config.yaml", "theme: gruvbox\nunits: exact\nmouse: false\n")
+	if err := os.Mkdir(filepath.Join(dir, DropInDir), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(dir, DropInDir), "20-ui.yaml", "mouse: true\n")
+	write(t, filepath.Join(dir, DropInDir), "10-theme.yaml", "theme: nord\nmouse: false\n")
+	write(t, filepath.Join(dir, DropInDir), "notes.txt", "theme: ignored\n")
+	write(t, filepath.Join(dir, DropInDir), ".hidden.yaml", "theme: ignored\n")
+	files := Files(user)[len(Files("")):] // after the system files
+	want := []string{user, filepath.Join(dir, DropInDir, "10-theme.yaml"), filepath.Join(dir, DropInDir, "20-ui.yaml")}
+	if strings.Join(files, ",") != strings.Join(want, ",") {
+		t.Fatalf("files %v", files)
+	}
+	c, problems := testTrust(dir).load(files)
+	if len(problems) != 0 || c.Theme != "nord" || !c.Mouse || c.Units != Exact {
+		t.Fatalf("%+v %v", c, problems)
+	}
+	if got := c.Target(user, "theme"); got != want[1] {
+		t.Errorf("theme edits go to %s", got)
+	}
+	if got := c.Target(user, "thresholds.capacity_warn"); got != user {
+		t.Errorf("an unset key goes to %s", got)
+	}
+	c.Sources["superuser"] = SystemFile
+	if got := c.Target(user, "superuser"); got != user {
+		t.Errorf("a key from the system file goes to %s", got)
 	}
 }

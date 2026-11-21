@@ -9,6 +9,7 @@ dark:
   error: "#fb4934"
   muted: "#928374"
   border: "#665c54"
+  key: "#c49fcc"
 light:
   background: "#fbf1c7"
   accent: "#076678"
@@ -17,3 +18,4 @@ light:
   error: "#9d0006"
   muted: "#7c6f64"
   border: "#bdae93"
+  key: "#694671"

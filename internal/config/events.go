@@ -35,23 +35,6 @@ const (
 // SeverityNames are the severities a filter may name, least urgent first.
 var SeverityNames = []string{"info", "notice", "warn", "error"}
 
-var eventKeys = map[string]setter{
-	"retention": positiveIn(func(c *Config) *int { return &c.Events.Retention }, retentionMin, retentionMax),
-	"filters":   setFilters,
-}
-
-// positiveIn sets a whole number from lo to hi.
-func positiveIn(field func(*Config) *int, lo, hi int) setter {
-	return func(_ *applier, c *Config, n *yaml.Node) error {
-		v, err := intIn(n, lo, hi)
-		if err != nil {
-			return err
-		}
-		*field(c) = v
-		return nil
-	}
-}
-
 // setFilters reads a list of saved filters. A filter with a problem is
 // reported and left out; the others apply. A file that sets filters
 // replaces the filters of the files before it.

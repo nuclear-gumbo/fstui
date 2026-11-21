@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
+
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
 )
@@ -57,7 +59,7 @@ func amplified(t *testing.T, written, zilNormal, diskWrite, diskRead float64) Fi
 	w.Sample(sample(t, t0, 0, 0, 0))
 	w.Sample(sample(t, t0.Add(2*time.Minute), uint64(written), 0, uint64(zilNormal)))
 	w.AddIO(ioPool(zfs.IOStat{Name: termtext.New("sda"), WriteBytes: uint64(diskWrite / 120), ReadBytes: uint64(diskRead / 120)}), 120)
-	return WriteAmplification(&w, Layout{Factor: 2, Desc: "a 2-way mirror", Leaves: []string{"sda"}}, 1, bytesOnly)
+	return WriteAmplification(&w, Layout{Factor: 2, Desc: "a 2-way mirror", Leaves: []string{"sda"}}, 1, bytesOnly, dt)
 }
 
 func TestWriteAmplification(t *testing.T) {
@@ -71,7 +73,7 @@ func TestWriteAmplification(t *testing.T) {
 		{"mirror", 100 * mib, 0, 210 * mib, 0, Fits, "2.1 times"},
 		{"sync twice", 100 * mib, 60 * mib, 500 * mib, 0, WorthALook, "written twice"},
 		{"read-modify-write", 100 * mib, 0, 900 * mib, 400 * mib, Mismatch, "read, changed and rewritten"},
-		{"too little", 4 * mib, 0, 8 * mib, 0, NotEnough, "applications wrote"},
+		{"too little", 4 * mib, 0, 8 * mib, 0, NotEnough, "applications have written"},
 	}
 	for _, c := range cases {
 		f := amplified(t, c.written, c.zil, c.diskWrite, c.diskRead)
@@ -89,3 +91,6 @@ func TestAmplificationCauseLogDevice(t *testing.T) {
 		t.Errorf("cause %q", got)
 	}
 }
+
+// dt is the default tune settings the tests judge by.
+var dt = config.Default().Tune

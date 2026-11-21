@@ -5,9 +5,13 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"os"
 	"time"
+
+	"github.com/nuclear-gumbo/fstui/internal/schedule"
 
 	"github.com/spf13/pflag"
 
@@ -63,7 +67,42 @@ type writeHooks struct {
 
 // startWrite sets up write support in the mode the flags ask for. When
 // that mode cannot be had, fstui starts read-only and says why.
-func startWrite(wf *writeFlags, h writeHooks) (ui.Actions, []ui.Screen, string, func(), []string) {
+// withSchedules adds the Schedules tab's changes to the backend's, when
+// the backend runs the system's tools, or says why it did not.
+func withSchedules(h writeHooks, r schedule.Reader) (writeHooks, string) {
+	b := schedule.Builder{
+		Reader: r, Binary: fstuiBinary, Unprivileged: os.Geteuid() != 0,
+		Has: func(t execute.Tool) bool { _, ok := h.tools.Path(t); return ok },
+	}
+	switch {
+	case h.simulate != nil: // the demo: its steps are carried out in its own system
+		b.Binary = func() (string, error) { return "/usr/bin/fstui", nil }
+		b.Unprivileged, b.Has = false, func(execute.Tool) bool { return true }
+	case h.offers == nil || h.tools == nil:
+		return h, "Changing schedules needs a storage backend, which this build leaves out"
+	}
+	offers, rebuild := h.offers, h.rebuild
+	h.offers = actions.Either(actions.ScheduleOffers(b), offers)
+	h.rebuild = func(ctx context.Context, op mutate.Op, params map[string]string) (*mutate.Plan, error) {
+		if op == mutate.ScheduleSet {
+			return b.Build(ctx, op, params)
+		}
+		return rebuild(ctx, op, params)
+	}
+	return h, ""
+}
+
+// fstuiBinary is this fstui, for a unit, cron line or script that runs
+// it as root: only a file no one but root could replace.
+func fstuiBinary() (string, error) {
+	p, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("finding fstui's own path: %w", err)
+	}
+	return execute.Trusted(p) //nolint:wrapcheck // names the file and the problem
+}
+
+func startWrite(wf *writeFlags, h writeHooks, auditEntries int) (ui.Actions, []ui.Screen, string, func(), []string) {
 	if h.offers == nil {
 		return nil, nil, "", func() {}, nil
 	}
@@ -77,7 +116,7 @@ func startWrite(wf *writeFlags, h writeHooks) (ui.Actions, []ui.Screen, string, 
 	host, _ := os.Hostname() // recorded in saved plans; empty if unknown
 	s := actions.NewSession(actions.Config{
 		Tools: h.tools, Paths: paths, Offers: h.offers, Rebuild: h.rebuild, Permissions: h.perms, Simulate: h.simulate,
-		Host: host, Version: buildVersion(), Now: time.Now,
+		Host: host, Version: buildVersion(), Now: time.Now, AuditEntries: auditEntries,
 	})
 	var notices []string
 	switch {
