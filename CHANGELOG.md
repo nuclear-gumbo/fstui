@@ -11,6 +11,7 @@ All notable changes to fstui are listed here. The format follows [Keep a Changel
 ### Changed
 
 - Config view, Alerts tab: the built-in alerts have short titles ("A device is offline", "Reads are slow"); the box under the list explains each. On a short terminal the box shortens to the explanation, so the list keeps its rows.
+- Config view, General tab: the opening line and each group's description fit 80 columns instead of being cut off.
 
 ## [0.8.6] - 2026-11-20
 

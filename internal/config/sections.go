@@ -16,11 +16,11 @@ type Section struct {
 // Every setting is in exactly one; a test checks it.
 var Sections = []Section{
 	{
-		"Display", "Theme, sizes, characters, mouse, and the view fstui opens on",
+		"Display", "Theme, sizes, characters, mouse, the first view",
 		[]string{"theme", "units", "ascii", "mouse", "natural_scrolling", "ui."},
 	},
 	{
-		"Warnings", "When a pool's capacity, fragmentation, scrub or checkpoint is warned about",
+		"Warnings", "Capacity, fragmentation, scrub and checkpoint warnings",
 		[]string{"thresholds.", "superuser"},
 	},
 	{"Refresh", "How often each view reads ZFS again", []string{"refresh."}},
@@ -28,9 +28,9 @@ var Sections = []Section{
 	{"Dashboard", "When the dashboard uses two or three columns", []string{"dashboard."}},
 	{"Events", "How many kernel events are kept", []string{"events."}},
 	{"Limits", "Timeouts and how much of a long listing is kept", []string{"limits."}},
-	{"Notifications", "How often messages repeat, how often the service checks, when sending gives up", []string{"notifications."}},
+	{"Notifications", "Repeats, how often the service checks, retries", []string{"notifications."}},
 	{"Schedules", "When scheduled checks, scrubs and trims run", []string{"schedules."}},
-	{"Tune", "How much the Tune tab measures before it answers, and its margins", []string{"tune."}},
+	{"Tune", "How long the Tune tab measures, and its margins", []string{"tune."}},
 }
 
 // PlaceIn is where a setting comes within its section: the index of the

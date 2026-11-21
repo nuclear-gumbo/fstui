@@ -31,7 +31,7 @@ func (s *Settings) render(d Display, width, height int) string {
 	}
 	msg := s.message
 	if msg == "" {
-		msg = fmt.Sprintf("Changes stay unsaved until you review them with %s; nothing is written before you confirm.", keyName(keys.Save))
+		msg = fmt.Sprintf("Nothing is written until you review your changes with %s and confirm.", keyName(keys.Save))
 	}
 	head := []string{ansi.Truncate(msg, width, "…"), ""}
 	if s.section < 0 {
