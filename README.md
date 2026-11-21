@@ -35,7 +35,7 @@ fstui starts read-only. Changes need write mode (`W`), show the exact commands a
 
 fstui tells you when a pool needs attention: a pool that is not ONLINE, a device that dropped out, data errors, a pool filling up, slow disks, an overdue scrub, and more. Each alert is turned on per pool and per channel, with its own threshold and message, and you can add your own. Messages go to ntfy, a webhook, Gotify, Pushover, Telegram, Discord, Slack, Matrix or email.
 
-They are sent by `fstui watch`, a service that fstui sets up for you on systemd or OpenRC (or `fstui check` from a timer or cron job), so nothing has to be run by hand. The Config view (`9`) shows whether it runs, and sets it up when it does not. An optional heartbeat URL lets a service such as Healthchecks warn you when the host itself goes down.
+They are sent by `fstui watch`, a service that fstui sets up for you on systemd or OpenRC (or `fstui check` from a timer or cron job), so nothing has to be run by hand. The Config view (`9`) shows whether it runs, and sets it up when it does not. An optional heartbeat URL lets a service such as Healthchecks warn you when the host itself goes down. Setting it up: [docs/notifications.md](docs/notifications.md).
 
 ## Requirements
 
@@ -79,7 +79,8 @@ sudo fstui check      check every pool once and send notifications, for a timer 
 - [docs/usage.md](docs/usage.md): the views and what they show
 - [docs/keys.md](docs/keys.md): every key
 - [docs/changes.md](docs/changes.md): write mode, confirmations, saved plans, the audit log, changes without root
-- [docs/configuration.md](docs/configuration.md): every setting, drop-in files, themes, keys, notifications, schedules
+- [docs/notifications.md](docs/notifications.md): getting notified: channels, alerts, the notification service
+- [docs/configuration.md](docs/configuration.md): every setting, drop-in files, themes, keys, schedules
 - [docs/troubleshooting.md](docs/troubleshooting.md): messages and what to do about them
 - [docs/codebase.md](docs/codebase.md) and [CONTRIBUTING.md](CONTRIBUTING.md): how the code is put together, and how to change it
 

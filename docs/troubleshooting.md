@@ -50,7 +50,7 @@ A configuration file, or a directory above it, can be written by someone other t
 
 ## `no secret: add the channel to secrets.yaml, or set secret_file`
 
-The channel needs a password or token and fstui found none for its name. Add `name: the secret` to `secrets.yaml` next to your `config.yaml` (mode 0600), or point the channel's `secret_file` at a file of its own; the Notifications tab (Config, 9) does the first for you ([configuration.md](configuration.md#secrets)).
+The channel needs a password or token and fstui found none for its name. Add `name: the secret` to `secrets.yaml` next to your `config.yaml` (mode 0600), or point the channel's `secret_file` at a file of its own; the Notifications tab (Config, 9) does the first for you ([configuration.md](notifications.md#secrets)).
 
 ## `can be read by group or others ... it must be 0600`
 
