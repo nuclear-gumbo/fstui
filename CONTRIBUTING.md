@@ -32,10 +32,10 @@ Requirements: Go 1.27 or newer, or Nix.
 ```sh
 make build          # bin/fstui
 make build-demo     # bin/fstui-demo: recorded output, no ZFS needed
-make check          # everything CI runs
+make check          # the full checks
 ```
 
-`make check` runs gofumpt, go vet, staticcheck, golangci-lint, shellcheck, govulncheck, the tests with the race detector, and a build of every module combination. With Nix, `nix develop` provides the tools.
+`make check` runs gofumpt, go vet, staticcheck, golangci-lint, shellcheck, govulncheck, the tests with the race detector, and a build of every module combination. With Nix, `nix develop` provides the tools. GitHub's CI runs a quicker part of it on every pull request (formatting, vet, build, tests); the maintainer's CI runs all of it, plus distribution builds and integration tests against real ZFS pools, before a merge.
 
 Build as your own user, never as root.
 
@@ -93,7 +93,7 @@ The description states:
 
 List only what you did. A change a user would notice adds a line to `CHANGELOG.md` under "Unreleased".
 
-CI must pass.
+CI must pass. The maintainer merges accepted pull requests into the main repository, which GitHub mirrors, so a merged pull request closes when its commits arrive on `main`.
 
 ## Review
 
