@@ -205,7 +205,7 @@ func (m *Mutator) step(mode Mode, a Argv, stdin []byte) (Result, error) {
 	// As in Read: a verified absolute path and an argv vector, no shell.
 	// No context: see Mutate.
 	cmd := exec.Command(path, a.Args()...) //nolint:gosec,noctx // see above
-	cmd.Env = env
+	cmd.Env = envFor(a.Tool)
 	cmd.Dir = "/"
 	if stdin != nil {
 		cmd.Stdin = bytes.NewReader(stdin)

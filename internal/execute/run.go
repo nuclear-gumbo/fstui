@@ -193,7 +193,7 @@ func (r *Runner) Read(ctx context.Context, a Argv) (Result, error) {
 	// The path was verified by Resolve and the arguments are an argv vector;
 	// no shell is involved.
 	cmd := exec.CommandContext(ctx, path, a.Args()...) //nolint:gosec // see above
-	cmd.Env = env
+	cmd.Env = envFor(a.Tool)
 	cmd.Dir = "/"
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
@@ -246,7 +246,7 @@ func (r *Runner) ReadTo(ctx context.Context, a Argv, consume func(io.Reader) err
 	defer stop()
 	stderr := &limitedBuffer{max: maxReadStderr}
 	cmd := exec.CommandContext(cmdCtx, path, a.Args()...) //nolint:gosec // as in Read
-	cmd.Env = env
+	cmd.Env = envFor(a.Tool)
 	cmd.Dir = "/"
 	cmd.Stderr = stderr
 	cmd.WaitDelay = pipeWaitDelay
@@ -330,7 +330,7 @@ func (r *Runner) Stream(ctx context.Context, a Argv, line func([]byte)) error {
 		return fmt.Errorf("%s: %w", a.Tool, ErrNotResolved)
 	}
 	cmd := exec.CommandContext(ctx, path, a.Args()...) //nolint:gosec // as in Read
-	cmd.Env = env
+	cmd.Env = envFor(a.Tool)
 	cmd.Dir = "/"
 	stderr := &limitedBuffer{max: maxStderr}
 	cmd.Stderr = stderr
