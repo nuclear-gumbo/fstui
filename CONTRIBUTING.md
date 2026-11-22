@@ -61,6 +61,24 @@ Test pool rules:
 - Do not run pool tests in containers. A container shares the host's kernel and pools.
 - No test touches a real block device unless you list its `/dev/disk/by-id` path, one per line, in `testdata/allowed-devices.conf` (ignored by git). `scripts/integration.sh` wipes every listed device before the tests (`wipefs -a` on its partitions and the disk) and refuses to run if one is mounted or in an imported pool. List only a disk whose contents you do not need.
 
+Remote hosts are tested against the test machine itself, over SSH as root. The tests run only when `FSTUI_TEST_SSH_HOST` names an alias in root's `~/.ssh/config` that reaches root on the same machine, and `FSTUI_TEST_SSH_BADKEY` one for the same address whose known host key is wrong (the test expects a refusal). Use a key of its own, accepted only from the loopback address and restricted:
+
+```sh
+# as root, once
+ssh-keygen -t ed25519 -N '' -f ~/.ssh/fstui-test-localhost
+printf 'from="127.0.0.1,::1",restrict %s\n' "$(cat ~/.ssh/fstui-test-localhost.pub)" >> ~/.ssh/authorized_keys
+cat >> ~/.ssh/config <<'END'
+Host fstui-test-localhost
+    HostName 127.0.0.1
+    User root
+    IdentityFile ~/.ssh/fstui-test-localhost
+    IdentitiesOnly yes
+END
+ssh-keyscan -t ed25519 127.0.0.1 >> ~/.ssh/known_hosts   # check the key against /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+Then `sudo FSTUI_TEST_SSH_HOST=fstui-test-localhost FSTUI_TEST_SSH_BADKEY=fstui-test-badkey sh scripts/integration.sh bin/integration.test`; the bad-key alias is the same entry with `UserKnownHostsFile` pointing at a file that holds another key for 127.0.0.1.
+
 Schedules under OpenRC and cron run in throwaway rootless containers (Gentoo with OpenRC, Debian with cron), since a development machine usually has only one of them: `sh scripts/test-schedules-container.sh`, as your own user, with Podman. These tests change the system they run on; never run them outside a container.
 
 ## Measuring memory
