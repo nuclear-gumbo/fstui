@@ -47,7 +47,17 @@ func detectVersion(ctx context.Context, run *execute.Runner, module string) (Ver
 	} else if err != nil {
 		return Version{}, fmt.Errorf("checking for the zfs kernel module: %w", err)
 	}
+	return versionOf(ctx, run)
+}
 
+// DetectVersionOn reads the versions through run, such as a remote
+// host's: the local kernel module says nothing about it, and zfs version
+// itself reports a module that is not loaded there.
+func DetectVersionOn(ctx context.Context, run Commands) (Version, error) {
+	return versionOf(ctx, run)
+}
+
+func versionOf(ctx context.Context, run Commands) (Version, error) {
 	res, jsonErr := run.Read(ctx, execute.Argv{Tool: execute.ZFS, Options: []string{"version", "-j"}})
 	if jsonErr == nil {
 		v, err := ParseVersion(res.Stdout)

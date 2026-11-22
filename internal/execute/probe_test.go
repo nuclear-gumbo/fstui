@@ -155,6 +155,10 @@ func TestUnreachable(t *testing.T) {
 			t.Errorf("not unreachable: %q", msg)
 		}
 	}
+	viaRemote := &CommandError{Argv: Argv{Tool: ZFS}, Host: "pve1", ExitCode: 255, Stderr: termtext.New(sshRecorded[0])}
+	if !errors.Is(error(viaRemote), ErrUnreachable) {
+		t.Error("a command run through Remote is not unreachable")
+	}
 	for name, e := range map[string]*CommandError{
 		// zpool events refuses a user who is not root with status 255.
 		"zpool's 255":     {Argv: ssh, ExitCode: 255, Stderr: termtext.New("cannot get event: permission denied\n")},

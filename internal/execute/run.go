@@ -105,6 +105,11 @@ func (a Argv) Check() error {
 // when they contain spaces or quotes, and the whole is sanitised as
 // untrusted text.
 func (a Argv) String() string {
+	if a.Tool == SSH && len(a.Operands) > 0 {
+		// The remote command is shown by Remote's errors; ssh's own
+		// options would only bury it.
+		return termtext.New("ssh " + a.Operands[0]).Display()
+	}
 	parts := []string{string(a.Tool)}
 	for _, s := range a.Args() {
 		if s == "" || strings.ContainsAny(s, " '\"") {
@@ -151,6 +156,9 @@ type CommandError struct {
 	Argv     Argv
 	ExitCode int
 	Stderr   termtext.Text
+	// Host is the ssh destination the command ran on through Remote;
+	// empty for a local command.
+	Host string
 }
 
 // Is reports a command ssh could not run as ErrUnreachable: ssh exits
@@ -158,13 +166,19 @@ type CommandError struct {
 // events refusing a user who is not root), so the exit status alone does
 // not say which. ssh's own messages do.
 func (e *CommandError) Is(target error) bool {
-	return target == ErrUnreachable && e.Argv.Tool == SSH && e.ExitCode == sshFailure && sshFailed(e.Stderr.Raw())
+	return target == ErrUnreachable && (e.Host != "" || e.Argv.Tool == SSH) && e.ExitCode == sshFailure && sshFailed(e.Stderr.Raw())
 }
 
 func (e *CommandError) Error() string {
 	msg := strings.TrimSpace(e.Stderr.Display())
 	if msg == "" {
 		msg = "no error output"
+	}
+	if e.Host != "" {
+		if errors.Is(e, ErrUnreachable) {
+			return fmt.Sprintf("%s could not be reached: %s", e.Host, msg)
+		}
+		return fmt.Sprintf("%s on %s exited with status %d: %s", e.Argv, e.Host, e.ExitCode, msg)
 	}
 	return fmt.Sprintf("%s exited with status %d: %s", e.Argv, e.ExitCode, msg)
 }
