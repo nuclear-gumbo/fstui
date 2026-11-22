@@ -153,6 +153,14 @@ type CommandError struct {
 	Stderr   termtext.Text
 }
 
+// Is reports a command ssh could not run as ErrUnreachable: ssh exits
+// with 255 for its own errors, but so may the remote command (zpool
+// events refusing a user who is not root), so the exit status alone does
+// not say which. ssh's own messages do.
+func (e *CommandError) Is(target error) bool {
+	return target == ErrUnreachable && e.Argv.Tool == SSH && e.ExitCode == sshFailure && sshFailed(e.Stderr.Raw())
+}
+
 func (e *CommandError) Error() string {
 	msg := strings.TrimSpace(e.Stderr.Display())
 	if msg == "" {

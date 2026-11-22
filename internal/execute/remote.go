@@ -213,3 +213,46 @@ func sshEnvironment(uid int, agent string, home func(int) (string, error)) []str
 	}
 	return out
 }
+
+// sshFailure is the exit status of ssh when ssh itself failed (ssh(1),
+// EXIT STATUS).
+const sshFailure = 255
+
+// sshMessages are how the OpenSSH client reports that it could not run
+// the command, from its source (openssh-portable fa4b2a8): connecting
+// (sshconnect.c), name lookup (ssh.c), host keys (sshconnect.c),
+// authentication (sshconnect2.c), the connection ending (packet.c,
+// clientloop.c) and the shared connection (mux.c). Case matters:
+// "permission denied" from zpool is not "Permission denied (".
+var sshMessages = []string{
+	"ssh: connect to host ",
+	": Could not resolve hostname ",
+	": Could not resolve host \"",
+	"Host key verification failed.",
+	" host key is known for ",
+	"REMOTE HOST IDENTIFICATION HAS CHANGED",
+	": Permission denied (",
+	"kex_exchange_identification: ",
+	"Connection closed by ",
+	"Connection reset by ",
+	" closed by remote host.",
+	"Timeout, server ",
+	"Control socket connect(",
+}
+
+// sshFailed reports whether stderr holds one of ssh's own failures, or
+// a connection that timed out ("Connection to HOST port 22 timed out").
+func sshFailed(stderr string) bool {
+	for l := range strings.Lines(stderr) {
+		l = strings.TrimSpace(l)
+		if strings.HasPrefix(l, "Connection ") && strings.HasSuffix(l, " timed out") {
+			return true
+		}
+		for _, m := range sshMessages {
+			if strings.Contains(l, m) {
+				return true
+			}
+		}
+	}
+	return false
+}
