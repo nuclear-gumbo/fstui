@@ -32,6 +32,27 @@ func Dir() (string, error) {
 	return filepath.Join(state, "fstui"), nil
 }
 
+// rootRuntime is root's runtime directory.
+const rootRuntime = "/run/fstui"
+
+// ErrNoRuntimeDir is returned by RuntimeDir for a user without
+// XDG_RUNTIME_DIR, which systemd-logind and elogind set at login.
+var ErrNoRuntimeDir = errors.New("XDG_RUNTIME_DIR is not set to an absolute path; log in through a session that sets it")
+
+// RuntimeDir is where fstui keeps what lasts only while it runs, such as
+// ssh's connection sockets: /run/fstui for root, $XDG_RUNTIME_DIR/fstui
+// for others. It is not created.
+func RuntimeDir() (string, error) {
+	if os.Geteuid() == 0 {
+		return rootRuntime, nil
+	}
+	run := os.Getenv("XDG_RUNTIME_DIR")
+	if !filepath.IsAbs(run) {
+		return "", ErrNoRuntimeDir
+	}
+	return filepath.Join(run, "fstui"), nil
+}
+
 // Private creates dir (mode 0700) if it is missing and refuses it unless
 // it is a real directory owned by the effective user with no access for
 // anyone else. A directory another user created first, for example under
