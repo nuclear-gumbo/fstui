@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 
 	"github.com/nuclear-gumbo/fstui/internal/schedule"
 )
@@ -37,7 +36,7 @@ func (r *Reader) ScheduleTasks(ctx context.Context, zpool string) ([]schedule.Ta
 	}
 	var others []schedule.Job
 	if r.CronFile != "" {
-		data, err := os.ReadFile(r.CronFile)
+		data, err := r.file(r.CronFile)
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
 		case err != nil:

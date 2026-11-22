@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -201,7 +200,7 @@ func (r *Reader) debianCron(ctx context.Context, pools []Overview) (map[string]S
 	if r.CronFile == "" || len(pools) == 0 {
 		return nil, nil
 	}
-	data, err := os.ReadFile(r.CronFile)
+	data, err := r.file(r.CronFile)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}

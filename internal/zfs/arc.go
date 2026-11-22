@@ -55,6 +55,16 @@ func ReadARCStats() (ARCStats, error) {
 	return ParseARCStats(b)
 }
 
+// ARCStats reads the ARC statistics through the reader's files: the
+// local ones, or a remote host's.
+func (r *Reader) ARCStats() (ARCStats, error) {
+	b, err := r.file(ARCStatsPath)
+	if err != nil {
+		return ARCStats{}, fmt.Errorf("reading ARC statistics: %w", err)
+	}
+	return ParseARCStats(b)
+}
+
 // ParseARCStats parses arcstats (ParseKstat). Types 3 and 4 are signed
 // and unsigned 64-bit integers; nothing else is used.
 func ParseARCStats(b []byte) (ARCStats, error) {
