@@ -31,6 +31,7 @@ var Sections = []Section{
 	{"Notifications", "Repeats, how often the service checks, retries", []string{"notifications."}},
 	{"Schedules", "When scheduled checks, scrubs and trims run", []string{"schedules."}},
 	{"Tune", "How long the Tune tab measures, and its margins", []string{"tune."}},
+	{"Remote hosts", "How fstui connects to other hosts over SSH", []string{"remote."}},
 }
 
 // PlaceIn is where a setting comes within its section: the index of the
@@ -61,15 +62,18 @@ func SectionOf(path string) int {
 // labels are what the Config view calls each setting: a name a person
 // would use, with its unit. The path is shown beside the selected one.
 var labels = map[string]string{
-	"theme":             "Colour theme",
-	"units":             "Size units",
-	"ascii":             "Plain characters only",
-	"mouse":             "Mouse",
-	"natural_scrolling": "Natural scrolling",
-	"ui.start_view":     "Open on view",
-	"ui.cursor_blink":   "Blinking cursor",
-	"ui.split_from":     "Side-by-side detail from width",
-	"ui.text_width":     "Text wraps at width",
+	"theme":                  "Colour theme",
+	"units":                  "Size units",
+	"ascii":                  "Plain characters only",
+	"mouse":                  "Mouse",
+	"natural_scrolling":      "Natural scrolling",
+	"ui.start_view":          "Open on view",
+	"ui.cursor_blink":        "Blinking cursor",
+	"ui.split_from":          "Side-by-side detail from width",
+	"ui.text_width":          "Text wraps at width",
+	"remote.connect_timeout": "Connect timeout",
+	"remote.alive_interval":  "Check a quiet connection every",
+	"remote.persist":         "Keep an unused connection for",
 
 	"thresholds.capacity_warn":      "Capacity warning at (%)",
 	"thresholds.capacity_error":     "Capacity full at (%)",

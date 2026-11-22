@@ -64,6 +64,9 @@ var registry = []Spec{
 	durationSpec("charts.io_keep", "I/O history kept per pool and device; at least io_window", time.Minute, 6*time.Hour, func(c *Config) *time.Duration { return &c.Charts.IOKeep }),
 
 	restart(durationSpec("limits.read_timeout", "Longest a zfs or zpool read may take", 5*time.Second, 10*time.Minute, func(c *Config) *time.Duration { return &c.Limits.ReadTimeout })),
+	durationSpec("remote.connect_timeout", "Longest ssh may take to connect to a host and agree on keys", time.Second, 5*time.Minute, func(c *Config) *time.Duration { return &c.Remote.ConnectTimeout }),
+	durationSpec("remote.alive_interval", "How often ssh checks a quiet connection; it gives up after three checks go unanswered", 5*time.Second, 10*time.Minute, func(c *Config) *time.Duration { return &c.Remote.AliveInterval }),
+	durationSpec("remote.persist", "How long a connection to a host stays open after nothing uses it", time.Second, time.Hour, func(c *Config) *time.Duration { return &c.Remote.Persist }),
 	durationSpec("limits.list_timeout", "Longest a listing of datasets or snapshots may take", 30*time.Second, 2*time.Hour, func(c *Config) *time.Duration { return &c.Limits.ListTimeout }),
 	intSpec("limits.slow_read_factor", "After a read of d seconds, wait at least this many times d before the next", 1, 20, func(c *Config) *int { return &c.Limits.SlowReadFactor }),
 	restart(intSpec("limits.history_entries", "Pool history entries kept, of user commands and of internal events each", 100, 1000000, func(c *Config) *int { return &c.Limits.HistoryEntries })),
@@ -156,6 +159,7 @@ var custom = map[string]setter{
 	"notifications.channels":  setChannels,
 	"notifications.templates": setTemplates,
 	"notifications.alerts":    setAlerts,
+	"hosts":                   setHosts,
 }
 
 var specByPath = func() map[string]Spec {

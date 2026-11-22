@@ -109,6 +109,10 @@ type Config struct {
 	UI               UI
 	Tune             Tune
 	Schedules        Schedules
+	// Hosts are the other machines fstui can read over SSH; Remote is
+	// how it connects to them.
+	Hosts  []Host
+	Remote Remote
 	// Keys rebinds actions: action name to the keys that trigger it.
 	// internal/ui/keys checks the action names.
 	Keys map[string][]string
@@ -168,6 +172,7 @@ func Default() Config {
 		UI:            UI{StartView: "pools", CursorBlink: true, SplitFrom: 120, TextWidth: 110},
 		Tune:          defaultTune(),
 		Schedules:     defaultSchedules(),
+		Remote:        defaultRemote(),
 		Events:        Events{Retention: defaultRetention},
 		Notifications: defaultNotifications(),
 		Dashboard:     defaultDashboard(),

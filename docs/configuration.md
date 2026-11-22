@@ -144,6 +144,19 @@ Durations are written like `30s`, `5m`, `24h`. Keys, colours, event filters, das
 | Setting | Default | Accepts | Meaning |
 |---|---|---|---|
 | `limits.read_timeout` | `30s` | 5s to 10m | Longest a zfs or zpool read may take; applies after a restart |
+
+#### `remote:`
+
+| Setting | Default | Accepts | Meaning |
+|---|---|---|---|
+| `remote.connect_timeout` | `10s` | 1s to 5m | Longest ssh may take to connect to a host and agree on keys |
+| `remote.alive_interval` | `15s` | 5s to 10m | How often ssh checks a quiet connection; it gives up after three checks go unanswered |
+| `remote.persist` | `1m` | 1s to 1h | How long a connection to a host stays open after nothing uses it |
+
+#### `limits:`
+
+| Setting | Default | Accepts | Meaning |
+|---|---|---|---|
 | `limits.list_timeout` | `10m` | 30s to 2h | Longest a listing of datasets or snapshots may take |
 | `limits.slow_read_factor` | `4` | 1 to 20 | After a read of d seconds, wait at least this many times d before the next |
 | `limits.history_entries` | `10000` | 100 to 1000000 | Pool history entries kept, of user commands and of internal events each; applies after a restart |

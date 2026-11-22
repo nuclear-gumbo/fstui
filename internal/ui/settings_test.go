@@ -5,6 +5,7 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -224,7 +225,7 @@ func TestSettingsLayout(t *testing.T) {
 func TestSettingsScroll(t *testing.T) {
 	s, _ := newSettings(t, "")
 	m := newModel(colorprofile.ASCII, configOf(s))
-	s.open(len(config.Sections) - 1) // Tune, the longest
+	s.open(slices.IndexFunc(config.Sections, func(g config.Section) bool { return g.Title == "Tune" })) // the longest
 	n := len(s.items())
 	for i := range n {
 		out := ansi.Strip(s.Render(m.display, 100, 16))

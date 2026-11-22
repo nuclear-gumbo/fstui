@@ -300,6 +300,31 @@
       },
       "type": "object"
     },
+    "hosts": {
+      "description": "Other machines fstui reads over SSH, by name. A list in a later file replaces this one.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "destination": {
+            "pattern": "^[A-Za-z0-9._:][A-Za-z0-9._:-]*(@[A-Za-z0-9._:-]+)?$",
+            "type": "string"
+          },
+          "name": {
+            "not": {
+              "const": "local"
+            },
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "destination"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
     "keys": {
       "additionalProperties": {
         "oneOf": [
@@ -768,6 +793,30 @@
           "maximum": 3600,
           "minimum": 1,
           "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "remote": {
+      "additionalProperties": false,
+      "properties": {
+        "alive_interval": {
+          "default": "15s",
+          "description": "How often ssh checks a quiet connection; it gives up after three checks go unanswered, 5s to 10m.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "connect_timeout": {
+          "default": "10s",
+          "description": "Longest ssh may take to connect to a host and agree on keys, 1s to 5m.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
+        },
+        "persist": {
+          "default": "1m",
+          "description": "How long a connection to a host stays open after nothing uses it, 1s to 1h.",
+          "pattern": "^(0|([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+)$",
+          "type": "string"
         }
       },
       "type": "object"

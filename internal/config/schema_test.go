@@ -108,6 +108,17 @@ func schema() obj {
 		"type":        "array", "items": obj{"enum": DashboardPanels},
 	}
 	str := obj{"type": "string"}
+	root["properties"].(obj)["hosts"] = obj{ //nolint:forcetypeassert // built here
+		"description": "Other machines fstui reads over SSH, by name. A list in a later file replaces this one.",
+		"type":        "array",
+		"items": obj{
+			"type": "object", "additionalProperties": false, "required": []string{"name", "destination"},
+			"properties": obj{
+				"name":        obj{"type": "string", "pattern": hostLabel.String(), "not": obj{"const": LocalHost}},
+				"destination": obj{"type": "string", "pattern": "^[A-Za-z0-9._:][A-Za-z0-9._:-]*(@[A-Za-z0-9._:-]+)?$"},
+			},
+		},
+	}
 	section("notifications")["channels"] = obj{
 		"description": "Where fstui check and watch send. Secrets go in secrets.yaml. A list in a later file replaces this one.",
 		"type":        "array",
@@ -242,6 +253,10 @@ notifications:
     - {template: tight}
 schedules: {check_every: 15m, cron_time: "03:00"}
 tune: {ghost_share: 0.25}
+remote: {connect_timeout: 5s}
+hosts:
+  - {name: pve1, destination: root@pve1.example.org}
+  - {name: nas, destination: nas}
 `
 	if _, problems := Parse("good.yaml", []byte(good)); len(problems) > 0 {
 		t.Fatalf("fstui refuses the good file: %v", problems)
@@ -262,6 +277,9 @@ tune: {ghost_share: 0.25}
 		"colors: {accent: blue}\n",
 		"dashboard: {panels: [clock]}\n",
 		"refresh: {pools: 1}\n",
+		"hosts: [{name: x, destination: \"-oProxyCommand=sh\"}]\n",
+		"hosts: [{name: X, destination: x}]\n",
+		"hosts: [{name: x, destination: x, port: 22}]\n",
 	} {
 		_, problems := Parse("bad.yaml", []byte(bad))
 		errs := validate(schema(), yamlValue(t, bad), "")
