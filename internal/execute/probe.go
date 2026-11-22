@@ -35,8 +35,9 @@ var (
 )
 
 // probeTools are what the probe looks for, in the system directories
-// searched locally.
-var probeTools = []Tool{RemoteEnv, ZFS, Zpool}
+// searched locally. Only env, zfs and zpool are required (Require);
+// without systemctl a host has no systemd, as locally.
+var probeTools = []Tool{RemoteEnv, ZFS, Zpool, Cat, Ls, Systemctl}
 
 // quoteTest holds every character a shell treats specially in a word,
 // and a newline; shellQuote quotes it, and the shell must print it back.

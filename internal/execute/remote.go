@@ -49,7 +49,9 @@ var (
 	ErrDestination = errors.New("is not a host name, an address or an ssh alias")
 	// ErrRemoteTool is returned for a tool the probe did not find and
 	// check on the host.
-	ErrRemoteTool = errors.New("was not checked on this host")
+	// It wraps ErrNotResolved: to a reader, a tool missing on the host
+	// is the same as one missing locally.
+	ErrRemoteTool = fmt.Errorf("was not checked on this host: %w", ErrNotResolved)
 	// ErrControlDir is returned for a directory ssh could not use as
 	// written in a ControlPath option.
 	ErrControlDir = errors.New("cannot hold ssh's connection sockets")
