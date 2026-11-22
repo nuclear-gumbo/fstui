@@ -23,6 +23,7 @@ internal/
   notify/             notification senders; the only package that opens network connections
   schedule/           scrubs, trims, check and watch under systemd, cron or OpenRC
   tune/               tune mode's questions, from measured windows
+  pve/                Proxmox VE: a cluster's nodes and its ZFS storage, from /etc/pve
   disks/              block devices offered for a new pool
   statedir/           where fstui keeps state between runs, and its instance lock
   format/             sizes and durations as fstui writes them
@@ -35,6 +36,7 @@ internal/
   demo/               the demo backend: recorded zfs and zpool output
   testpool/           test pools on sparse files, for integration tests only
 testdata/zfs/2.3.9/   real command output the parsers and the demo are tested against
+testdata/pve/9.2/     a Proxmox VE cluster's files, names and addresses replaced
 ```
 
 Two rules hold the structure together, and the linters enforce both: only `internal/execute` imports `os/exec`, and only `internal/notify` imports `net/http`, `net/smtp` and `crypto/tls`.
