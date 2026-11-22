@@ -38,6 +38,9 @@ audit log. --dry-run plans and records changes without running them.
 
 type writeFlags struct{ write, dryRun *bool }
 
+// wantsChanges reports --write or --dry-run.
+func wantsChanges(wf *writeFlags) bool { return *wf.write || *wf.dryRun }
+
 func addWriteFlags(fs *pflag.FlagSet) *writeFlags {
 	return &writeFlags{
 		write:  fs.Bool("write", false, "start in write mode (W switches inside fstui)"),

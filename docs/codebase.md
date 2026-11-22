@@ -7,7 +7,7 @@ How fstui is put together, for contributors. Each package's doc comment says wha
 ```
 cmd/fstui/            program start: flags, fstui check and fstui watch, wiring of the modules
 internal/
-  execute/            the only package that starts processes: tool paths, argv, timeouts, mutations
+  execute/            the only package that starts processes: tool paths, argv, timeouts, mutations, ssh to other hosts
   termtext/           text from outside fstui, made safe to draw
   config/             YAML settings: defaults, files, drop-ins, the settings registry, themes, secrets
   storage/            backend-neutral types the generic views use
@@ -47,6 +47,7 @@ Every backend and optional module can be left out (`make check` builds each comb
 |---|---|---|
 | `fstui_nowrite` | everything that changes storage or system files | `*_write.go`, `module_write.go`; the stand-ins are `*_nowrite.go` |
 | `fstui_nozfs` | the ZFS backend | `module_zfs*.go`; `module_nozfs.go` |
+| `fstui_noremote` | other hosts over SSH (`--host`, `hosts:`) | `module_remote.go`; `module_noremote.go` |
 | `fstui_demo` | the real backend, for the demo backend | `module_demo*.go` |
 
 Test-only tags: `fstui_integration` (pool tests, run as root by `scripts/integration.sh`), `fstui_container` (schedule tests for `scripts/test-schedules-container.sh`, never outside a container), `fstui_profile` (`bin/fstui-profile`).

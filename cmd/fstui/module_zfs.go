@@ -68,34 +68,50 @@ func zfsScreens(cfg config.Config) (opened, error) {
 	if err != nil {
 		return opened{}, err
 	}
-	settings := &cfg // one copy the views share and update when the Config view saves
-	pools := zfsview.NewPools(newReader(run, cfg), zfsview.PoolsOptions{
-		Interval: cfg.Refresh.Pools, DatasetInterval: cfg.Refresh.Datasets, Thresholds: cfg.Thresholds, Superuser: cfg.Superuser,
-		Version: v, Root: os.Geteuid() == 0, Now: time.Now, Settings: settings,
-	})
 	reader := newReader(run, cfg)
+	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: os.Geteuid() == 0, arc: zfs.ReadARCStats})
+	o.write = zfsWrite(reader, tools)
+	o.scheduleTasks = func(ctx context.Context) ([]schedule.Task, []schedule.Job, error) {
+		zpool, _ := tools.Path(execute.Zpool)
+		return reader.ScheduleTasks(ctx, zpool)
+	}
+	o.notifyInfo = func() []string { return []string{check.DetectZED("/proc", check.ZEDConfig).Describe()} }
+	return o, nil
+}
+
+// zfsSource is what the ZFS views read: the local machine's tools and
+// files, or a remote host's.
+type zfsSource struct {
+	reader  *zfs.Reader
+	version zfs.Version
+	root    bool // fstui is root where the pools are
+	arc     func() (zfs.ARCStats, error)
+}
+
+// zfsViews are the ZFS views over src, the dashboard first in the view
+// bar, and the pool names the Alerts tab offers.
+func zfsViews(cfg config.Config, src zfsSource) opened {
+	settings := &cfg // one copy the views share and update when the Config view saves
+	reader := src.reader
+	pools := zfsview.NewPools(reader, zfsview.PoolsOptions{
+		Interval: cfg.Refresh.Pools, DatasetInterval: cfg.Refresh.Datasets, Thresholds: cfg.Thresholds, Superuser: cfg.Superuser,
+		Version: src.version, Root: src.root, Now: time.Now, Settings: settings,
+	})
 	datasets := zfsview.NewDatasets(reader, zfsview.DatasetsOptions{Interval: cfg.Refresh.Datasets, Now: time.Now, Settings: settings})
 	snapshots := zfsview.NewSnapshots(reader, settings, time.Now)
 	volumes := zfsview.NewVolumes(reader, settings, time.Now)
-	arc := zfsview.NewARC(zfs.ReadARCStats, settings, time.Now)
+	arc := zfsview.NewARC(src.arc, settings, time.Now)
 	io := zfsview.NewIO(reader, settings, time.Now)
 	evs := zfsview.NewEvents(reader, zfsview.EventsOptions{
-		Root: os.Geteuid() == 0, Retention: cfg.Events.Retention, Filters: cfg.Events.Filters, Now: time.Now, Settings: settings,
+		Root: src.root, Retention: cfg.Events.Retention, Filters: cfg.Events.Filters, Now: time.Now, Settings: settings,
 	})
 	dash := zfsview.NewDashboard(pools, evs, io, arc, zfsview.DashboardOptions{
 		Now: time.Now, Settings: settings,
 	})
-	// The dashboard comes first in the view bar.
 	return opened{
-		screens: []ui.Screen{dash, pools, datasets, snapshots, volumes, arc, io, evs},
-		write:   zfsWrite(reader, tools),
-		scheduleTasks: func(ctx context.Context) ([]schedule.Task, []schedule.Job, error) {
-			zpool, _ := tools.Path(execute.Zpool)
-			return reader.ScheduleTasks(ctx, zpool)
-		},
-		notifyInfo: func() []string { return []string{check.DetectZED("/proc", check.ZEDConfig).Describe()} },
-		poolNames:  poolNames(reader, cfg.Limits.ReadTimeout),
-	}, nil
+		screens:   []ui.Screen{dash, pools, datasets, snapshots, volumes, arc, io, evs},
+		poolNames: poolNames(reader, cfg.Limits.ReadTimeout),
+	}
 }
 
 // checkSource opens the ZFS backend for fstui check: its problems, by the
@@ -115,7 +131,7 @@ func checkSource(cfg config.Config) (check.Source, error) {
 }
 
 // newReader is a ZFS reader with the limits in cfg.
-func newReader(run *execute.Runner, cfg config.Config) *zfs.Reader {
+func newReader(run zfs.Commands, cfg config.Config) *zfs.Reader {
 	r := zfs.NewReader(run)
 	r.HistoryKeep, r.DiffMax, r.HistoryTimeout = cfg.Limits.HistoryEntries, cfg.Limits.DiffEntries, cfg.Limits.HistoryTimeout
 	return r

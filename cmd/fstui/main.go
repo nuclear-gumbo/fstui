@@ -67,6 +67,7 @@ func modules() *registry.Registry {
 	r := new(registry.Registry)
 	registerZFS(r)
 	registerWrite(r)
+	registerRemote(r)
 	return r
 }
 
@@ -126,6 +127,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	listThemes := fs.Bool("list-themes", false, "list the themes fstui can use, then exit")
 	superuser := fs.Bool("superuser", false, "hide advisory warnings, never confirmations (also superuser: true in config.yaml)")
 	dashboard := fs.Bool("dashboard", false, "start on the dashboard (view 0), for a screen left on all day")
+	host := addRemoteFlags(fs)
 	wf := addWriteFlags(fs)
 	fs.BoolP("help", "h", false, "print this help, then exit")
 	fs.Usage = func() {}
@@ -157,7 +159,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if !term.IsTerminal(os.Stdout.Fd()) || !term.IsTerminal(os.Stdin.Fd()) {
 		return report(stderr, exitUsage, "fstui is interactive and needs a terminal; fstui --version works without one.\n")
 	}
-	return start(stderr, *superuser, *dashboard, wf)
+	return start(stderr, *superuser, *dashboard, *host, wf)
 }
 
 // optionList formats the options as GNU tools do. pflag's own list marks
@@ -175,7 +177,7 @@ func optionList(fs *pflag.FlagSet) string {
 }
 
 // start loads the config, opens every compiled-in backend and runs the UI.
-func start(stderr io.Writer, superuserFlag, dashboard bool, wf *writeFlags) int {
+func start(stderr io.Writer, superuserFlag, dashboard bool, hostName string, wf *writeFlags) int {
 	var notices []string
 	user, err := config.UserFile()
 	if err != nil {
@@ -197,9 +199,12 @@ func start(stderr io.Writer, superuserFlag, dashboard bool, wf *writeFlags) int 
 		notices = append(notices, p.String())
 	}
 
-	backends, err := zfsScreens(cfg)
+	notices = append(notices, hostNotices(cfg, hostName, wf)...)
+	backends, host, priv, err := openBackends(cfg, hostName)
 	if err != nil {
-		return report(stderr, exitFailed, "fstui: %v\n", err)
+		// What the status bar would have said may be the reason, such as
+		// a config file ignored because others can write it.
+		return report(stderr, exitFailed, "fstui: %v\n%s", err, noticeLines(notices))
 	}
 	if backends.cleanup != nil {
 		defer backends.cleanup()
@@ -221,8 +226,7 @@ func start(stderr io.Writer, superuserFlag, dashboard bool, wf *writeFlags) int 
 	alerts := ui.NewAlerts(user, cfg, backends.poolNames)
 	screens := append(append(backends.screens, writeScreens...), ui.NewConfig(general, notifications, alerts, schedules))
 
-	host, _ := os.Hostname() // empty is shown as empty; nothing depends on it
-	session := ui.Session{Host: termtext.New(host), Privilege: privilege(), Label: buildLabel, Mode: mode, Superuser: cfg.Superuser, Notices: notices}
+	session := ui.Session{Host: termtext.New(host), Privilege: priv, Label: buildLabel, Mode: mode, Superuser: cfg.Superuser, Notices: notices}
 	profile := colorProfile()
 	m := ui.New(session, screens, ui.Options{
 		Theme: th, Profile: profile, Overrides: cfg.Colors, Exact: cfg.Units == config.Exact,
@@ -233,6 +237,39 @@ func start(stderr io.Writer, superuserFlag, dashboard bool, wf *writeFlags) int 
 		return report(stderr, exitFailed, "fstui: %v\n", err)
 	}
 	return 0
+}
+
+// noticeLines lists notices, one per line, for stderr.
+func noticeLines(notices []string) string {
+	var b strings.Builder
+	for _, n := range notices {
+		b.WriteString("fstui: " + n + "\n")
+	}
+	return b.String()
+}
+
+// hostNotices are what the status bar says about hosts at the start.
+func hostNotices(cfg config.Config, hostName string, wf *writeFlags) []string {
+	var out []string
+	if n := hostsNotice(cfg); n != "" {
+		out = append(out, n)
+	}
+	if hostName != "" && wantsChanges(wf) {
+		out = append(out, "Started read-only: changes on other hosts come in a later release")
+	}
+	return out
+}
+
+// openBackends opens this machine's backends, or the host named
+// hostName, with the status bar's host and privilege fields.
+func openBackends(cfg config.Config, hostName string) (opened, string, string, error) {
+	if hostName != "" {
+		h, err := openHost(cfg, hostName)
+		return h.opened, h.name, h.privilege, err
+	}
+	host, _ := os.Hostname() // empty is shown as empty; nothing depends on it
+	o, err := zfsScreens(cfg)
+	return o, host, privilege(), err
 }
 
 // printThemes lists shipped themes and theme files in the theme

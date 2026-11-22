@@ -40,8 +40,10 @@ expect() {
 	esac
 }
 
-expect "" "zfs, write" 2 "needs a terminal"
-expect "fstui_nowrite" "zfs" 2 "needs a terminal"
+expect "" "zfs, write, remote" 2 "needs a terminal"
+expect "fstui_noremote" "zfs, write" 2 "needs a terminal"
+expect "fstui_nowrite" "zfs, remote" 2 "needs a terminal"
+expect "fstui_nowrite fstui_noremote" "zfs" 2 "needs a terminal"
 expect "fstui_nozfs" "write" 2 "includes no storage backends"
 expect "fstui_nozfs fstui_nowrite" "none" 2 "includes no storage backends"
 expect "fstui_demo" "demo, write" 2 "needs a terminal"

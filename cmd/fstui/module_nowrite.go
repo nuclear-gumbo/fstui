@@ -25,6 +25,9 @@ func addWriteFlags(*pflag.FlagSet) *writeFlags { return &writeFlags{} }
 
 func checkWriteFlags(*writeFlags) error { return nil }
 
+// wantsChanges: this build has no --write or --dry-run.
+func wantsChanges(*writeFlags) bool { return false }
+
 type writeHooks struct{}
 
 func startWrite(*writeFlags, writeHooks, int) (ui.Actions, []ui.Screen, string, func(), []string) {
