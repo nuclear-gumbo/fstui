@@ -46,8 +46,9 @@ expect "fstui_nowrite" "zfs, remote" 2 "needs a terminal"
 expect "fstui_nowrite fstui_noremote" "zfs" 2 "needs a terminal"
 expect "fstui_nozfs" "write" 2 "includes no storage backends"
 expect "fstui_nozfs fstui_nowrite" "none" 2 "includes no storage backends"
-expect "fstui_demo" "demo, write" 2 "needs a terminal"
-expect "fstui_demo fstui_nowrite" "demo" 2 "needs a terminal"
+expect "fstui_demo" "demo, write, remote" 2 "needs a terminal"
+expect "fstui_demo fstui_noremote" "demo, write" 2 "needs a terminal"
+expect "fstui_demo fstui_nowrite" "demo, remote" 2 "needs a terminal"
 
 # Without the write module the binary contains no code that changes
 # storage: none of these packages may be linked in. The demo

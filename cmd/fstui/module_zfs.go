@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/nuclear-gumbo/fstui/internal/notify"
 
@@ -22,8 +21,6 @@ import (
 	"github.com/nuclear-gumbo/fstui/internal/execute"
 	"github.com/nuclear-gumbo/fstui/internal/registry"
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
-	"github.com/nuclear-gumbo/fstui/internal/ui"
-	"github.com/nuclear-gumbo/fstui/internal/ui/zfsview"
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
 )
 
@@ -77,41 +74,6 @@ func zfsScreens(cfg config.Config) (opened, error) {
 	}
 	o.notifyInfo = func() []string { return []string{check.DetectZED("/proc", check.ZEDConfig).Describe()} }
 	return o, nil
-}
-
-// zfsSource is what the ZFS views read: the local machine's tools and
-// files, or a remote host's.
-type zfsSource struct {
-	reader  *zfs.Reader
-	version zfs.Version
-	root    bool // fstui is root where the pools are
-	arc     func() (zfs.ARCStats, error)
-}
-
-// zfsViews are the ZFS views over src, the dashboard first in the view
-// bar, and the pool names the Alerts tab offers.
-func zfsViews(cfg config.Config, src zfsSource) opened {
-	settings := &cfg // one copy the views share and update when the Config view saves
-	reader := src.reader
-	pools := zfsview.NewPools(reader, zfsview.PoolsOptions{
-		Interval: cfg.Refresh.Pools, DatasetInterval: cfg.Refresh.Datasets, Thresholds: cfg.Thresholds, Superuser: cfg.Superuser,
-		Version: src.version, Root: src.root, Now: time.Now, Settings: settings,
-	})
-	datasets := zfsview.NewDatasets(reader, zfsview.DatasetsOptions{Interval: cfg.Refresh.Datasets, Now: time.Now, Settings: settings})
-	snapshots := zfsview.NewSnapshots(reader, settings, time.Now)
-	volumes := zfsview.NewVolumes(reader, settings, time.Now)
-	arc := zfsview.NewARC(src.arc, settings, time.Now)
-	io := zfsview.NewIO(reader, settings, time.Now)
-	evs := zfsview.NewEvents(reader, zfsview.EventsOptions{
-		Root: src.root, Retention: cfg.Events.Retention, Filters: cfg.Events.Filters, Now: time.Now, Settings: settings,
-	})
-	dash := zfsview.NewDashboard(pools, evs, io, arc, zfsview.DashboardOptions{
-		Now: time.Now, Settings: settings,
-	})
-	return opened{
-		screens:   []ui.Screen{dash, pools, datasets, snapshots, volumes, arc, io, evs},
-		poolNames: poolNames(reader, cfg.Limits.ReadTimeout),
-	}
 }
 
 // checkSource opens the ZFS backend for fstui check: its problems, by the

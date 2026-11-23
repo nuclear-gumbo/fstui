@@ -7,10 +7,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -21,7 +19,6 @@ import (
 	"github.com/nuclear-gumbo/fstui/internal/config"
 	"github.com/nuclear-gumbo/fstui/internal/events"
 	"github.com/nuclear-gumbo/fstui/internal/execute"
-	"github.com/nuclear-gumbo/fstui/internal/format"
 	"github.com/nuclear-gumbo/fstui/internal/problem"
 	"github.com/nuclear-gumbo/fstui/internal/pve"
 	"github.com/nuclear-gumbo/fstui/internal/registry"
@@ -229,25 +226,6 @@ func hostStatus(ctx context.Context, cfg config.Config, e ui.HostEntry, current 
 		user = u + "@"
 	}
 	return summary, nodes(m, cfg, user, current, false)
-}
-
-// poolSummary is "3 pools", with how many are not ONLINE by state.
-func poolSummary(ctx context.Context, r *zfs.Reader) string {
-	os, err := r.Overviews(ctx)
-	if err != nil {
-		return "pools not read: " + err.Error()
-	}
-	states := map[string]int{}
-	for _, o := range os {
-		if o.Status.State != "ONLINE" {
-			states[o.Status.State]++
-		}
-	}
-	parts := []string{fmt.Sprintf("%d %s", len(os), format.Plural(len(os), "pool", "pools"))}
-	for _, s := range slices.Sorted(maps.Keys(states)) {
-		parts = append(parts, fmt.Sprintf("%d %s", states[s], termtext.New(s).Display()))
-	}
-	return strings.Join(parts, ", ")
 }
 
 // sshDir is the private directory of ssh's connection sockets.

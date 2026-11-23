@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/nuclear-gumbo/fstui/internal/notify"
 	"github.com/nuclear-gumbo/fstui/internal/zfs/health"
@@ -22,8 +21,6 @@ import (
 	"github.com/nuclear-gumbo/fstui/internal/config"
 	"github.com/nuclear-gumbo/fstui/internal/demo"
 	"github.com/nuclear-gumbo/fstui/internal/registry"
-	"github.com/nuclear-gumbo/fstui/internal/ui"
-	"github.com/nuclear-gumbo/fstui/internal/ui/zfsview"
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
 )
 
@@ -66,39 +63,19 @@ func zfsScreens(cfg config.Config) (opened, error) {
 	host := schedule.Detect(sched.Root)
 	cmds.UseSchedules(sched)
 	reader := zfs.NewReader(cmds)
-	reader.CronFile = ""            // the host's cron file is not part of the demo
-	reader.ReadFile = cmds.ReadFile // nor its module parameters or modprobe.d
-	reader.ReadDir = cmds.ReadDir   // nor its kstat directories
-	settings := &cfg                // one copy the views share and update when the Config view saves
-	pools := zfsview.NewPools(reader, zfsview.PoolsOptions{
-		Interval: cfg.Refresh.Pools, DatasetInterval: cfg.Refresh.Datasets, Thresholds: cfg.Thresholds, Superuser: cfg.Superuser,
-		Version: v, Root: true, Now: time.Now, Settings: settings, // the recordings include pool history
-	})
-	arcView := zfsview.NewARC(arc.Read, settings, time.Now)
-	io := zfsview.NewIO(reader, settings, time.Now)
-	evs := zfsview.NewEvents(reader, zfsview.EventsOptions{
-		Root: true, Retention: cfg.Events.Retention, Filters: cfg.Events.Filters, Now: time.Now, Settings: settings,
-	})
-	dash := zfsview.NewDashboard(pools, evs, io, arcView, zfsview.DashboardOptions{
-		Now: time.Now, Settings: settings,
-	})
-	return opened{
-		screens: []ui.Screen{
-			dash, pools,
-			zfsview.NewDatasets(reader, zfsview.DatasetsOptions{Interval: cfg.Refresh.Datasets, Now: time.Now, Settings: settings}),
-			zfsview.NewSnapshots(reader, settings, time.Now),
-			zfsview.NewVolumes(reader, settings, time.Now),
-			arcView, io, evs,
-		}, write: demoWrite(cmds, reader, sched), scheduleHost: &host, scheduleRun: sched,
-		scheduleTasks: func(ctx context.Context) ([]schedule.Task, []schedule.Job, error) {
-			return reader.ScheduleTasks(ctx, "/usr/sbin/zpool")
-		},
-		poolNames: poolNames(reader, cfg.Limits.ReadTimeout),
-		cleanup:   func() { _ = sched.Close() }, // a temporary directory; nothing to report at exit
-		notifyTest: func(context.Context, config.Notifications, config.Channel, config.Secrets, string) error {
-			return errors.New("the demo sends no notifications")
-		},
-	}, nil
+	reader.CronFile = ""                                                                 // the host's cron file is not part of the demo
+	reader.ReadFile = cmds.ReadFile                                                      // nor its module parameters or modprobe.d
+	reader.ReadDir = cmds.ReadDir                                                        // nor its kstat directories
+	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: true, arc: arc.Read}) // the recordings include pool history
+	o.write, o.scheduleHost, o.scheduleRun = demoWrite(cmds, reader, sched), &host, sched
+	o.scheduleTasks = func(ctx context.Context) ([]schedule.Task, []schedule.Job, error) {
+		return reader.ScheduleTasks(ctx, "/usr/sbin/zpool")
+	}
+	o.cleanup = func() { _ = sched.Close() } // a temporary directory; nothing to report at exit
+	o.notifyTest = func(context.Context, config.Notifications, config.Channel, config.Secrets, string) error {
+		return errors.New("the demo sends no notifications")
+	}
+	return o, nil
 }
 
 // checkSource is fstui check on the demo's pools: the same problems and

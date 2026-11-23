@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//go:build fstui_noremote || fstui_nozfs || fstui_demo
+//go:build fstui_noremote || (fstui_nozfs && !fstui_demo)
 
 package main
 
@@ -15,8 +15,8 @@ import (
 	"github.com/nuclear-gumbo/fstui/internal/ui"
 )
 
-// registerRemote is empty in builds that leave out remote hosts (and,
-// for now, in the demo, which gets its own hosts in a later change).
+// registerRemote is empty in builds that leave out remote hosts, or the
+// ZFS backend they read.
 func registerRemote(*registry.Registry) {}
 
 // addRemoteFlags adds no --host.
