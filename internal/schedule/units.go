@@ -7,21 +7,33 @@ package schedule
 import "strings"
 
 // hardening confines fstui check and watch to what they need: they read
-// pools and send messages, and write only their state directory.
+// pools and send messages, and write only their state directory and
+// their runtime directory, which holds ssh's sockets for other hosts
+// (ProtectSystem=strict leaves /run read-only too). Both units share
+// it, so it is kept when one of them stops.
 const hardening = `NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=read-only
 PrivateTmp=yes
 StateDirectory=fstui
 StateDirectoryMode=0700
+RuntimeDirectory=fstui
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
 `
+
+// network orders a unit after the network is up: they send messages
+// and read other hosts, and at boot a check before the network would
+// report hosts as down (systemd.special(7), network-online.target).
+const network = `Wants=network-online.target
+After=local-fs.target network-online.target`
 
 // checkUnits are fstui-check.service and fstui-check.timer.
 func checkUnits(binary, every string) (service, timer string) {
 	service = `# Written by fstui: change it in the Schedules tab of the Config view.
 [Unit]
 Description=fstui check: look at every pool and send notifications
-After=local-fs.target
+` + network + `
 
 [Service]
 Type=oneshot
@@ -46,7 +58,7 @@ func watchUnit(binary string) string {
 	return `# Written by fstui: change it in the Schedules tab of the Config view.
 [Unit]
 Description=fstui watch: notifications as pools change
-After=local-fs.target
+` + network + `
 
 [Service]
 ExecStart=` + systemdQuote(binary) + ` watch

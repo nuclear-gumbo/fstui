@@ -22,7 +22,12 @@ All notable changes to fstui are listed here. The format follows [Keep a Changel
 
 ### Fixed
 
+- The `fstui check` and `fstui watch` units written by the Schedules tab now start after the network is up (`network-online.target`), so a check at boot no longer reports hosts or channels as unreachable before the network is there.
 - When fstui could not start because of its configuration, the reason could be a file it had ignored (for example one others can write), which it did not say. It now lists such files with the error.
+
+### Upgrading
+
+- To check other hosts from the `fstui-watch` or `fstui-check` service that 0.8 set up on systemd, turn it off and on again in the Schedules tab: the new unit gives ssh a directory for its connections (`RuntimeDirectory=fstui`), which the 0.8 unit's sandbox does not allow. Without other hosts, nothing needs to change.
 
 ## [0.8.6] - 2026-11-20
 
