@@ -36,7 +36,7 @@ type remoteHost struct {
 }
 
 // openHost opens a node of the demo cluster, read-only as a real remote
-// host is until 0.9.1.
+// host is until changes on remote hosts arrive.
 func openHost(cfg config.Config, choice ui.HostEntry) (remoteHost, error) {
 	cmds, err := demo.NewHost(choice.Name)
 	if err != nil {

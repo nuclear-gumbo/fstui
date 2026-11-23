@@ -47,7 +47,7 @@ type remoteHost struct {
 }
 
 // openHost connects to the chosen host, checks it (the probe) and
-// returns its ZFS views. Changes on remote hosts come in 0.9.1: nothing
+// returns its ZFS views. Changes on remote hosts come later: nothing
 // is offered for writing, and the Schedules tab keeps to this machine.
 func openHost(cfg config.Config, choice ui.HostEntry) (remoteHost, error) {
 	h, err := targetOf(cfg, choice)
