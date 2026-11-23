@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
 )
 
@@ -19,10 +20,10 @@ import (
 // be a node of the cluster lab, with pve2.
 func lister() *HostLister {
 	return &HostLister{
-		Entries: func() []HostEntry {
+		Entries: func(config.Config) []HostEntry {
 			return []HostEntry{{Name: "local", Current: true}, {Name: "pve1", Destination: "root@pve1"}}
 		},
-		Status: func(_ context.Context, e HostEntry) (string, []HostEntry) {
+		Status: func(_ context.Context, _ config.Config, e HostEntry) (string, []HostEntry) {
 			switch e.Name {
 			case "pve1":
 				return "2 pools", []HostEntry{{Name: "pve2", Destination: "root@pve2", Cluster: "lab"}}

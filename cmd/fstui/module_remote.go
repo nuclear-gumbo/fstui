@@ -60,24 +60,30 @@ func openHost(cfg config.Config, choice ui.HostEntry) (remoteHost, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Remote.ConnectTimeout+cfg.Limits.ReadTimeout)
 	defer cancel()
-	p, err := rem.Probe(ctx)
-	if err == nil {
-		err = p.Require(execute.RemoteEnv, execute.ZFS, execute.Zpool)
-	}
+	p, v, err := checkHost(ctx, rem)
 	if err != nil {
 		rem.Close()
 		return remoteHost{}, fmt.Errorf("host %s (%s): %w", h.name, h.Destination, err)
 	}
-	v, err := zfs.DetectVersionOn(ctx, rem)
-	if err != nil {
-		rem.Close()
-		return remoteHost{}, fmt.Errorf("host %s: %w", h.name, err)
-	}
 	reader := newReader(rem, cfg)
 	reader.ReadFile, reader.ReadDir = rem.ReadFile, rem.ReadDir
-	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: p.UID == 0, remote: true, arc: reader.ARCStats, hosts: hostLister(cfg, h.name)})
+	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: p.UID == 0, remote: true, arc: reader.ARCStats, hosts: hostLister(h.name)})
 	o.cleanup = rem.Close
 	return remoteHost{opened: o, name: h.name, privilege: remotePrivilege(p.UID)}, nil
+}
+
+// checkHost probes the host and reads its OpenZFS version: what must
+// hold before anything else is read there.
+func checkHost(ctx context.Context, rem *execute.Remote) (execute.Probe, zfs.Version, error) {
+	p, err := rem.Probe(ctx)
+	if err != nil {
+		return p, zfs.Version{}, err
+	}
+	if err := p.Require(execute.RemoteEnv, execute.ZFS, execute.Zpool); err != nil {
+		return p, zfs.Version{}, err
+	}
+	v, err := zfs.DetectVersionOn(ctx, rem)
+	return p, v, err
 }
 
 // target is a host to connect to, with the name fstui shows for it.
@@ -143,12 +149,12 @@ func fileExists(path string) bool {
 // hostLister is what H lists: this machine, the hosts in config.yaml,
 // the other nodes of this machine's Proxmox VE cluster, and those of
 // each listed host's cluster as each is read.
-func hostLister(cfg config.Config, current string) *ui.HostLister {
+func hostLister(current string) *ui.HostLister {
 	if current == "" {
 		current = config.LocalHost
 	}
 	return &ui.HostLister{
-		Entries: func() []ui.HostEntry {
+		Entries: func(cfg config.Config) []ui.HostEntry {
 			out := []ui.HostEntry{{Name: config.LocalHost, Current: current == config.LocalHost}}
 			for _, h := range cfg.Hosts {
 				out = append(out, ui.HostEntry{Name: h.Name, Destination: h.Destination, Current: current == h.Name})
@@ -158,7 +164,7 @@ func hostLister(cfg config.Config, current string) *ui.HostLister {
 			}
 			return out
 		},
-		Status: func(ctx context.Context, e ui.HostEntry) (string, []ui.HostEntry) {
+		Status: func(ctx context.Context, cfg config.Config, e ui.HostEntry) (string, []ui.HostEntry) {
 			ctx, cancel := context.WithTimeout(ctx, cfg.Remote.ConnectTimeout+cfg.Limits.ReadTimeout)
 			defer cancel()
 			return hostStatus(ctx, cfg, e, current)
@@ -205,11 +211,7 @@ func hostStatus(ctx context.Context, cfg config.Config, e ui.HostEntry, current 
 		return err.Error(), nil
 	}
 	defer rem.Close()
-	p, err := rem.Probe(ctx)
-	if err == nil {
-		err = p.Require(execute.RemoteEnv, execute.ZFS, execute.Zpool)
-	}
-	if err != nil {
+	if _, _, err := checkHost(ctx, rem); err != nil {
 		return err.Error(), nil
 	}
 	summary := poolSummary(ctx, zfs.NewReader(rem))
@@ -302,14 +304,7 @@ func remoteRuns(local check.Run, hosts []config.Host) ([]check.Run, func(), []st
 func hostSource(cfg config.Config, rem *execute.Remote) (check.Source, string, check.ZED) {
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Remote.ConnectTimeout+cfg.Limits.ReadTimeout)
 	defer cancel()
-	p, err := rem.Probe(ctx)
-	if err == nil {
-		err = p.Require(execute.RemoteEnv, execute.ZFS, execute.Zpool)
-	}
-	var v zfs.Version
-	if err == nil {
-		v, err = zfs.DetectVersionOn(ctx, rem)
-	}
+	_, v, err := checkHost(ctx, rem)
 	if err != nil {
 		return failedSource{err}, "", check.ZED{}
 	}
@@ -331,3 +326,8 @@ func (f failedSource) Measures(context.Context, time.Time, map[string]bool) ([]p
 }
 
 func (f failedSource) Events(context.Context) ([]events.Event, int, error) { return nil, 0, f.err }
+
+// configView adds the Hosts tab.
+func configView(c *ui.Config, user string, cfg config.Config) *ui.Config {
+	return c.WithHosts(ui.NewHosts(user, cfg, hostLister(config.LocalHost)))
+}

@@ -10,6 +10,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
 	"github.com/nuclear-gumbo/fstui/internal/ui"
 )
 
@@ -40,8 +41,10 @@ func TestDashboardHostsPanel(t *testing.T) {
 	d.opts.Settings.Refresh.Hosts = time.Millisecond // the loop below waits out each tick
 	reads := 0
 	d.hosts.lister = &ui.HostLister{
-		Entries: func() []ui.HostEntry { return []ui.HostEntry{{Name: "local"}, {Name: "pve1", Destination: "pve1"}} },
-		Status: func(_ context.Context, e ui.HostEntry) (string, []ui.HostEntry) {
+		Entries: func(config.Config) []ui.HostEntry {
+			return []ui.HostEntry{{Name: "local"}, {Name: "pve1", Destination: "pve1"}}
+		},
+		Status: func(_ context.Context, _ config.Config, e ui.HostEntry) (string, []ui.HostEntry) {
 			reads++
 			if e.Name == "pve1" {
 				return "2 pools, 1 DEGRADED", []ui.HostEntry{{Name: "pve2", Destination: "pve2", Cluster: "lab"}}

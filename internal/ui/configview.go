@@ -11,13 +11,15 @@ import (
 )
 
 // Config is view 9: the settings (General), where notifications go and
-// what sends them (Notifications), what is sent (Alerts) and what runs on
-// a schedule (Schedules), as tabs.
+// what sends them (Notifications), what is sent (Alerts), what runs on a
+// schedule (Schedules) and, with the remote module, the other hosts
+// (Hosts), as tabs.
 type Config struct {
 	general   *Settings
 	notify    *Notifications
 	alerts    *Alerts
 	schedules *Schedules
+	hosts     *Hosts // nil without the remote module: no tab
 	tab       int
 	width     int
 }
@@ -27,9 +29,23 @@ const (
 	tabNotifications
 	tabAlerts
 	tabSchedules
+	tabHosts
 )
 
-var configTabs = []string{"General", "Notifications", "Alerts", "Schedules"}
+// tabs are the tab names, Hosts only with the remote module.
+func (c *Config) tabs() []string {
+	t := []string{"General", "Notifications", "Alerts", "Schedules"}
+	if c.hosts != nil {
+		t = append(t, "Hosts")
+	}
+	return t
+}
+
+// WithHosts adds the Hosts tab.
+func (c *Config) WithHosts(h *Hosts) *Config {
+	c.hosts = h
+	return c
+}
 
 // NewConfig returns view 9 with its tabs.
 func NewConfig(general *Settings, notify *Notifications, alerts *Alerts, schedules *Schedules) *Config {
@@ -54,6 +70,8 @@ func (c *Config) editing() configTab {
 		return c.notify
 	case tabAlerts:
 		return c.alerts
+	case tabHosts:
+		return c.hosts
 	}
 	return c.general
 }
@@ -85,10 +103,10 @@ func (c *Config) Number() int { return settingsView }
 // Name implements Screen.
 func (c *Config) Name() string { return "Config" }
 
-// Claims implements Claimer: on the Notifications and Alerts tabs, a adds
-// an entry instead of opening the change menu.
+// Claims implements Claimer: on the Notifications, Alerts and Hosts
+// tabs, a adds an entry instead of opening the change menu.
 func (c *Config) Claims(msg tea.KeyPressMsg) bool {
-	adds := c.tab == tabNotifications || c.tab == tabAlerts
+	adds := c.tab == tabNotifications || c.tab == tabAlerts || c.tab == tabHosts
 	return adds && !c.editing().Nested() && key.Matches(msg, keys.Get(keys.Actions))
 }
 
@@ -154,7 +172,11 @@ func (c *Config) Update(msg tea.Msg) (Screen, tea.Cmd) {
 	case savedMsg: // notifications saved config.yaml: every view takes the new settings
 		return c, c.general.reload(false)
 	}
-	return c, tea.Batch(c.general.Update(msg), c.notify.Update(msg), c.alerts.Update(msg), c.schedules.Update(msg))
+	cmds := []tea.Cmd{c.general.Update(msg), c.notify.Update(msg), c.alerts.Update(msg), c.schedules.Update(msg)}
+	if c.hosts != nil {
+		cmds = append(cmds, c.hosts.Update(msg))
+	}
+	return c, tea.Batch(cmds...)
 }
 
 // current is the tab shown.
@@ -177,9 +199,9 @@ func (c *Config) shown() tea.Cmd {
 func (c *Config) switchTab(msg tea.KeyPressMsg) bool {
 	switch {
 	case key.Matches(msg, keys.Get(keys.Right)):
-		c.tab = (c.tab + 1) % len(configTabs)
+		c.tab = (c.tab + 1) % len(c.tabs())
 	case key.Matches(msg, keys.Get(keys.Left)):
-		c.tab = (c.tab + len(configTabs) - 1) % len(configTabs)
+		c.tab = (c.tab + len(c.tabs()) - 1) % len(c.tabs())
 	default:
 		return false
 	}
@@ -187,7 +209,7 @@ func (c *Config) switchTab(msg tea.KeyPressMsg) bool {
 }
 
 func (c *Config) panel() Panel {
-	return Panel{Title: "config", Tabs: configTabs, Active: c.tab, Focused: true}
+	return Panel{Title: "config", Tabs: c.tabs(), Active: c.tab, Focused: true}
 }
 
 // Render implements Screen.

@@ -224,6 +224,7 @@ type Options struct {
 	NoBlink   bool             // a typing cursor does not blink (config: ui.cursor_blink)
 	Actions   Actions          // the write module's changes; nil without it
 	Hosts     *HostLister      // the other hosts H lists; nil without the remote module
+	Config    config.Config    // the settings fstui started with; saved ones replace them
 }
 
 // Model is the root Bubble Tea model.
@@ -416,7 +417,7 @@ func (m Model) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.display.Exact = !m.display.Exact
 		return m, nil
 	case m.opts.Hosts != nil && key.Matches(msg, keys.Get(keys.Hosts)):
-		modal, cmd := openHosts(*m.opts.Hosts)
+		modal, cmd := openHosts(*m.opts.Hosts, m.opts.Config)
 		m.modal = modal
 		return m, cmd
 	case m.claimed(msg):
@@ -537,6 +538,7 @@ func (m Model) screenFor(n int) int {
 
 func (m *Model) applyConfig(msg ConfigMsg) {
 	c := msg.Config
+	m.opts.Config = c
 	m.opts.Theme, m.opts.Overrides = msg.Theme, c.Colors
 	m.opts.Mouse, m.opts.Natural, m.opts.NoBlink = c.Mouse, c.NaturalScrolling, !c.UI.CursorBlink
 	m.display.Exact = c.Units == config.Exact

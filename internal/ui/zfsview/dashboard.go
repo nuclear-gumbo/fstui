@@ -108,7 +108,7 @@ func (d *Dashboard) focused() string {
 func (d *Dashboard) Activate() tea.Cmd {
 	cmds := []tea.Cmd{d.io.Activate(), d.arc.Activate(), d.evs.Activate()}
 	if slices.Contains(d.opts.Settings.Dashboard.Panels, "hosts") {
-		cmds = append(cmds, d.hosts.activate(d.opts.Settings.Refresh.Hosts))
+		cmds = append(cmds, d.hosts.activate(*d.opts.Settings))
 	}
 	return tea.Batch(cmds...)
 }
@@ -125,7 +125,7 @@ func (d *Dashboard) Status() ui.Status { return d.pools.Status() }
 // Update implements ui.Screen. The views it shows receive their own
 // messages from the root; a key press here only marks problems seen.
 func (d *Dashboard) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
-	if cmd, ok := d.hosts.update(msg, d.opts.Settings.Refresh.Hosts); ok {
+	if cmd, ok := d.hosts.update(msg, *d.opts.Settings); ok {
 		return d, cmd
 	}
 	switch msg := msg.(type) {

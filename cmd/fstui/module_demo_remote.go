@@ -52,7 +52,7 @@ func openHost(cfg config.Config, choice ui.HostEntry) (remoteHost, error) {
 	}
 	cmds.UseARC(arc)
 	reader := demoReader(cmds)
-	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: true, remote: true, arc: arc.Read, hosts: hostLister(cfg, choice.Name)})
+	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: true, remote: true, arc: arc.Read, hosts: hostLister(choice.Name)})
 	return remoteHost{opened: o, name: choice.Name, privilege: remotePrivilege(0)}, nil
 }
 
@@ -72,12 +72,12 @@ func remotePrivilege(uid int) string {
 }
 
 // hostLister lists the demo machine and the cluster's nodes.
-func hostLister(_ config.Config, current string) *ui.HostLister {
+func hostLister(current string) *ui.HostLister {
 	if current == "" {
 		current = config.LocalHost
 	}
 	return &ui.HostLister{
-		Entries: func() []ui.HostEntry {
+		Entries: func(config.Config) []ui.HostEntry {
 			out := []ui.HostEntry{{Name: config.LocalHost, Current: current == config.LocalHost}}
 			m, err := demo.Members()
 			if err != nil {
@@ -88,7 +88,7 @@ func hostLister(_ config.Config, current string) *ui.HostLister {
 			}
 			return out
 		},
-		Status: func(ctx context.Context, e ui.HostEntry) (string, []ui.HostEntry) {
+		Status: func(ctx context.Context, _ config.Config, e ui.HostEntry) (string, []ui.HostEntry) {
 			cmds := demo.New()
 			if e.Name != config.LocalHost {
 				var err error
@@ -111,3 +111,9 @@ func remoteRuns(_ check.Run, hosts []config.Host) ([]check.Run, func(), []string
 
 // hostsNotice is nothing: H lists the demo's cluster.
 func hostsNotice(config.Config) string { return "" }
+
+// configView adds the Hosts tab; the demo's hosts are its cluster, and
+// a host added there is listed and tested like the cluster's nodes.
+func configView(c *ui.Config, user string, cfg config.Config) *ui.Config {
+	return c.WithHosts(ui.NewHosts(user, cfg, hostLister(config.LocalHost)))
+}

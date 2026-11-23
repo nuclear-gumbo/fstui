@@ -10,6 +10,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/nuclear-gumbo/fstui/internal/config"
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
 	"github.com/nuclear-gumbo/fstui/internal/theme"
 	"github.com/nuclear-gumbo/fstui/internal/ui/keys"
@@ -24,13 +25,14 @@ type HostEntry struct {
 }
 
 // HostLister fills the host list: the hosts known without connecting,
-// and then, a host at a time, what each holds.
+// and then, a host at a time, what each holds. Both take the settings
+// as they are now, so a host saved in the Config view is listed at once.
 type HostLister struct {
-	Entries func() []HostEntry
+	Entries func(cfg config.Config) []HostEntry
 	// Status reads one host: a line on its pools ("3 pools, 1 DEGRADED")
 	// or why it could not be read, and the other nodes of its Proxmox
-	// VE cluster, if it is in one.
-	Status func(ctx context.Context, e HostEntry) (string, []HostEntry)
+	// VE cluster, if it is in one. It runs outside the UI goroutine.
+	Status func(ctx context.Context, cfg config.Config, e HostEntry) (string, []HostEntry)
 }
 
 // SwitchHostMsg asks fstui to show another host: the program ends and
@@ -47,22 +49,24 @@ type hostStatusMsg struct {
 // hostList is the modal H opens.
 type hostList struct {
 	lister  HostLister
+	cfg     config.Config
 	entries []HostEntry
 	status  map[string]string
 	cursor  int
 }
 
-func openHosts(l HostLister) (Modal, tea.Cmd) {
-	h := &hostList{lister: l, entries: l.Entries(), status: map[string]string{}}
+func openHosts(l HostLister, cfg config.Config) (Modal, tea.Cmd) {
+	h := &hostList{lister: l, cfg: cfg, entries: l.Entries(cfg), status: map[string]string{}}
 	return h, h.read(h.entries)
 }
 
 // read asks each host for its status at the same time.
 func (h *hostList) read(es []HostEntry) tea.Cmd {
 	cmds := make([]tea.Cmd, 0, len(es))
+	cfg := h.cfg
 	for _, e := range es {
 		cmds = append(cmds, func() tea.Msg {
-			text, found := h.lister.Status(context.Background(), e)
+			text, found := h.lister.Status(context.Background(), cfg, e)
 			return hostStatusMsg{list: h, name: e.Name, text: text, found: found}
 		})
 	}

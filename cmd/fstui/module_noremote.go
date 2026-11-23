@@ -50,4 +50,7 @@ func remoteRuns(_ check.Run, hosts []config.Host) ([]check.Run, func(), []string
 }
 
 // hostLister lists no hosts: H does nothing in this build.
-func hostLister(config.Config, string) *ui.HostLister { return nil }
+func hostLister(string) *ui.HostLister { return nil }
+
+// configView has no Hosts tab without the remote module.
+func configView(c *ui.Config, _ string, _ config.Config) *ui.Config { return c }

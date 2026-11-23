@@ -253,14 +253,14 @@ func start(stderr io.Writer, superuserFlag, dashboard bool, choice ui.HostEntry,
 	secretsFiles := config.SecretsFiles(user)
 	notifications := ui.NewNotifications(user, cfg, func() (config.Secrets, []config.Problem) { return config.LoadSecrets(secretsFiles...) }, backends.notifyInfo, tester)
 	alerts := ui.NewAlerts(user, cfg, backends.poolNames)
-	screens := append(append(backends.screens, writeScreens...), ui.NewConfig(general, notifications, alerts, schedules))
+	screens := append(append(backends.screens, writeScreens...), configView(ui.NewConfig(general, notifications, alerts, schedules), user, cfg))
 
 	session := ui.Session{Host: termtext.New(host), Privilege: priv, Label: buildLabel, Mode: mode, Superuser: cfg.Superuser, Notices: notices}
 	profile := colorProfile()
 	m := ui.New(session, screens, ui.Options{
 		Theme: th, Profile: profile, Overrides: cfg.Colors, Exact: cfg.Units == config.Exact,
 		ASCII: cfg.UseASCII(os.Getenv("TERM")), Mouse: cfg.Mouse, Natural: cfg.NaturalScrolling, Now: time.Now, StartView: startView(dashboard, cfg.UI.StartView), NoBlink: !cfg.UI.CursorBlink,
-		Actions: actions, Hosts: hostLister(cfg, choice.Name),
+		Actions: actions, Hosts: hostLister(choice.Name), Config: cfg,
 	})
 	next, err := runProgram(m, profile)
 	if err != nil {
