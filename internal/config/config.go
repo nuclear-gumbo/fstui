@@ -60,6 +60,7 @@ type Refresh struct {
 	Events        time.Duration // kernel events while the Events view is shown
 	EventsHidden  time.Duration // and while it is not (the dashboard's panel)
 	Tune          time.Duration // the Tune tab's measurements
+	Hosts         time.Duration // the dashboard's hosts panel
 }
 
 // Charts are how much time the graphs show and keep.
@@ -162,7 +163,7 @@ func Default() Config {
 		Refresh: Refresh{
 			Pools: defaultRefreshPools, Datasets: defaultRefreshDatasets, ARC: defaultRefreshARC,
 			ARCHidden: 10 * time.Second, DatasetDetail: 30 * time.Second, Properties: time.Minute, Schedules: time.Minute,
-			Events: 2 * time.Second, EventsHidden: 30 * time.Second, Tune: 5 * time.Second,
+			Events: 2 * time.Second, EventsHidden: 30 * time.Second, Tune: 5 * time.Second, Hosts: time.Minute,
 		},
 		Charts: Charts{ARCWindow: 5 * time.Minute, IOWindow: 2 * time.Minute, IOKeep: 10 * time.Minute},
 		Limits: Limits{

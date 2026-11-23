@@ -92,6 +92,7 @@ var labels = map[string]string{
 	"refresh.events":         "Kernel events, while shown (seconds)",
 	"refresh.events_hidden":  "Kernel events, in the background (seconds)",
 	"refresh.tune":           "Tune measurements (seconds)",
+	"refresh.hosts":          "Other hosts on the dashboard (seconds)",
 
 	"charts.arc_window": "ARC graphs span",
 	"charts.io_window":  "I/O rates span",

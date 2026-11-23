@@ -63,10 +63,10 @@ func zfsScreens(cfg config.Config) (opened, error) {
 	host := schedule.Detect(sched.Root)
 	cmds.UseSchedules(sched)
 	reader := zfs.NewReader(cmds)
-	reader.CronFile = ""                                                                 // the host's cron file is not part of the demo
-	reader.ReadFile = cmds.ReadFile                                                      // nor its module parameters or modprobe.d
-	reader.ReadDir = cmds.ReadDir                                                        // nor its kstat directories
-	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: true, arc: arc.Read}) // the recordings include pool history
+	reader.CronFile = ""                                                                                                           // the host's cron file is not part of the demo
+	reader.ReadFile = cmds.ReadFile                                                                                                // nor its module parameters or modprobe.d
+	reader.ReadDir = cmds.ReadDir                                                                                                  // nor its kstat directories
+	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: true, arc: arc.Read, hosts: hostLister(cfg, config.LocalHost)}) // the recordings include pool history
 	o.write, o.scheduleHost, o.scheduleRun = demoWrite(cmds, reader, sched), &host, sched
 	o.scheduleTasks = func(ctx context.Context) ([]schedule.Task, []schedule.Job, error) {
 		return reader.ScheduleTasks(ctx, "/usr/sbin/zpool")

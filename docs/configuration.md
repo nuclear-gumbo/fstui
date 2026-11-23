@@ -130,6 +130,7 @@ Durations are written like `30s`, `5m`, `24h`. Keys, colours, event filters, das
 | `refresh.events` | `2` | 1 to 3600 seconds | Seconds between reads of kernel events while the Events view is shown |
 | `refresh.events_hidden` | `30` | 1 to 3600 seconds | Seconds between reads of kernel events while the Events view is not shown |
 | `refresh.tune` | `5` | 1 to 3600 seconds | Seconds between the Tune tab's measurements; applies the next time the tab opens |
+| `refresh.hosts` | `60` | 10 to 3600 seconds | Seconds between the dashboard's reads of other hosts, for its hosts panel |
 
 #### `charts:`
 

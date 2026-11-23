@@ -27,6 +27,7 @@ type zfsSource struct {
 	version zfs.Version
 	root    bool // fstui is root where the pools are
 	arc     func() (zfs.ARCStats, error)
+	hosts   *ui.HostLister // for the dashboard's hosts panel
 }
 
 // zfsViews are the ZFS views over src, the dashboard first in the view
@@ -47,7 +48,7 @@ func zfsViews(cfg config.Config, src zfsSource) opened {
 		Root: src.root, Retention: cfg.Events.Retention, Filters: cfg.Events.Filters, Now: time.Now, Settings: settings,
 	})
 	dash := zfsview.NewDashboard(pools, evs, io, arc, zfsview.DashboardOptions{
-		Now: time.Now, Settings: settings,
+		Now: time.Now, Settings: settings, Hosts: src.hosts,
 	})
 	return opened{
 		screens:   []ui.Screen{dash, pools, datasets, snapshots, volumes, arc, io, evs},

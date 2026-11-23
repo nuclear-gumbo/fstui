@@ -66,7 +66,7 @@ func zfsScreens(cfg config.Config) (opened, error) {
 		return opened{}, err
 	}
 	reader := newReader(run, cfg)
-	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: os.Geteuid() == 0, arc: zfs.ReadARCStats})
+	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: os.Geteuid() == 0, arc: zfs.ReadARCStats, hosts: hostLister(cfg, config.LocalHost)})
 	o.write = zfsWrite(reader, tools)
 	o.scheduleTasks = func(ctx context.Context) ([]schedule.Task, []schedule.Job, error) {
 		zpool, _ := tools.Path(execute.Zpool)

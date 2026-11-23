@@ -217,7 +217,8 @@
               "events",
               "io",
               "arc",
-              "scans"
+              "scans",
+              "hosts"
             ]
           },
           "type": "array"
@@ -780,6 +781,13 @@
           "description": "Seconds between reads of kernel events while the Events view is not shown.",
           "maximum": 3600,
           "minimum": 1,
+          "type": "integer"
+        },
+        "hosts": {
+          "default": 60,
+          "description": "Seconds between the dashboard's reads of other hosts, for its hosts panel.",
+          "maximum": 3600,
+          "minimum": 10,
           "type": "integer"
         },
         "pools": {

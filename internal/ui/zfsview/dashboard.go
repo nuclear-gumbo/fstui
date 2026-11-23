@@ -4,6 +4,7 @@ package zfsview
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -28,6 +29,9 @@ const dashboardView = 10
 type DashboardOptions struct {
 	Now      func() time.Time
 	Settings *config.Config // shared by the views; nil: defaults
+	// Hosts lists the other hosts for the hosts panel; nil without the
+	// remote module.
+	Hosts *ui.HostLister
 }
 
 // Dashboard is a read-only overview meant to stay on a screen all day: the
@@ -52,6 +56,7 @@ type Dashboard struct {
 	evFirst  int        // its first row drawn
 	evShown  []uint64   // event IDs in the events panel, newest first
 	rects    []panelBox // where the last render put each panel
+	hosts    hostsPanel
 }
 
 // panelBox is where a panel was drawn, for the mouse.
@@ -63,7 +68,7 @@ type panelBox struct {
 // NewDashboard returns the dashboard over the given views.
 func NewDashboard(pools *Pools, evs *Events, io *IO, arc *ARC, o DashboardOptions) *Dashboard {
 	o.Settings = settingsOr(o.Settings)
-	return &Dashboard{pools: pools, evs: evs, io: io, arc: arc, opts: o}
+	return &Dashboard{pools: pools, evs: evs, io: io, arc: arc, opts: o, hosts: hostsPanel{lister: o.Hosts}}
 }
 
 // Name implements ui.Screen.
@@ -101,11 +106,16 @@ func (d *Dashboard) focused() string {
 // Activate implements ui.Activator: the views it shows read at their
 // shown rates, and zpool iostat starts.
 func (d *Dashboard) Activate() tea.Cmd {
-	return tea.Batch(d.io.Activate(), d.arc.Activate(), d.evs.Activate())
+	cmds := []tea.Cmd{d.io.Activate(), d.arc.Activate(), d.evs.Activate()}
+	if slices.Contains(d.opts.Settings.Dashboard.Panels, "hosts") {
+		cmds = append(cmds, d.hosts.activate(d.opts.Settings.Refresh.Hosts))
+	}
+	return tea.Batch(cmds...)
 }
 
 // Deactivate implements ui.Deactivator.
 func (d *Dashboard) Deactivate() tea.Cmd {
+	d.hosts.deactivate()
 	return tea.Batch(d.arc.Deactivate(), d.evs.Deactivate()) // I/O keeps recording
 }
 
@@ -115,6 +125,9 @@ func (d *Dashboard) Status() ui.Status { return d.pools.Status() }
 // Update implements ui.Screen. The views it shows receive their own
 // messages from the root; a key press here only marks problems seen.
 func (d *Dashboard) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
+	if cmd, ok := d.hosts.update(msg, d.opts.Settings.Refresh.Hosts); ok {
+		return d, cmd
+	}
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		d.seenErrors, d.seenWarnings = d.counts()
@@ -311,6 +324,8 @@ func (d *Dashboard) panel(disp ui.Display, name string, focused bool, width, hei
 		body = d.arcPanel(disp, iw, ih)
 	case "scans":
 		body = d.scansPanel(disp)
+	case "hosts":
+		body = d.hosts.render(disp, iw)
 	}
 	return ui.Panel{Title: title, Focused: focused}.Render(disp, body, width, height)
 }

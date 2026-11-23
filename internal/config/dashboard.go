@@ -19,7 +19,7 @@ type Dashboard struct {
 }
 
 // DashboardPanels are the panels the dashboard can show.
-var DashboardPanels = []string{"health", "events", "io", "arc", "scans"}
+var DashboardPanels = []string{"health", "events", "io", "arc", "scans", "hosts"}
 
 const dashboardColumnsMax = 3
 

@@ -58,6 +58,7 @@ var registry = []Spec{
 	secondsSpec("refresh.events", "Seconds between reads of kernel events while the Events view is shown", 1, func(c *Config) *time.Duration { return &c.Refresh.Events }),
 	secondsSpec("refresh.events_hidden", "Seconds between reads of kernel events while the Events view is not shown", 1, func(c *Config) *time.Duration { return &c.Refresh.EventsHidden }),
 	secondsSpec("refresh.tune", "Seconds between the Tune tab's measurements; applies the next time the tab opens", 1, func(c *Config) *time.Duration { return &c.Refresh.Tune }),
+	secondsSpec("refresh.hosts", "Seconds between the dashboard's reads of other hosts, for its hosts panel", 10, func(c *Config) *time.Duration { return &c.Refresh.Hosts }),
 
 	durationSpec("charts.arc_window", "Time the ARC graphs show", time.Minute, time.Hour, func(c *Config) *time.Duration { return &c.Charts.ARCWindow }),
 	durationSpec("charts.io_window", "Time the I/O rates show", 30*time.Second, time.Hour, func(c *Config) *time.Duration { return &c.Charts.IOWindow }),
