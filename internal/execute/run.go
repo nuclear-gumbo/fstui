@@ -170,7 +170,7 @@ func (e *CommandError) Is(target error) bool {
 }
 
 func (e *CommandError) Error() string {
-	msg := strings.TrimSpace(e.Stderr.Display())
+	msg := termtext.New(strings.TrimSpace(e.Stderr.Raw())).Display() // trimmed before escaping, so a CR LF ending is not shown
 	if msg == "" {
 		msg = "no error output"
 	}
