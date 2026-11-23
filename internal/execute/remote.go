@@ -17,8 +17,8 @@ import (
 )
 
 // Host is another machine, reached through the OpenSSH client. Wrap
-// turns a command into one ssh runs there, so Runner and Mutator run
-// remote commands exactly as local ones.
+// turns a command into one ssh runs there, so a Runner runs remote
+// commands exactly as local ones.
 type Host struct {
 	// Destination is what ssh connects to: an alias from the user's
 	// ~/.ssh/config, or [user@]host. CheckDestination accepts it.
@@ -53,13 +53,12 @@ var (
 	// to ssh.
 	ErrDestination = errors.New("is not a host name, an address or an ssh alias")
 	// ErrRemoteTool is returned for a tool the probe did not find and
-	// check on the host.
-	// It wraps ErrNotResolved: to a reader, a tool missing on the host
-	// is the same as one missing locally.
+	// check on the host. It wraps ErrNotResolved: to a reader, a tool
+	// missing on the host is the same as one missing locally.
 	ErrRemoteTool = fmt.Errorf("was not checked on this host: %w", ErrNotResolved)
-	// ErrControlDir is returned for a directory ssh could not use as
-	// written in a ControlPath option.
-	ErrControlDir = errors.New("cannot hold ssh's connection sockets")
+	// ErrOptionPath is returned for a path ssh would misread as the
+	// value of an option: the control directory or a known-hosts file.
+	ErrOptionPath = errors.New("cannot be given to ssh as a path")
 )
 
 // destinationChars are what a destination may contain: host names,
@@ -96,7 +95,7 @@ const maxControlDir = 49
 // and whitespace or quotes split or quote the value.
 func checkControlDir(dir string) error {
 	if !filepath.IsAbs(dir) || len(dir) > maxControlDir || strings.ContainsAny(dir, "%~\"' \t\n") {
-		return fmt.Errorf("%q %w", dir, ErrControlDir)
+		return fmt.Errorf("%q %w", dir, ErrOptionPath)
 	}
 	return nil
 }
@@ -190,7 +189,7 @@ func (h Host) keyOptions() ([]string, error) {
 	}
 	if h.KnownHostsFile != "" {
 		if !filepath.IsAbs(h.KnownHostsFile) || strings.ContainsAny(h.KnownHostsFile, "%~\"' \t\n") {
-			return nil, fmt.Errorf("known hosts file %q %w", h.KnownHostsFile, ErrControlDir)
+			return nil, fmt.Errorf("known hosts file %q %w", h.KnownHostsFile, ErrOptionPath)
 		}
 		out = append(out, "-o", "UserKnownHostsFile="+h.KnownHostsFile, "-o", "GlobalKnownHostsFile=none")
 	}

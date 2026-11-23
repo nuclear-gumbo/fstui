@@ -95,7 +95,7 @@ func TestWrapRefuses(t *testing.T) {
 		"env not probed":  {testHost(map[Tool]string{ZFS: "/usr/sbin/zfs"}), Argv{Tool: ZFS}, ErrRemoteTool},
 		"operand option":  {testHost(full), Argv{Tool: ZFS, Options: []string{"promote"}, Operands: []string{"-x"}, NoSeparator: true}, ErrOperandOption},
 		"destination":     {Host{Destination: "-oProxyCommand=x", ControlDir: "/run/x", Paths: full}, Argv{Tool: ZFS}, ErrDestination},
-		"control dir":     {Host{Destination: "pve1", ControlDir: "/home/a b", Paths: full}, Argv{Tool: ZFS}, ErrControlDir},
+		"control dir":     {Host{Destination: "pve1", ControlDir: "/home/a b", Paths: full}, Argv{Tool: ZFS}, ErrOptionPath},
 	} {
 		if _, err := c.host.Wrap(c.a); !errors.Is(err, c.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, c.want)
@@ -124,7 +124,7 @@ func TestCheckControlDir(t *testing.T) {
 		t.Error(err)
 	}
 	for _, d := range []string{"run/fstui", "/tmp/%h", "~/ssh", "/home/a b", `/x"y`, "/" + strings.Repeat("d", maxControlDir)} {
-		if err := checkControlDir(d); !errors.Is(err, ErrControlDir) {
+		if err := checkControlDir(d); !errors.Is(err, ErrOptionPath) {
 			t.Errorf("%q accepted", d)
 		}
 	}
