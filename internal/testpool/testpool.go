@@ -30,6 +30,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/nuclear-gumbo/fstui/internal/execute"
 )
@@ -321,7 +322,7 @@ func (p *Pool) exec(tool execute.Tool, target string, args []string) error {
 // it.
 func (p *Pool) destroy() {
 	if p.created {
-		if err := p.exec(execute.Zpool, p.Name, []string{"destroy", "-f", "--", p.Name}); err != nil {
+		if err := p.destroyRetrying(); err != nil {
 			p.t.Errorf("cleanup: %v", err)
 			return
 		}
@@ -332,6 +333,25 @@ func (p *Pool) destroy() {
 		}
 	}
 }
+
+// destroyRetrying destroys the pool, trying again while zpool says it
+// is busy, as OpenZFS's own tests do (log_must_busy in logapi.shlib: five
+// tries, one second apart and doubling): right after heavy writes the
+// kernel can hold a pool for a moment after the last file is closed.
+func (p *Pool) destroyRetrying() error {
+	delay := time.Second
+	for try := 1; ; try++ {
+		err := p.exec(execute.Zpool, p.Name, []string{"destroy", "-f", "--", p.Name})
+		if err == nil || try == busyTries || !strings.Contains(err.Error(), "busy") {
+			return err
+		}
+		time.Sleep(delay)
+		delay *= 2
+	}
+}
+
+// busyTries is log_must_retry's count for "busy".
+const busyTries = 5
 
 // Wait waits for the pool's activities to end, as zpool wait -t takes
 // them: "resilver,replace" for an attach or replace to finish.
