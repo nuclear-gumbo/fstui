@@ -111,6 +111,7 @@ func TestCheckDestination(t *testing.T) {
 	}
 	for _, d := range []string{
 		"", "-oProxyCommand=sh", "-p", "pve1 -o x", "host;id", "a@b@c", "@pve1", "root@", "$(id)",
+		"root@-p", "root@-oProxyCommand", "-u@host", "root@-",
 		"pve1\n", "pve`id`", "h%h", "~root", "pve1/x", strings.Repeat("a", maxDestination+1),
 	} {
 		if err := CheckDestination(d); !errors.Is(err, ErrDestination) {
@@ -226,4 +227,36 @@ func TestKeyOptions(t *testing.T) {
 			t.Errorf("%+v accepted", bad)
 		}
 	}
+}
+
+// Whatever a name holds, the remote shell gets back exactly the words
+// fstui built: no character can end the quoting or start a command.
+func FuzzWrapRoundTrip(f *testing.F) {
+	for _, s := range hostile {
+		f.Add(s, "x")
+	}
+	f.Add("'", "\\'")
+	f.Add("$'\\x27'", "`")
+	printf, err1 := exec.LookPath("/usr/bin/printf")
+	envPath, err2 := exec.LookPath("/usr/bin/env")
+	f.Fuzz(func(t *testing.T, a, b string) {
+		if err1 != nil || err2 != nil {
+			t.Skip("needs /usr/bin/printf and /usr/bin/env")
+		}
+		if strings.ContainsRune(a+b, 0) {
+			t.Skip("an argument cannot hold NUL") // exec refuses it, locally or remotely
+		}
+		h := testHost(map[Tool]string{ZFS: printf, RemoteEnv: envPath})
+		w, err := h.Wrap(Argv{Tool: ZFS, Options: []string{`%s\0`}, Operands: []string{a, b}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, err := exec.Command("/bin/sh", "-c", w.Operands[1]).Output()
+		if err != nil {
+			t.Fatalf("%q %q: %v", a, b, err)
+		}
+		if got, want := string(out), "--\x00"+a+"\x00"+b+"\x00"; got != want {
+			t.Fatalf("got %q, want %q", got, want)
+		}
+	})
 }

@@ -74,13 +74,19 @@ const destinationChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01
 const maxDestination = 320
 
 // CheckDestination accepts a destination for ssh: only the characters
-// of host names, addresses and user names, at most one @, and nothing
-// that starts with - and so could be read as an option.
+// of host names, addresses and user names, at most one @, and neither
+// the user nor the host starting with -, which a ProxyCommand given %h
+// or %r could read as an option. OpenSSH 9.6 refuses the same itself
+// (ssh_valid_hostname, ssh_valid_ruser; CVE-2023-51385); older clients
+// do not.
 func CheckDestination(d string) error {
+	user, host, hasUser := strings.Cut(d, "@")
+	if !hasUser {
+		user, host = "", d
+	}
 	switch {
-	case d == "", len(d) > maxDestination, strings.Trim(d, destinationChars) != "",
-		strings.HasPrefix(d, "-"), strings.HasPrefix(d, "@"), strings.HasSuffix(d, "@"),
-		strings.Count(d, "@") > 1:
+	case len(d) > maxDestination, strings.Trim(d, destinationChars) != "", strings.Contains(host, "@"),
+		host == "", strings.HasPrefix(host, "-"), hasUser && (user == "" || strings.HasPrefix(user, "-")):
 		return fmt.Errorf("%q %w", d, ErrDestination)
 	}
 	return nil
