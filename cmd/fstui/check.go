@@ -47,8 +47,7 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	if help, _ := fs.GetBool("help"); help {
 		return report(stdout, 0, "%s\nOptions:\n%s", checkUsage, optionList(fs))
 	}
-	runs, notices, closeRuns, err := checkRuns()
-	defer closeRuns()
+	runs, notices, err := checkRuns()
 	for _, n := range notices {
 		_, _ = fmt.Fprintf(stderr, "fstui check: %s\n", n) // a failed write shows in the status of the report below
 	}
@@ -77,28 +76,28 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 const bootIDPath = "/proc/sys/kernel/random/boot_id"
 
 // checkRuns builds the runs of a check, one per host in
-// notifications.hosts, this machine first; closeAll ends their
-// connections.
-func checkRuns() (runs []check.Run, notices []string, closeAll func(), err error) {
+// notifications.hosts, this machine first. Their connections to other
+// hosts close by themselves once unused (remote.persist).
+func checkRuns() (runs []check.Run, notices []string, err error) {
 	local, notices, err := checkRun()
 	if err != nil {
-		return nil, notices, func() {}, err
+		return nil, notices, err
 	}
 	onHere, hosts, problems := local.Config.CheckedHosts()
 	notices = append(notices, problems...)
 	if onHere {
 		runs = append(runs, local)
 	}
-	remote, closeAll, more := remoteRuns(local, hosts)
+	remote, more := remoteRuns(local, hosts)
 	notices = append(notices, more...)
 	runs = append(runs, remote...)
 	if len(runs) == 0 {
-		return nil, notices, closeAll, errors.New("notifications.hosts names no host to check")
+		return nil, notices, errors.New("notifications.hosts names no host to check")
 	}
 	for i := 1; i < len(runs); i++ {
 		runs[i].NoHeartbeat = true // one request per pass
 	}
-	return runs, notices, closeAll, nil
+	return runs, notices, nil
 }
 
 // checkRun builds this machine's run from the configuration, the

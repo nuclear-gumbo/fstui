@@ -42,11 +42,11 @@ func hostsNotice(cfg config.Config) string {
 }
 
 // remoteRuns checks no other host in this build.
-func remoteRuns(_ check.Run, hosts []config.Host) ([]check.Run, func(), []string) {
+func remoteRuns(_ check.Run, hosts []config.Host) ([]check.Run, []string) {
 	if len(hosts) == 0 {
-		return nil, func() {}, nil
+		return nil, nil
 	}
-	return nil, func() {}, []string{"notifications.hosts names other hosts, which this build of fstui does not check: it leaves out the remote module"}
+	return nil, []string{"notifications.hosts names other hosts, which this build of fstui does not check: it leaves out the remote module"}
 }
 
 // hostLister lists no hosts: H does nothing in this build.

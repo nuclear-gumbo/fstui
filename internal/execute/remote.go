@@ -29,7 +29,9 @@ type Host struct {
 	// ConnectTimeout bounds connecting and the key exchange;
 	// AliveInterval is how often an idle connection is checked (ssh
 	// gives up after three unanswered checks, its default); Persist is
-	// how long a shared connection stays open once nothing uses it.
+	// how long a shared connection stays open once nothing uses it. That
+	// is the only way one closes: every fstui of the same user shares it,
+	// and "ssh -O exit" would cut off the others' commands.
 	ConnectTimeout, AliveInterval, Persist time.Duration
 	// Paths are the absolute paths of the tools on the host, as the
 	// probe found and checked them. A tool not here is not run.
@@ -136,15 +138,6 @@ func (h Host) remote(words []string) (Argv, error) {
 		return Argv{}, err
 	}
 	return Argv{Tool: SSH, Options: opts, Operands: []string{h.Destination, strings.Join(quoted, " ")}}, nil
-}
-
-// Exit closes the host's shared connection, if one is open.
-func (h Host) Exit() (Argv, error) {
-	opts, err := h.options()
-	if err != nil {
-		return Argv{}, err
-	}
-	return Argv{Tool: SSH, Options: append(opts, "-O", "exit"), Operands: []string{h.Destination}}, nil
 }
 
 // options are ssh's options for every command. Given with -o, they win

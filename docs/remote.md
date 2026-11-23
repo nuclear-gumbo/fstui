@@ -26,7 +26,7 @@ Before it reads a host, fstui checks that:
 
 Every command then runs by that absolute path with a fixed environment, and names are quoted so the host's shell cannot read them as anything else. A host whose key is unknown or has changed is refused, not added.
 
-One SSH connection per host is shared by every read, and closed when fstui exits; `remote.persist` closes one left behind. `remote.connect_timeout` and `remote.alive_interval` bound connecting and a quiet connection ([reference](configuration.md#reference)).
+One SSH connection per host is shared by every read, and by every fstui you run as the same user, such as the `fstui watch` service and fstui on the screen as root. It closes once nothing has used it for `remote.persist` (a minute); fstui never closes it itself, since that would cut off the others' reads. `remote.connect_timeout` and `remote.alive_interval` bound connecting and a quiet connection ([reference](configuration.md#reference)).
 
 ## Proxmox VE
 

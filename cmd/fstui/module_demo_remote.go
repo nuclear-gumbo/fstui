@@ -102,11 +102,11 @@ func hostLister(current string) *ui.HostLister {
 }
 
 // remoteRuns: the demo's fstui check looks at its own pools only.
-func remoteRuns(_ check.Run, hosts []config.Host) ([]check.Run, func(), []string) {
+func remoteRuns(_ check.Run, hosts []config.Host) ([]check.Run, []string) {
 	if len(hosts) == 0 {
-		return nil, func() {}, nil
+		return nil, nil
 	}
-	return nil, func() {}, []string{"the demo checks its own pools only; notifications.hosts is not used"}
+	return nil, []string{"the demo checks its own pools only; notifications.hosts is not used"}
 }
 
 // hostsNotice is nothing: H lists the demo's cluster.

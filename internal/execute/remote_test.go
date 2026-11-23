@@ -137,17 +137,6 @@ func TestSecondsAtLeastOne(t *testing.T) {
 	}
 }
 
-func TestExit(t *testing.T) {
-	a, err := testHost(nil).Exit()
-	if err != nil {
-		t.Fatal(err)
-	}
-	args := a.Args()
-	if tail := args[len(args)-4:]; !slices.Equal(tail, []string{"-O", "exit", "--", "root@pve1"}) {
-		t.Errorf("args end %q", tail)
-	}
-}
-
 // listen makes a Unix socket at path without the net package, which
 // only internal/notify may import.
 func listen(t *testing.T, path string) {
@@ -232,7 +221,8 @@ func TestKeyOptions(t *testing.T) {
 	} {
 		b := testHost(nil)
 		b.HostKeyAlias, b.KnownHostsFile = bad.HostKeyAlias, bad.KnownHostsFile
-		if _, err := b.Exit(); err == nil {
+		b.Paths = map[Tool]string{ZFS: "/usr/sbin/zfs", RemoteEnv: "/usr/bin/env"}
+		if _, err := b.Wrap(Argv{Tool: ZFS}); err == nil {
 			t.Errorf("%+v accepted", bad)
 		}
 	}

@@ -62,13 +62,11 @@ func openHost(cfg config.Config, choice ui.HostEntry) (remoteHost, error) {
 	defer cancel()
 	p, v, err := checkHost(ctx, rem)
 	if err != nil {
-		rem.Close()
 		return remoteHost{}, fmt.Errorf("host %s (%s): %w", h.name, h.Destination, err)
 	}
 	reader := newReader(rem, cfg)
 	reader.ReadFile, reader.ReadDir = rem.ReadFile, rem.ReadDir
 	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: p.UID == 0, remote: true, arc: reader.ARCStats, hosts: hostLister(h.name)})
-	o.cleanup = rem.Close
 	return remoteHost{opened: o, name: h.name, privilege: remotePrivilege(p.UID)}, nil
 }
 
@@ -210,7 +208,6 @@ func hostStatus(ctx context.Context, cfg config.Config, e ui.HostEntry, current 
 	if err != nil {
 		return err.Error(), nil
 	}
-	defer rem.Close()
 	if _, _, err := checkHost(ctx, rem); err != nil {
 		return err.Error(), nil
 	}
@@ -272,30 +269,21 @@ func hostsNotice(config.Config) string { return "" }
 // host over ssh and keeping its own state. A host that cannot be
 // reached or fails the probe still gets a run: its failure is then sent
 // once, as that host's problem, and cleared when it is back.
-func remoteRuns(local check.Run, hosts []config.Host) ([]check.Run, func(), []string) {
-	if len(hosts) == 0 {
-		return nil, func() {}, nil
-	}
+func remoteRuns(local check.Run, hosts []config.Host) ([]check.Run, []string) {
 	cfg := local.Config
 	var runs []check.Run
-	var remotes []*execute.Remote
 	for _, h := range hosts {
 		rem, err := connect(cfg, execute.Host{Destination: h.Destination})
 		if err != nil {
-			return nil, func() {}, []string{"not checking other hosts: " + err.Error()}
+			return nil, []string{"not checking other hosts: " + err.Error()}
 		}
-		remotes = append(remotes, rem)
 		r := local
 		r.Host = h.Name
 		r.StateDir = filepath.Join(local.StateDir, "hosts", h.Name)
 		r.Source, r.Boot, r.ZED = hostSource(cfg, rem)
 		runs = append(runs, r)
 	}
-	return runs, func() {
-		for _, rem := range remotes {
-			rem.Close()
-		}
-	}, nil
+	return runs, nil
 }
 
 // hostSource probes the host and reads what a check needs besides its

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 	"time"
@@ -27,11 +28,20 @@ const controlDir = "/run/fstui-test-ssh"
 
 func remoteTo(t *testing.T, env string) *execute.Remote {
 	t.Helper()
+	return remoteVia(t, env, controlDir)
+}
+
+// remoteVia is remoteTo with its own socket directory: ssh names a
+// shared connection by host, port and user (%C), so two aliases of
+// 127.0.0.1 would share one, and the second's host key check would
+// never run.
+func remoteVia(t *testing.T, env, dir string) *execute.Remote {
+	t.Helper()
 	dest := os.Getenv(env)
 	if dest == "" {
 		t.Skipf("%s is not set", env)
 	}
-	if err := statedir.Private(controlDir); err != nil {
+	if err := statedir.Private(dir); err != nil {
 		t.Fatal(err)
 	}
 	tools, err := execute.Resolve(execute.SSH)
@@ -39,10 +49,9 @@ func remoteTo(t *testing.T, env string) *execute.Remote {
 		t.Fatal(err)
 	}
 	r := execute.NewRemote(execute.NewRunner(tools), execute.Host{
-		Destination: dest, ControlDir: controlDir,
+		Destination: dest, ControlDir: dir,
 		ConnectTimeout: 10 * time.Second, AliveInterval: 15 * time.Second, Persist: 30 * time.Second,
 	})
-	t.Cleanup(r.Close)
 	return r
 }
 
@@ -140,8 +149,8 @@ func mustResolve(t *testing.T, tools ...execute.Tool) *execute.Tools {
 	return r
 }
 
-// Nothing runs before the probe; a shared connection that is gone is
-// replaced by the next command.
+// Nothing runs before the probe; a shared connection whose socket is
+// gone, as after its master was killed, is replaced by the next command.
 func TestIntegrationRemoteReconnects(t *testing.T) {
 	rem := remoteTo(t, "FSTUI_TEST_SSH_HOST")
 	if _, err := zfs.DetectVersionOn(context.Background(), rem); !errors.Is(err, execute.ErrNotResolved) {
@@ -150,7 +159,15 @@ func TestIntegrationRemoteReconnects(t *testing.T) {
 	if _, err := rem.Probe(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	rem.Close()
+	sockets, err := filepath.Glob(filepath.Join(controlDir, "*"))
+	if err != nil || len(sockets) == 0 {
+		t.Fatalf("no shared connection after the probe: %v %v", sockets, err)
+	}
+	for _, s := range sockets {
+		if err := os.Remove(s); err != nil {
+			t.Fatal(err)
+		}
+	}
 	r := zfs.NewReader(rem)
 	if _, err := r.PoolNames(context.Background()); err != nil {
 		t.Errorf("after the connection closed: %v", err)
@@ -166,7 +183,7 @@ func TestIntegrationRemoteRefused(t *testing.T) {
 			t.Setenv("FSTUI_TEST_SSH_NOHOST", "fstuitest-no-such-host.invalid")
 			rem = remoteTo(t, "FSTUI_TEST_SSH_NOHOST")
 		} else {
-			rem = remoteTo(t, env)
+			rem = remoteVia(t, env, controlDir+"-badkey")
 		}
 		if _, err := rem.Probe(context.Background()); !errors.Is(err, execute.ErrUnreachable) {
 			t.Errorf("%s: probe err = %v, want unreachable", rem.Destination(), err)

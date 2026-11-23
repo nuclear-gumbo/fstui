@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"time"
 )
 
 // Remote runs commands on one host through a Runner: the readers use it
@@ -70,21 +69,6 @@ func (r *Remote) Stream(ctx context.Context, a Argv, line func([]byte)) error {
 		return err
 	}
 	return r.named(a, r.run.Stream(ctx, w, line))
-}
-
-// closeTimeout bounds closing the shared connection when fstui exits.
-const closeTimeout = 5 * time.Second
-
-// Close ends the host's shared connection. A connection that is already
-// gone is not an error: ControlPersist would have closed it anyway.
-func (r *Remote) Close() {
-	a, err := r.host.Exit()
-	if err != nil {
-		return
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), closeTimeout)
-	defer cancel()
-	_, _ = r.run.Read(ctx, a) // nothing to report: see above
 }
 
 // named makes an error from ssh about a: a command error carries a and
