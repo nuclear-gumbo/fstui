@@ -11,7 +11,7 @@ Each [release](https://github.com/nuclear-gumbo/fstui/releases) has:
 - `SHA256SUMS`: checksums of both.
 
 ```sh
-v=0.9.0
+v=0.9.1
 curl -LO https://github.com/nuclear-gumbo/fstui/releases/download/v$v/fstui-$v-linux-amd64
 curl -LO https://github.com/nuclear-gumbo/fstui/releases/download/v$v/SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS

@@ -4,6 +4,10 @@ All notable changes to fstui are listed here. The format follows [Keep a Changel
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-22
+
+A fix for a crash when saving in the Config view. Changes on other hosts, announced for 0.9.1, come in 0.9.2. Tested with OpenZFS 2.3.9 on Debian 13.
+
 ### Fixed
 
 - Config view: adding a host, a second notification channel or an alert of your own crashed fstui as the saved file was shown (hosts in 0.9.0, channels since 0.8.0, your own alerts since 0.8.1). The tab now shows what it wrote at once.
