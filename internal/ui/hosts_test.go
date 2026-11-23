@@ -26,7 +26,7 @@ func lister() *HostLister {
 		Status: func(_ context.Context, _ config.Config, e HostEntry) (string, []HostEntry) {
 			switch e.Name {
 			case "pve1":
-				return "2 pools", []HostEntry{{Name: "pve2", Destination: "root@pve2", Cluster: "lab"}}
+				return "2 pools", []HostEntry{{Name: "pve2", Destination: "root@pve2", Cluster: "lab"}, {Name: "pve3", Destination: "pve3", Cluster: "evil\x1b]0;owned\a\x1b[2J"}}
 			case "pve2":
 				return "could not be reached: ssh: connect to host pve2 port 22: No route to host", nil
 			}
@@ -64,6 +64,9 @@ func TestHostList(t *testing.T) {
 	m := sized(New(s, nil, Options{Profile: colorprofile.ASCII, Now: func() time.Time { return epoch }, Hosts: lister()}), 100, 30)
 	m, cmd := press(t, m, "H")
 	m = run(m, cmd)
+	if raw := m.View().Content; strings.Contains(raw, "\x1b]0;") || strings.Contains(raw, "\x1b[2J") {
+		t.Error("a cluster name reached the terminal as an escape sequence")
+	}
 	out := ansi.Strip(m.View().Content)
 	for _, want := range []string{"local", "shown now; 1 pool", "pve1   2 pools", "Proxmox VE cluster lab", "pve2", "could not be reached"} {
 		if !strings.Contains(out, want) {
@@ -80,8 +83,12 @@ func TestHostList(t *testing.T) {
 	if cmd != nil {
 		t.Error("enter on the current host did something")
 	}
-	m, _ = press(t, m, "j")
-	m, _ = press(t, m, "j")
+	for i := 0; m.modal.(*hostList).entries[m.modal.(*hostList).cursor].Name != "pve2"; i++ { //nolint:forcetypeassert // the list is open
+		if i > 5 {
+			t.Fatal("pve2 not in the list")
+		}
+		m, _ = press(t, m, "j")
+	}
 	_, cmd = enter(m)
 	if cmd == nil {
 		t.Fatal("enter on pve2 did nothing")
