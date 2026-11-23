@@ -53,6 +53,9 @@ func TestCheckedHosts(t *testing.T) {
 	if !local || len(hosts) != 1 || hosts[0].Name != "pve1" || len(missing) != 1 || !strings.Contains(missing[0], "pve9") {
 		t.Errorf("local %v hosts %v missing %v", local, hosts, missing)
 	}
+	if _, problems := Parse("c.yaml", []byte("notifications: {hosts: [local, local]}\n")); len(problems) != 1 || !strings.Contains(problems[0].Msg, "listed twice") {
+		t.Errorf("a host listed twice: %v", problems)
+	}
 	if local, hosts, _ := Default().CheckedHosts(); !local || hosts != nil {
 		t.Error("by default only this machine is checked")
 	}

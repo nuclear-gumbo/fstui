@@ -622,7 +622,8 @@
                 "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
                 "type": "string"
               },
-              "type": "array"
+              "type": "array",
+              "uniqueItems": true
             }
           ]
         },

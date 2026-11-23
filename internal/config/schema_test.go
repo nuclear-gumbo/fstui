@@ -121,7 +121,7 @@ func schema() obj {
 	}
 	section("notifications")["hosts"] = obj{
 		"description": "Hosts fstui check and fstui watch look at, by name from hosts:; local is this machine. Unset: this machine only.",
-		"oneOf":       []any{obj{"type": "string", "pattern": hostLabel.String()}, obj{"type": "array", "items": obj{"type": "string", "pattern": hostLabel.String()}}},
+		"oneOf":       []any{obj{"type": "string", "pattern": hostLabel.String()}, obj{"type": "array", "uniqueItems": true, "items": obj{"type": "string", "pattern": hostLabel.String()}}},
 	}
 	section("notifications")["channels"] = obj{
 		"description": "Where fstui check and watch send. Secrets go in secrets.yaml. A list in a later file replaces this one.",

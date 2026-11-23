@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"time"
 
 	"go.yaml.in/yaml/v3"
@@ -101,9 +102,12 @@ func setNotifyHosts(_ *applier, c *Config, n *yaml.Node) error {
 	if err != nil {
 		return err
 	}
-	for _, name := range names {
+	for i, name := range names {
 		if !hostLabel.MatchString(name) {
 			return fmt.Errorf("%q: want host names from hosts:, or %s for this machine", name, LocalHost)
+		}
+		if slices.Contains(names[:i], name) {
+			return fmt.Errorf("%q is listed twice; each host is checked once", name)
 		}
 	}
 	c.Notifications.Hosts = names

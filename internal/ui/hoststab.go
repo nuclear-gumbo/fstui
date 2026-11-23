@@ -253,6 +253,10 @@ func (h *Hosts) remove(name string) {
 // toggle checks a machine with fstui check and fstui watch, or not. The
 // list keeps the rows' order, and at least one machine stays checked.
 func (h *Hosts) toggle(name string) {
+	if h.file == "" {
+		h.message = "This cannot be changed: fstui could not find your config file (the notice at startup says why)."
+		return
+	}
 	if file := h.cfg.Target(h.file, "notifications.hosts"); file != h.cfg.Target(h.file, "hosts") {
 		h.message = "notifications.hosts is set in " + file + ", hosts: elsewhere; change it there."
 		return
