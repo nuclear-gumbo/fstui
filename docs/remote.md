@@ -6,7 +6,7 @@ fstui can show the pools of other machines over SSH, read-only: every view works
 
 1. Make sure `ssh HOST` logs in without a password prompt, with a key or through your SSH agent, and that the host's key is in your `known_hosts`. fstui never asks for a password, a key passphrase or a new host key; it uses the OpenSSH client with your `~/.ssh/config`, so host aliases, `User`, `Port`, `IdentityFile` and `ProxyJump` all apply.
 2. Log in as root, or as a user with `zfs allow` permissions. fstui does not use `sudo`.
-3. Name the host in `config.yaml`:
+3. Add it in the Config view's Hosts tab (`9`, then the last tab): `a`, a name, and the destination; `t` tests the connection. Or name it in `config.yaml`:
 
    ```yaml
    hosts:
@@ -38,7 +38,7 @@ Add `hosts` to `dashboard.panels` for a panel with one line per host: its pools 
 
 ## Notifications
 
-`fstui check` and `fstui watch` look at the hosts in `notifications.hosts`; `local` is the machine they run on.
+`fstui check` and `fstui watch` look at the hosts in `notifications.hosts`; `local` is the machine they run on. In the Hosts tab, `space` ticks a machine in or out of that list.
 
 ```yaml
 notifications:

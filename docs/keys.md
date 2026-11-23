@@ -39,6 +39,8 @@
 | `t` | Config, Notifications tab | Send a test message to the selected channel |
 | `a`, `enter`, `d` | Config, Notifications tab | Add a channel, edit the selected one, remove it (press twice) |
 | `s` | Config, Notifications tab | Set up sending: open the Schedules tab on `fstui watch`, its change ready |
+| `a`, `enter`, `d` | Config, Hosts tab | Add a host, change the selected one, remove it (press twice) |
+| `space`, `t` | Config, Hosts tab | Send notifications about the selected machine or not; test its connection |
 | `space`, `enter` | Config, Alerts tab | Turn the selected alert on or off; change its pools, channels and thresholds |
 | `a`, `d` | Config, Alerts tab | Add your own alert; remove your own (press twice) |
 | `p`, `w` | Config, Notifications and Alerts tabs | Review the changes as a diff, write them |

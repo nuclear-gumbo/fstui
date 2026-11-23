@@ -7,6 +7,7 @@ All notable changes to fstui are listed here. The format follows [Keep a Changel
 ### Added
 
 - Other hosts over SSH, read-only: `hosts:` in `config.yaml` names them, `fstui --host NAME` opens one, and `H` lists them and switches. fstui uses the OpenSSH client with your keys, agent and `~/.ssh/config`, never asks for a password or a new host key, and checks each host's shell and its `zfs`, `zpool` and `env` before reading it. See `docs/remote.md`.
+- Config view, Hosts tab: add, change and remove hosts, test a connection (`t`), and tick which machines `fstui watch` sends notifications about (`space`); each change is reviewed as a diff, as for channels.
 - Proxmox VE: on a node, as root, `H` lists the cluster's other nodes and reaches them as the cluster does; a listed host that is a node adds its cluster's nodes.
 - `notifications.hosts`: `fstui check` and `fstui watch` look at other hosts too. Each host's messages name it, what was sent is kept per host, a host that cannot be reached is reported once, and the heartbeat is requested once per check.
 - Dashboard: a `hosts` panel (add it to `dashboard.panels`) with each host's pools and health, read every `refresh.hosts`.
