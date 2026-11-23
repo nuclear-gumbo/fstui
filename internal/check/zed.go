@@ -35,20 +35,24 @@ var zedChannels = []struct{ key, name string }{
 // DetectZED looks for a running zed process in /proc and reads the
 // channels set in rc. It runs nothing.
 func DetectZED(proc, rc string) ZED {
-	var z ZED
+	running := false
 	comms, _ := filepath.Glob(filepath.Join(proc, "[0-9]*", "comm"))
 	for _, c := range comms {
 		if b, err := os.ReadFile(c); err == nil && string(bytes.TrimSpace(b)) == "zed" { //nolint:gosec // /proc
-			z.Running = true
+			running = true
 			break
 		}
 	}
-	b, err := os.ReadFile(rc) //nolint:gosec // OpenZFS's configuration
-	if err != nil {
-		return z
-	}
+	b, _ := os.ReadFile(rc) //nolint:gosec // OpenZFS's configuration; missing means no channels
+	return ZEDFrom(running, b)
+}
+
+// ZEDFrom is what ZED does, from whether it runs and its zed.rc: for a
+// remote host, both read over ssh.
+func ZEDFrom(running bool, rc []byte) ZED {
+	z := ZED{Running: running}
 	set := map[string]string{}
-	sc := bufio.NewScanner(bytes.NewReader(b))
+	sc := bufio.NewScanner(bytes.NewReader(rc))
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
 		if k, v, ok := strings.Cut(line, "="); ok && !strings.HasPrefix(line, "#") {

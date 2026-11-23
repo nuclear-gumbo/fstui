@@ -46,7 +46,7 @@ func runWatch(args []string, stdout, stderr io.Writer) int {
 	if help, _ := fs.GetBool("help"); help {
 		return report(stdout, 0, "%s\nOptions:\n%s", watchUsage, optionList(fs))
 	}
-	r, notices, err := checkRun()
+	r, notices, err := checkRun() // this machine's state directory holds the lock
 	if err != nil {
 		return report(stderr, exitFailed, "fstui watch: %v\n", err)
 	}
@@ -77,23 +77,38 @@ func runWatch(args []string, stdout, stderr io.Writer) int {
 	n := r.Config.Notifications
 	say(stdout, "fstui watch: checking every %s; kernel events looked for every %s\n", format.Age(n.WatchInterval), every(n.WatchEvents))
 	printNotices(stderr, notices)
+	w, closeRuns := newWatch(stdout, stderr, notices)
+	defer closeRuns()
+	w.Loop(ctx, wake)
+	say(stdout, "fstui watch: stopped\n")
+	return 0
+}
+
+// newWatch is the loop's view of fstui watch: each pass loads the runs
+// of every checked host anew and prints what is worth printing. The
+// returned function ends the last pass's connections.
+func newWatch(stdout, stderr io.Writer, notices []string) (check.Watch, func()) {
+	closeRuns := func() {}
 	shown := notices
-	w := check.Watch{
-		Load: checkRun,
+	return check.Watch{
+		Load: func() ([]check.Run, []string, error) {
+			closeRuns() // the last pass's connections, before the new runs open theirs on the same sockets
+			runs, notices, closer, err := checkRuns()
+			closeRuns = closer
+			return runs, notices, err
+		},
 		Report: func(res check.Result, notices []string) {
 			if !slices.Equal(notices, shown) { // a file changed: say so once, not every pass
 				printNotices(stderr, notices)
 				shown = notices
 			}
 			if worthPrinting(res) {
+				say(stdout, "%s:\n", res.Host)
 				_ = printResult(stdout, res) // the status is for fstui check; a service keeps going
 			}
 		},
 		Fail: func(err error) { say(stderr, "fstui watch: %v\n", err) },
-	}
-	w.Loop(ctx, wake)
-	say(stdout, "fstui watch: stopped\n")
-	return 0
+	}, func() { closeRuns() }
 }
 
 // every is a poll interval in words; 0 is off.

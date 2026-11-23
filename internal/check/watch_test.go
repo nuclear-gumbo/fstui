@@ -5,16 +5,19 @@ package check
 import (
 	"context"
 	"errors"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/nuclear-gumbo/fstui/internal/events"
+	"github.com/nuclear-gumbo/fstui/internal/zfs"
 )
 
 // watchLoop runs Watch.Loop with load; each pass calls then with
 // its number, from the loop's goroutine, so then may change the source
 // without racing the loop.
-func watchLoop(t *testing.T, load func() (Run, []string, error), wake chan struct{}, then func(pass int, cancel func())) (passes int, failed []error) {
+func watchLoop(t *testing.T, load func() ([]Run, []string, error), wake chan struct{}, then func(pass int, cancel func())) (passes int, failed []error) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -40,7 +43,7 @@ func TestWatchRunsOnNewEvent(t *testing.T) {
 	h.run.Config.Notifications.WatchInterval = time.Hour
 	h.run.Config.Notifications.WatchEvents = 5 * time.Millisecond
 	h.src.evs = []events.Event{event(1, events.Error, "old")}
-	load := func() (Run, []string, error) { return h.run, nil, nil }
+	load := func() ([]Run, []string, error) { return []Run{h.run}, nil, nil }
 	passes, _ := watchLoop(t, load, nil, func(pass int, cancel func()) {
 		switch pass {
 		case 1: // the first run only notes where the events stand
@@ -61,13 +64,13 @@ func TestWatchWakeAndFailedLoad(t *testing.T) {
 	h.run.Config.Notifications.WatchInterval = time.Hour
 	wake := make(chan struct{}, 1)
 	loads := 0
-	load := func() (Run, []string, error) {
+	load := func() ([]Run, []string, error) {
 		loads++
 		if loads == 1 {
 			wake <- struct{}{}
-			return Run{}, nil, errors.New("config unreadable")
+			return nil, nil, errors.New("config unreadable")
 		}
-		return h.run, nil, nil
+		return []Run{h.run}, nil, nil
 	}
 	passes, failed := watchLoop(t, load, wake, func(pass int, cancel func()) {
 		if pass == 1 {
@@ -107,5 +110,43 @@ func TestEventsPending(t *testing.T) {
 	h.run.ZED = ZED{Running: true, Channels: []string{"ntfy"}}
 	if h.run.EventsPending(ctx) {
 		t.Error("pending while ZED sends events")
+	}
+}
+
+// A pass checks every host: each sends under its own name and keeps
+// its own state, a host that cannot be read says so, and the heartbeat
+// is requested once.
+func TestWatchHosts(t *testing.T) {
+	h := newHarness(t)
+	h.run.Config.Notifications.HeartbeatURL = "https://hc.example.org/ping/x"
+	h.src.pools = []zfs.Overview{overview(t, "tank", "DEGRADED", 10)}
+	remote := h.run
+	remote.Host, remote.NoHeartbeat = "pve1", true
+	remote.Source = &fakeSource{err: errors.New("pve1 could not be reached: ssh: connect to host pve1 port 22: Connection refused")}
+	remote.StateDir = filepath.Join(t.TempDir(), "pve1")
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	var results []Result
+	Watch{
+		Load: func() ([]Run, []string, error) { return []Run{h.run, remote}, nil, nil },
+		Report: func(res Result, _ []string) {
+			if results = append(results, res); len(results) == 2 {
+				cancel()
+			}
+		},
+		Fail: func(err error) { t.Error(err) },
+	}.Loop(ctx, nil)
+	if len(results) != 2 || results[0].Host != "nas" || results[1].Host != "pve1" {
+		t.Fatalf("results %+v", results)
+	}
+	if p := results[1].Problems; len(p) != 1 || !strings.Contains(p[0].Text, "pve1 could not be reached") {
+		t.Errorf("pve1 problems %+v", p)
+	}
+	got := titles(h.out.take("phone"))
+	if !strings.Contains(got, "nas: ") || !strings.Contains(got, "pve1: ") {
+		t.Errorf("phone got %q", got)
+	}
+	if n := len(h.out.take("heartbeat")); n != 1 {
+		t.Errorf("%d heartbeat requests, want 1", n)
 	}
 }

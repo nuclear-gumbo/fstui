@@ -37,15 +37,19 @@ type Run struct {
 	Secrets  config.Secrets
 	StateDir string
 	Host     string
-	Boot     string // the kernel's boot ID
-	ZED      ZED
-	Now      func() time.Time
+	// NoHeartbeat leaves notifications.heartbeat_url to another run of
+	// the same pass: one request per pass, however many hosts it checks.
+	NoHeartbeat bool
+	Boot        string // the kernel's boot ID
+	ZED         ZED
+	Now         func() time.Time
 	// Send sends one message; notify.Send, or a fake in tests.
 	Send func(context.Context, notify.Channel, notify.Message) error
 }
 
 // Result is what a run found and did.
 type Result struct {
+	Host     string // the run's host, as its messages name it
 	Problems []problem.Problem
 	// Events is how many kernel events were sent; EventsNote says why
 	// none were looked at, if so.
@@ -66,7 +70,7 @@ const readProblem = "check:read"
 // Once looks at every pool and sends what the rules say.
 func (r Run) Once(ctx context.Context) Result {
 	now := r.Now()
-	res := Result{Sent: map[string]int{}, Failed: map[string]error{}, Skipped: map[string]string{}}
+	res := Result{Host: r.Host, Sent: map[string]int{}, Failed: map[string]error{}, Skipped: map[string]string{}}
 	state, err := LoadState(r.StateDir)
 	res.StateErr = err
 	state = migrate(state, r.Config)
@@ -237,7 +241,7 @@ func (r Run) Test(ctx context.Context, name string) error {
 func (r Run) heartbeat(ctx context.Context, read bool) string {
 	n := r.Config.Notifications
 	switch {
-	case n.HeartbeatURL == "":
+	case n.HeartbeatURL == "", r.NoHeartbeat:
 		return ""
 	case !read:
 		return "not sent: the pools could not be read"

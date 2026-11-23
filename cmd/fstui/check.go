@@ -47,26 +47,62 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	if help, _ := fs.GetBool("help"); help {
 		return report(stdout, 0, "%s\nOptions:\n%s", checkUsage, optionList(fs))
 	}
-	r, notices, err := checkRun()
+	runs, notices, closeRuns, err := checkRuns()
+	defer closeRuns()
 	for _, n := range notices {
 		_, _ = fmt.Fprintf(stderr, "fstui check: %s\n", n) // a failed write shows in the status of the report below
 	}
 	if err != nil {
 		return report(stderr, exitFailed, "fstui check: %v\n", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), r.Config.Notifications.CheckTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), runs[0].Config.Notifications.CheckTimeout)
 	defer cancel()
 	if *test != "" {
-		if err := r.Test(ctx, *test); err != nil {
+		if err := runs[0].Test(ctx, *test); err != nil {
 			return report(stderr, exitFailed, "fstui check: %v\n", err)
 		}
 		return report(stdout, 0, "%s: test message sent\n", *test)
 	}
-	return printResult(stdout, r.Once(ctx))
+	status := 0
+	for _, r := range runs {
+		if len(runs) > 1 {
+			say(stdout, "%s:\n", r.Host)
+		}
+		status = max(status, printResult(stdout, r.Once(ctx)))
+	}
+	return status
 }
 
-// checkRun builds the run from the configuration, the secrets and the
-// ZFS backend.
+// bootIDPath is the kernel's boot ID.
+const bootIDPath = "/proc/sys/kernel/random/boot_id"
+
+// checkRuns builds the runs of a check, one per host in
+// notifications.hosts, this machine first; closeAll ends their
+// connections.
+func checkRuns() (runs []check.Run, notices []string, closeAll func(), err error) {
+	local, notices, err := checkRun()
+	if err != nil {
+		return nil, notices, func() {}, err
+	}
+	onHere, hosts, problems := local.Config.CheckedHosts()
+	notices = append(notices, problems...)
+	if onHere {
+		runs = append(runs, local)
+	}
+	remote, closeAll, more := remoteRuns(local, hosts)
+	notices = append(notices, more...)
+	runs = append(runs, remote...)
+	if len(runs) == 0 {
+		return nil, notices, closeAll, errors.New("notifications.hosts names no host to check")
+	}
+	for i := 1; i < len(runs); i++ {
+		runs[i].NoHeartbeat = true // one request per pass
+	}
+	return runs, notices, closeAll, nil
+}
+
+// checkRun builds this machine's run from the configuration, the
+// secrets and the ZFS backend.
 func checkRun() (check.Run, []string, error) {
 	var notices []string
 	user, err := config.UserFile()
@@ -90,7 +126,7 @@ func checkRun() (check.Run, []string, error) {
 	send, dir := checkSending(dir)
 	host, _ := os.Hostname()
 	host = cmp.Or(cfg.Notifications.Host, host)
-	boot, _ := os.ReadFile("/proc/sys/kernel/random/boot_id")
+	boot, _ := os.ReadFile(bootIDPath)
 	return check.Run{
 		Source: src, Config: cfg, Secrets: secrets, StateDir: dir,
 		Host: host, Boot: strings.TrimSpace(string(boot)), ZED: check.DetectZED("/proc", check.ZEDConfig),

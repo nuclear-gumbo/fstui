@@ -7,6 +7,7 @@ package main
 import (
 	"errors"
 
+	"github.com/nuclear-gumbo/fstui/internal/check"
 	"github.com/spf13/pflag"
 
 	"github.com/nuclear-gumbo/fstui/internal/config"
@@ -37,4 +38,12 @@ func hostsNotice(cfg config.Config) string {
 		return ""
 	}
 	return "hosts: in config.yaml is ignored: this build of fstui leaves out the remote module"
+}
+
+// remoteRuns checks no other host in this build.
+func remoteRuns(_ check.Run, hosts []config.Host) ([]check.Run, func(), []string) {
+	if len(hosts) == 0 {
+		return nil, func() {}, nil
+	}
+	return nil, func() {}, []string{"notifications.hosts names other hosts, which this build of fstui does not check: it leaves out the remote module"}
 }

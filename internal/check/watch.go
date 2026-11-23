@@ -4,6 +4,7 @@ package check
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/nuclear-gumbo/fstui/internal/config"
@@ -15,10 +16,11 @@ import (
 // are read again for every pass, so a saved change applies without a
 // restart.
 type Watch struct {
-	// Load is a run with the configuration as it is now, and the
-	// problems found in the files.
-	Load func() (Run, []string, error)
-	// Report is told what each pass did; Fail why a pass could not run.
+	// Load is the runs of a pass, one per host checked, with the
+	// configuration as it is now, and the problems found in the files.
+	Load func() ([]Run, []string, error)
+	// Report is told what each run of a pass did; Fail why a pass
+	// could not run.
 	Report func(Result, []string)
 	Fail   func(error)
 }
@@ -28,10 +30,11 @@ type Watch struct {
 func (w Watch) Loop(ctx context.Context, wake <-chan struct{}) {
 	for ctx.Err() == nil {
 		n := config.Default().Notifications
-		r, notices, err := w.Load()
+		runs, notices, err := w.Load()
 		if err != nil {
 			w.Fail(err)
-		} else {
+		}
+		for _, r := range runs {
 			n = r.Config.Notifications
 			pass, cancel := context.WithTimeout(ctx, n.CheckTimeout)
 			res := r.Once(pass)
@@ -45,7 +48,9 @@ func (w Watch) Loop(ctx context.Context, wake <-chan struct{}) {
 		if err != nil {
 			poll = 0
 		}
-		wait(ctx, wake, n.WatchInterval, poll, func() bool { return r.EventsPending(ctx) })
+		wait(ctx, wake, n.WatchInterval, poll, func() bool {
+			return slices.ContainsFunc(runs, func(r Run) bool { return r.EventsPending(ctx) })
+		})
 	}
 }
 
