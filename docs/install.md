@@ -55,6 +55,14 @@ go build -tags fstui_nowrite -o fstui ./cmd/fstui
 
 This binary only reads: write mode, the change menus, schedule changes, saved plans and the audit log are not in it. `fstui check` and `fstui watch` are, since they change nothing. `fstui --version` lists the compiled-in modules; `write` is absent from this build.
 
+## Without other hosts
+
+```sh
+go build -tags fstui_noremote -o fstui ./cmd/fstui
+```
+
+This binary looks at the machine it runs on only: `--host`, the host list (`H`), the Config view's Hosts tab, Proxmox VE discovery and checks of other hosts are left out, and it never runs `ssh`. Tags combine: `-tags "fstui_nowrite fstui_noremote"`. A Gentoo ebuild maps the USE flags `write` and `remote` to these tags.
+
 ## Demo container
 
 ```sh

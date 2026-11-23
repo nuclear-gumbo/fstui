@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//go:build fstui_demo
+//go:build fstui_demo && !fstui_noremote
 
 package demo
 

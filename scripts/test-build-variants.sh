@@ -75,6 +75,27 @@ no_write_code() {
 no_write_code fstui_nowrite
 no_write_code "fstui_demo fstui_nowrite"
 
+# Without the remote module the binary cannot reach another host: no
+# Proxmox VE code, and nothing that runs ssh.
+# no_remote_code <tags>
+no_remote_code() {
+	deps=$(go list -deps -tags "$1" ./cmd/fstui)
+	case $deps in
+	*"/fstui/internal/pve
+"* | *"/fstui/internal/pve")
+		echo "FAIL: tags '$1': links internal/pve"
+		fail=1
+		;;
+	esac
+	go build -tags "$1" -o "$bin" ./cmd/fstui
+	if go tool nm "$bin" | grep -q 'execute\.(\*Remote)\|execute\.Host\.Wrap'; then
+		echo "FAIL: tags '$1': binary contains the ssh runner"
+		fail=1
+	fi
+}
+no_remote_code fstui_noremote
+no_remote_code "fstui_demo fstui_noremote"
+
 # --version adds one line per module saying what it found on this host:
 # the OpenZFS versions, or why there are none (most CI hosts have no ZFS).
 # expect_describe <tags> <module> <yes|no>
