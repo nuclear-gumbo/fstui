@@ -62,7 +62,7 @@ func (h *Hosts) Nested() bool { return h.form != nil || h.review != nil }
 // Typing reports a form open.
 func (h *Hosts) Typing() bool { return h.form != nil }
 
-var hostCheckKey = key.NewBinding(key.WithKeys("space"), key.WithHelp("space", "check with fstui watch, or not"))
+var hostCheckKey = key.NewBinding(key.WithKeys("space"), key.WithHelp("space", "notify or not"))
 
 // Keys are the tab's bindings.
 func (h *Hosts) Keys() []key.Binding {
@@ -263,7 +263,7 @@ func (h *Hosts) toggle(name string) {
 	}
 	on := slices.Contains(h.checked(), name)
 	if on && len(h.checked()) == 1 {
-		h.message = "fstui check needs a machine to look at; check another first."
+		h.message = "fstui watch needs a machine to send notifications about; tick another first."
 		return
 	}
 	want := map[string]bool{name: !on}
@@ -341,14 +341,14 @@ func (h *Hosts) render(d Display, width, height int) string {
 	pal := d.Palette
 	muted := pal.Style(theme.Muted)
 	intro := "Other machines fstui reads over SSH, read-only; " + keyMark("H") + " switches to one. " +
-		keyMark(hostCheckKey.Help().Key) + " chooses the machines fstui check and fstui watch look at; " +
+		keyMark(hostCheckKey.Help().Key) + " chooses the machines fstui watch sends notifications about; " +
 		keyName(keys.TestChannel) + " tests a connection."
 	lines := []string{ansi.Wrap(intro, width, ""), ""}
 	nameCol := len("NAME")
 	for _, n := range h.names() {
 		nameCol = max(nameCol, len(n))
 	}
-	lines = append(lines, muted.Render("  CHECK  "+pad(nameCol, "NAME")+"  DESTINATION"))
+	lines = append(lines, muted.Render("  NOTIFY  "+pad(nameCol, "NAME")+"  DESTINATION"))
 	h.top = lipgloss.Height(strings.Join(lines, "\n"))
 	checked := h.checked()
 	for i, n := range h.names() {
@@ -364,7 +364,7 @@ func (h *Hosts) render(d Display, width, height int) string {
 		if i > 0 {
 			dest = termtext.New(h.hosts()[i-1].Destination).Display()
 		}
-		lines = append(lines, ansi.Truncate(marker+box+"    "+pad(nameCol, n)+"  "+dest, width, "…"))
+		lines = append(lines, ansi.Truncate(marker+box+"     "+pad(nameCol, n)+"  "+dest, width, "…"))
 	}
 	if len(h.hosts()) == 0 {
 		lines = append(lines, "", ansi.Wrap("No other hosts yet. "+keyName(keys.Actions)+" adds one; docs/remote.md says what a host needs.", width, ""))

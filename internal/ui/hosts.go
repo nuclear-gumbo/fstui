@@ -156,7 +156,7 @@ func (h *hostList) Render(d Display, width, height int) string {
 		line := marker + pad(nameCol, e.Name) + "  " + muted.Render(termtext.New(status).Display())
 		lines = append(lines, fit(line, iw))
 	}
-	lines = append(lines, "", muted.Render(fit("A host is read over SSH, read-only; hosts: in config.yaml lists them.", iw)))
+	lines = append(lines, "", muted.Render(fit("Hosts are read over SSH, read-only; the Config view's Hosts tab adds them.", iw)))
 	return Panel{Title: "hosts", Focused: true}.Render(d, strings.Join(lines, "\n"), w, min(height, len(lines)+2))
 }
 

@@ -70,7 +70,7 @@ func write(t *testing.T, h *Hosts, file string) config.Config {
 
 func TestHostsTabAdd(t *testing.T) {
 	h, file := hostsTab(t, "theme: nord\n", nil)
-	if out := ansi.Strip(h.Render(asciiDisplay(false), 100, 30)); !strings.Contains(out, "[x]    local  this machine") || !strings.Contains(out, "No other hosts yet") {
+	if out := ansi.Strip(h.Render(asciiDisplay(false), 100, 30)); !strings.Contains(out, "[x]     local  this machine") || !strings.Contains(out, "No other hosts yet") {
 		t.Fatalf("empty tab:\n%s", out)
 	}
 	h.Update(k("a"))
@@ -109,7 +109,7 @@ func TestHostsTabRefusesBadDestination(t *testing.T) {
 func TestHostsTabCheck(t *testing.T) {
 	h, file := hostsTab(t, "hosts:\n  - {name: pve1, destination: pve1}\n  - {name: nas, destination: nas}\n", nil)
 	h.Update(k(" "))
-	if !strings.Contains(h.message, "needs a machine") {
+	if !strings.Contains(h.message, "needs a machine") { // the last one stays ticked
 		t.Errorf("unchecked the last machine: %q", h.message)
 	}
 	h.Update(k("j"))
