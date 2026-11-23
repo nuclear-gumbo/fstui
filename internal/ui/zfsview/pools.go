@@ -39,8 +39,11 @@ type PoolsOptions struct {
 	Superuser       bool
 	Version         zfs.Version // for the userland/kernel mismatch warning
 	Root            bool        // zpool history and events need root
-	Now             func() time.Time
-	Settings        *config.Config // shared by the views; nil: defaults
+	// Remote is set for a pool on another host: its files cannot be
+	// read from here, so the Tune tab's per-file walk is not offered.
+	Remote   bool
+	Now      func() time.Time
+	Settings *config.Config // shared by the views; nil: defaults
 }
 
 // Pools is the overview of every imported pool.
@@ -137,7 +140,11 @@ func (p *Pools) Keys() []key.Binding {
 		case tabHistory:
 			bs = append([]key.Binding{keys.Get(keys.Internal)}, bs...)
 		case tabTune:
-			bs = append([]key.Binding{keys.As(keys.Select, "show details"), keys.As(keys.Refresh, "measure again"), keys.Get(keys.MeasureFiles)}, bs[:len(bs)-2]...)
+			tuneKeys := []key.Binding{keys.As(keys.Select, "show details"), keys.As(keys.Refresh, "measure again")}
+			if !p.opts.Remote {
+				tuneKeys = append(tuneKeys, keys.Get(keys.MeasureFiles))
+			}
+			bs = append(tuneKeys, bs[:len(bs)-2]...)
 			bs = append(bs, keys.As(keys.Back, "back"))
 		}
 		return bs

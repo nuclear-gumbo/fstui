@@ -34,7 +34,9 @@ func expensive(alg string) bool {
 
 // Compression answers whether compression pays for itself per dataset;
 // walk is the result of the per-file walk, if one was run.
-func Compression(ds []DatasetCompression, walk *WalkResult, size func(uint64) string, t config.Tune) Finding {
+// files is whether the pool's files can be read here: not for a pool on
+// another host, whose files the per-file walk cannot reach.
+func Compression(ds []DatasetCompression, walk *WalkResult, size func(uint64) string, t config.Tune, files bool) Finding {
 	minUsed := uint64(t.CompressionGiB) << 30 //nolint:gosec // a non-negative setting
 	f := Finding{Question: CompressionQuestion}
 	var big []DatasetCompression
@@ -60,6 +62,9 @@ func Compression(ds []DatasetCompression, walk *WalkResult, size func(uint64) st
 	f.Verdict = Fits
 	f.Figure = fmt.Sprintf("%s compresses %.2fx (compression=%s)", big[0].Dataset, big[0].Ratio, big[0].Algorithm)
 	f.Points = "c measures, per file, how much of the data does not compress"
+	if !files {
+		f.Points = "measuring per file reads the files, so it needs fstui on the machine that holds the pool"
+	}
 	for _, d := range big {
 		if expensive(d.Algorithm) && d.Ratio < t.PoorRatio {
 			f.Verdict = WorthALook

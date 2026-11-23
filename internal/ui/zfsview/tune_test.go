@@ -13,6 +13,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/nuclear-gumbo/fstui/internal/ui/keys"
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
 	"github.com/nuclear-gumbo/fstui/internal/zfs/name"
 )
@@ -76,6 +77,19 @@ func TestTuneTab(t *testing.T) {
 			t.Errorf("line wider than the tab: %q", l)
 		}
 	}
+	// On another host the files cannot be walked from here: not offered,
+	// and not started.
+	p.detail.tune.roots = []string{"/tank"}
+	p.opts.Remote = true
+	if p.measureFiles() != nil {
+		t.Error("the per-file walk started for a remote pool")
+	}
+	for _, b := range p.Keys() {
+		if b.Help().Desc == keys.Get(keys.MeasureFiles).Help().Desc {
+			t.Error("the per-file walk is offered for a remote pool")
+		}
+	}
+	p.opts.Remote = false
 	p.stopTune()
 
 	plain := NewPools(&fakeSource{pools: []zfs.Overview{ov}}, defaults())

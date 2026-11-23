@@ -131,7 +131,7 @@ func (p *Pools) stopTune() {
 // mounted filesystems; it ends with the tab or at its limits.
 func (p *Pools) measureFiles() tea.Cmd {
 	t := p.detail.tune
-	if t == nil || t.cancel == nil || t.walking != nil || len(t.roots) == 0 {
+	if t == nil || t.cancel == nil || t.walking != nil || len(t.roots) == 0 || p.opts.Remote {
 		return nil
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -332,7 +332,7 @@ func (p *Pools) findings(size func(uint64) string) []tune.Finding {
 	cost := tune.Cost{Writes: amp.Verdict >= tune.WorthALook, Reads: tune.ReadAmplified(w, layout, tc)}
 	return []tune.Finding{
 		amp, tune.Sizes(w, t.records, t.volumes, cost, size, tc), tune.ARC(w, size, tc),
-		tune.Saturation(w, layout, tc), tune.Compression(t.comp, t.walk, size, tc),
+		tune.Saturation(w, layout, tc), tune.Compression(t.comp, t.walk, size, tc, !p.opts.Remote),
 	}
 }
 

@@ -75,7 +75,7 @@ func openHost(cfg config.Config, choice ui.HostEntry) (remoteHost, error) {
 	}
 	reader := newReader(rem, cfg)
 	reader.ReadFile, reader.ReadDir = rem.ReadFile, rem.ReadDir
-	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: p.UID == 0, arc: reader.ARCStats, hosts: hostLister(cfg, h.name)})
+	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: p.UID == 0, remote: true, arc: reader.ARCStats, hosts: hostLister(cfg, h.name)})
 	o.cleanup = rem.Close
 	return remoteHost{opened: o, name: h.name, privilege: remotePrivilege(p.UID)}, nil
 }

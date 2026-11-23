@@ -52,7 +52,7 @@ func openHost(cfg config.Config, choice ui.HostEntry) (remoteHost, error) {
 	}
 	cmds.UseARC(arc)
 	reader := demoReader(cmds)
-	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: true, arc: arc.Read, hosts: hostLister(cfg, choice.Name)})
+	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: true, remote: true, arc: arc.Read, hosts: hostLister(cfg, choice.Name)})
 	return remoteHost{opened: o, name: choice.Name, privilege: remotePrivilege(0)}, nil
 }
 

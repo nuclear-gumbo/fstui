@@ -26,6 +26,7 @@ type zfsSource struct {
 	reader  *zfs.Reader
 	version zfs.Version
 	root    bool // fstui is root where the pools are
+	remote  bool // the pools are on another host
 	arc     func() (zfs.ARCStats, error)
 	hosts   *ui.HostLister // for the dashboard's hosts panel
 }
@@ -37,7 +38,7 @@ func zfsViews(cfg config.Config, src zfsSource) opened {
 	reader := src.reader
 	pools := zfsview.NewPools(reader, zfsview.PoolsOptions{
 		Interval: cfg.Refresh.Pools, DatasetInterval: cfg.Refresh.Datasets, Thresholds: cfg.Thresholds, Superuser: cfg.Superuser,
-		Version: src.version, Root: src.root, Now: time.Now, Settings: settings,
+		Version: src.version, Root: src.root, Remote: src.remote, Now: time.Now, Settings: settings,
 	})
 	datasets := zfsview.NewDatasets(reader, zfsview.DatasetsOptions{Interval: cfg.Refresh.Datasets, Now: time.Now, Settings: settings})
 	snapshots := zfsview.NewSnapshots(reader, settings, time.Now)
