@@ -12,6 +12,7 @@ import (
 
 	"github.com/nuclear-gumbo/fstui/internal/config"
 	"github.com/nuclear-gumbo/fstui/internal/registry"
+	"github.com/nuclear-gumbo/fstui/internal/ui"
 )
 
 // registerRemote is empty in builds that leave out remote hosts (and,
@@ -28,7 +29,7 @@ type remoteHost struct {
 }
 
 // openHost is never reached: there is no --host to ask for it.
-func openHost(config.Config, string) (remoteHost, error) {
+func openHost(config.Config, ui.HostEntry) (remoteHost, error) {
 	return remoteHost{}, errors.New("this build of fstui leaves out remote hosts")
 }
 
@@ -47,3 +48,6 @@ func remoteRuns(_ check.Run, hosts []config.Host) ([]check.Run, func(), []string
 	}
 	return nil, func() {}, []string{"notifications.hosts names other hosts, which this build of fstui does not check: it leaves out the remote module"}
 }
+
+// hostLister lists no hosts: H does nothing in this build.
+func hostLister(config.Config, string) *ui.HostLister { return nil }

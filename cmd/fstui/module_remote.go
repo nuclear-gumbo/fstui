@@ -7,7 +7,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"maps"
+	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -18,10 +21,13 @@ import (
 	"github.com/nuclear-gumbo/fstui/internal/config"
 	"github.com/nuclear-gumbo/fstui/internal/events"
 	"github.com/nuclear-gumbo/fstui/internal/execute"
+	"github.com/nuclear-gumbo/fstui/internal/format"
 	"github.com/nuclear-gumbo/fstui/internal/problem"
+	"github.com/nuclear-gumbo/fstui/internal/pve"
 	"github.com/nuclear-gumbo/fstui/internal/registry"
 	"github.com/nuclear-gumbo/fstui/internal/statedir"
 	"github.com/nuclear-gumbo/fstui/internal/termtext"
+	"github.com/nuclear-gumbo/fstui/internal/ui"
 	"github.com/nuclear-gumbo/fstui/internal/zfs"
 	"github.com/nuclear-gumbo/fstui/internal/zfs/health"
 )
@@ -43,28 +49,18 @@ type remoteHost struct {
 	privilege string
 }
 
-// openHost connects to the host named name, checks it (the probe) and
+// openHost connects to the chosen host, checks it (the probe) and
 // returns its ZFS views. Changes on remote hosts come in 0.9.1: nothing
 // is offered for writing, and the Schedules tab keeps to this machine.
-func openHost(cfg config.Config, name string) (remoteHost, error) {
-	h, ok := cfg.HostNamed(name)
-	if !ok {
-		return remoteHost{}, unknownHost(cfg, name)
-	}
-	tools, err := execute.Resolve(execute.SSH)
-	if err != nil {
-		return remoteHost{}, fmt.Errorf("not running ssh: %w", err)
-	}
-	dir, err := sshDir()
+func openHost(cfg config.Config, choice ui.HostEntry) (remoteHost, error) {
+	h, err := targetOf(cfg, choice)
 	if err != nil {
 		return remoteHost{}, err
 	}
-	run := execute.NewRunner(tools)
-	run.ReadTimeout = cfg.Limits.ReadTimeout
-	rem := execute.NewRemote(run, execute.Host{
-		Destination: h.Destination, ControlDir: dir,
-		ConnectTimeout: cfg.Remote.ConnectTimeout, AliveInterval: cfg.Remote.AliveInterval, Persist: cfg.Remote.Persist,
-	})
+	rem, err := connect(cfg, h.Host)
+	if err != nil {
+		return remoteHost{}, err
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Remote.ConnectTimeout+cfg.Limits.ReadTimeout)
 	defer cancel()
 	p, err := rem.Probe(ctx)
@@ -73,18 +69,185 @@ func openHost(cfg config.Config, name string) (remoteHost, error) {
 	}
 	if err != nil {
 		rem.Close()
-		return remoteHost{}, fmt.Errorf("host %s (%s): %w", h.Name, h.Destination, err)
+		return remoteHost{}, fmt.Errorf("host %s (%s): %w", h.name, h.Destination, err)
 	}
 	v, err := zfs.DetectVersionOn(ctx, rem)
 	if err != nil {
 		rem.Close()
-		return remoteHost{}, fmt.Errorf("host %s: %w", h.Name, err)
+		return remoteHost{}, fmt.Errorf("host %s: %w", h.name, err)
 	}
 	reader := newReader(rem, cfg)
 	reader.ReadFile, reader.ReadDir = rem.ReadFile, rem.ReadDir
 	o := zfsViews(cfg, zfsSource{reader: reader, version: v, root: p.UID == 0, arc: reader.ARCStats})
 	o.cleanup = rem.Close
-	return remoteHost{opened: o, name: h.Name, privilege: remotePrivilege(p.UID)}, nil
+	return remoteHost{opened: o, name: h.name, privilege: remotePrivilege(p.UID)}, nil
+}
+
+// target is a host to connect to, with the name fstui shows for it.
+type target struct {
+	execute.Host
+	name string
+}
+
+// targetOf is the chosen host: one from hosts:, or a Proxmox VE node the
+// host list found. A node of this machine's own cluster is reached as
+// the cluster reaches it (PVE::SSHInfo).
+func targetOf(cfg config.Config, choice ui.HostEntry) (target, error) {
+	if h, ok := cfg.HostNamed(choice.Name); ok {
+		return target{Host: execute.Host{Destination: h.Destination}, name: h.Name}, nil
+	}
+	if choice.Destination == "" {
+		return target{}, unknownHost(cfg, choice.Name)
+	}
+	t := target{Host: execute.Host{Destination: choice.Destination}, name: choice.Name}
+	if m, ok := localMembers(); ok && choice.Cluster == m.Cluster {
+		t.HostKeyAlias = choice.Name
+		if f := filepath.Join("/etc/pve/nodes", choice.Name, "ssh_known_hosts"); fileExists(f) {
+			t.KnownHostsFile = f
+		}
+	}
+	return t, nil
+}
+
+// connect is a connection to h with fstui's settings; nothing is run
+// until Probe.
+func connect(cfg config.Config, h execute.Host) (*execute.Remote, error) {
+	tools, err := execute.Resolve(execute.SSH)
+	if err != nil {
+		return nil, fmt.Errorf("not running ssh: %w", err)
+	}
+	dir, err := sshDir()
+	if err != nil {
+		return nil, err
+	}
+	run := execute.NewRunner(tools)
+	run.ReadTimeout = cfg.Limits.ReadTimeout
+	h.ControlDir = dir
+	h.ConnectTimeout, h.AliveInterval, h.Persist = cfg.Remote.ConnectTimeout, cfg.Remote.AliveInterval, cfg.Remote.Persist
+	return execute.NewRemote(run, h), nil
+}
+
+// localMembers is this machine's Proxmox VE cluster, when fstui runs as
+// root on a node of one.
+func localMembers() (pve.Members, bool) {
+	b, err := os.ReadFile(pve.MembersPath)
+	if err != nil {
+		return pve.Members{}, false
+	}
+	m, err := pve.ParseMembers(b)
+	return m, err == nil && m.Cluster != ""
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// hostLister is what H lists: this machine, the hosts in config.yaml,
+// the other nodes of this machine's Proxmox VE cluster, and those of
+// each listed host's cluster as each is read.
+func hostLister(cfg config.Config, current string) *ui.HostLister {
+	if current == "" {
+		current = config.LocalHost
+	}
+	return &ui.HostLister{
+		Entries: func() []ui.HostEntry {
+			out := []ui.HostEntry{{Name: config.LocalHost, Current: current == config.LocalHost}}
+			for _, h := range cfg.Hosts {
+				out = append(out, ui.HostEntry{Name: h.Name, Destination: h.Destination, Current: current == h.Name})
+			}
+			if m, ok := localMembers(); ok {
+				out = append(out, nodes(m, cfg, "root@", current, true)...)
+			}
+			return out
+		},
+		Status: func(ctx context.Context, e ui.HostEntry) (string, []ui.HostEntry) {
+			ctx, cancel := context.WithTimeout(ctx, cfg.Remote.ConnectTimeout+cfg.Limits.ReadTimeout)
+			defer cancel()
+			return hostStatus(ctx, cfg, e, current)
+		},
+	}
+}
+
+// nodes are the cluster's nodes other than this one and the hosts
+// already listed, reached as user@node, or by address when byIP.
+func nodes(m pve.Members, cfg config.Config, user, current string, byIP bool) []ui.HostEntry {
+	var out []ui.HostEntry
+	for _, n := range m.Nodes {
+		if _, listed := cfg.HostNamed(n.Name); listed || n.Name == m.Self || n.Name == config.LocalHost {
+			continue
+		}
+		dest := user + n.Name
+		if byIP && n.IP.IsValid() {
+			dest = user + n.IP.String()
+		}
+		if execute.CheckDestination(dest) != nil {
+			continue
+		}
+		out = append(out, ui.HostEntry{Name: n.Name, Destination: dest, Cluster: m.Cluster, Current: current == n.Name})
+	}
+	return out
+}
+
+// hostStatus reads a host for the list: its pools in a few words, and the
+// other nodes of its Proxmox VE cluster.
+func hostStatus(ctx context.Context, cfg config.Config, e ui.HostEntry, current string) (string, []ui.HostEntry) {
+	if e.Name == config.LocalHost {
+		tools, err := execute.Resolve(execute.ZFS, execute.Zpool)
+		if err != nil {
+			return "not read: " + err.Error(), nil
+		}
+		return poolSummary(ctx, zfs.NewReader(execute.NewRunner(tools))), nil
+	}
+	t, err := targetOf(cfg, e)
+	if err != nil {
+		return err.Error(), nil
+	}
+	rem, err := connect(cfg, t.Host)
+	if err != nil {
+		return err.Error(), nil
+	}
+	defer rem.Close()
+	p, err := rem.Probe(ctx)
+	if err == nil {
+		err = p.Require(execute.RemoteEnv, execute.ZFS, execute.Zpool)
+	}
+	if err != nil {
+		return err.Error(), nil
+	}
+	summary := poolSummary(ctx, zfs.NewReader(rem))
+	b, err := rem.ReadFile(pve.MembersPath)
+	if err != nil {
+		return summary, nil
+	}
+	m, err := pve.ParseMembers(b)
+	if err != nil || m.Cluster == "" {
+		return summary, nil
+	}
+	user := ""
+	if u, _, ok := strings.Cut(t.Destination, "@"); ok {
+		user = u + "@"
+	}
+	return summary, nodes(m, cfg, user, current, false)
+}
+
+// poolSummary is "3 pools", with how many are not ONLINE by state.
+func poolSummary(ctx context.Context, r *zfs.Reader) string {
+	os, err := r.Overviews(ctx)
+	if err != nil {
+		return "pools not read: " + err.Error()
+	}
+	states := map[string]int{}
+	for _, o := range os {
+		if o.Status.State != "ONLINE" {
+			states[o.Status.State]++
+		}
+	}
+	parts := []string{fmt.Sprintf("%d %s", len(os), format.Plural(len(os), "pool", "pools"))}
+	for _, s := range slices.Sorted(maps.Keys(states)) {
+		parts = append(parts, fmt.Sprintf("%d %s", states[s], termtext.New(s).Display()))
+	}
+	return strings.Join(parts, ", ")
 }
 
 // sshDir is the private directory of ssh's connection sockets.
@@ -134,23 +297,13 @@ func remoteRuns(local check.Run, hosts []config.Host) ([]check.Run, func(), []st
 		return nil, func() {}, nil
 	}
 	cfg := local.Config
-	tools, err := execute.Resolve(execute.SSH)
-	if err != nil {
-		return nil, func() {}, []string{"not checking other hosts: ssh: " + err.Error()}
-	}
-	dir, err := sshDir()
-	if err != nil {
-		return nil, func() {}, []string{"not checking other hosts: " + err.Error()}
-	}
 	var runs []check.Run
 	var remotes []*execute.Remote
 	for _, h := range hosts {
-		run := execute.NewRunner(tools)
-		run.ReadTimeout = cfg.Limits.ReadTimeout
-		rem := execute.NewRemote(run, execute.Host{
-			Destination: h.Destination, ControlDir: dir,
-			ConnectTimeout: cfg.Remote.ConnectTimeout, AliveInterval: cfg.Remote.AliveInterval, Persist: cfg.Remote.Persist,
-		})
+		rem, err := connect(cfg, execute.Host{Destination: h.Destination})
+		if err != nil {
+			return nil, func() {}, []string{"not checking other hosts: " + err.Error()}
+		}
 		remotes = append(remotes, rem)
 		r := local
 		r.Host = h.Name

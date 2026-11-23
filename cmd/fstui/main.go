@@ -159,7 +159,16 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if !term.IsTerminal(os.Stdout.Fd()) || !term.IsTerminal(os.Stdin.Fd()) {
 		return report(stderr, exitUsage, "fstui is interactive and needs a terminal; fstui --version works without one.\n")
 	}
-	return start(stderr, *superuser, *dashboard, *host, wf)
+	// Choosing another host in the host list ends the program; it starts
+	// again on that host, so every view is built for it as at start-up.
+	choice := ui.HostEntry{Name: *host}
+	for {
+		code, next := start(stderr, *superuser, *dashboard, choice, wf)
+		if next == nil {
+			return code
+		}
+		choice = *next
+	}
 }
 
 // optionList formats the options as GNU tools do. pflag's own list marks
@@ -177,7 +186,7 @@ func optionList(fs *pflag.FlagSet) string {
 }
 
 // start loads the config, opens every compiled-in backend and runs the UI.
-func start(stderr io.Writer, superuserFlag, dashboard bool, hostName string, wf *writeFlags) int {
+func start(stderr io.Writer, superuserFlag, dashboard bool, choice ui.HostEntry, wf *writeFlags) (int, *ui.HostEntry) {
 	var notices []string
 	user, err := config.UserFile()
 	if err != nil {
@@ -199,12 +208,12 @@ func start(stderr io.Writer, superuserFlag, dashboard bool, hostName string, wf 
 		notices = append(notices, p.String())
 	}
 
-	notices = append(notices, hostNotices(cfg, hostName, wf)...)
-	backends, host, priv, err := openBackends(cfg, hostName)
+	notices = append(notices, hostNotices(cfg, choice.Name, wf)...)
+	backends, host, priv, err := openBackends(cfg, choice)
 	if err != nil {
 		// What the status bar would have said may be the reason, such as
 		// a config file ignored because others can write it.
-		return report(stderr, exitFailed, "fstui: %v\n%s", err, noticeLines(notices))
+		return report(stderr, exitFailed, "fstui: %v\n%s", err, noticeLines(notices)), nil
 	}
 	if backends.cleanup != nil {
 		defer backends.cleanup()
@@ -231,12 +240,28 @@ func start(stderr io.Writer, superuserFlag, dashboard bool, hostName string, wf 
 	m := ui.New(session, screens, ui.Options{
 		Theme: th, Profile: profile, Overrides: cfg.Colors, Exact: cfg.Units == config.Exact,
 		ASCII: cfg.UseASCII(os.Getenv("TERM")), Mouse: cfg.Mouse, Natural: cfg.NaturalScrolling, Now: time.Now, StartView: startView(dashboard, cfg.UI.StartView), NoBlink: !cfg.UI.CursorBlink,
-		Actions: actions,
+		Actions: actions, Hosts: hostLister(cfg, choice.Name),
 	})
-	if _, err := tea.NewProgram(m, tea.WithColorProfile(profile)).Run(); err != nil {
-		return report(stderr, exitFailed, "fstui: %v\n", err)
+	next, err := runProgram(m, profile)
+	if err != nil {
+		return report(stderr, exitFailed, "fstui: %v\n", err), nil
 	}
-	return 0
+	return 0, next
+}
+
+// runProgram runs the interface until it ends, and returns the host the
+// user chose to see next, if that is why it ended.
+func runProgram(m ui.Model, profile colorprofile.Profile) (*ui.HostEntry, error) {
+	final, err := tea.NewProgram(m, tea.WithColorProfile(profile)).Run()
+	if err != nil {
+		return nil, err //nolint:wrapcheck // the caller prefixes fstui
+	}
+	if fm, ok := final.(ui.Model); ok {
+		if next, ok := fm.Next(); ok {
+			return &next, nil
+		}
+	}
+	return nil, nil
 }
 
 // noticeLines lists notices, one per line, for stderr.
@@ -260,11 +285,11 @@ func hostNotices(cfg config.Config, hostName string, wf *writeFlags) []string {
 	return out
 }
 
-// openBackends opens this machine's backends, or the host named
-// hostName, with the status bar's host and privilege fields.
-func openBackends(cfg config.Config, hostName string) (opened, string, string, error) {
-	if hostName != "" {
-		h, err := openHost(cfg, hostName)
+// openBackends opens this machine's backends, or the chosen host, with
+// the status bar's host and privilege fields.
+func openBackends(cfg config.Config, choice ui.HostEntry) (opened, string, string, error) {
+	if choice.Name != "" && choice.Name != config.LocalHost {
+		h, err := openHost(cfg, choice)
 		return h.opened, h.name, h.privilege, err
 	}
 	host, _ := os.Hostname() // empty is shown as empty; nothing depends on it
