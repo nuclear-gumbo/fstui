@@ -2,8 +2,8 @@
 
 // Package pve reads how a Proxmox VE cluster describes itself: which
 // nodes it has (/etc/pve/.members) and which ZFS storage each node holds
-// (/etc/pve/storage.cfg). The formats are pmxcfs's and pve-common's
-// (docs/research/remote-hosts.md); both files come from the cluster and
+// (/etc/pve/storage.cfg). The formats are those pmxcfs writes and
+// pve-common's SectionConfig reads; both files come from the cluster and
 // are untrusted.
 package pve
 

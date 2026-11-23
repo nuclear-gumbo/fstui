@@ -6,12 +6,23 @@ All notable changes to fstui are listed here. The format follows [Keep a Changel
 
 ### Added
 
+- Other hosts over SSH, read-only: `hosts:` in `config.yaml` names them, `fstui --host NAME` opens one, and `H` lists them and switches. fstui uses the OpenSSH client with your keys, agent and `~/.ssh/config`, never asks for a password or a new host key, and checks each host's shell and its `zfs`, `zpool` and `env` before reading it. See `docs/remote.md`.
+- Proxmox VE: on a node, as root, `H` lists the cluster's other nodes and reaches them as the cluster does; a listed host that is a node adds its cluster's nodes.
+- `notifications.hosts`: `fstui check` and `fstui watch` look at other hosts too. Each host's messages name it, what was sent is kept per host, a host that cannot be reached is reported once, and the heartbeat is requested once per check.
+- Dashboard: a `hosts` panel (add it to `dashboard.panels`) with each host's pools and health, read every `refresh.hosts`.
+- Settings `remote.connect_timeout`, `remote.alive_interval` and `remote.persist` (Remote hosts group), and `refresh.hosts`.
 - `ui.text_width` (Display group): the widest a line of text runs in the Config view before it wraps, 110 columns by default.
+- A build tag `fstui_noremote` (Gentoo USE flag `remote`) leaves out other hosts.
 
 ### Changed
 
 - Config view, Alerts tab: the built-in alerts have short titles ("A device is offline", "Reads are slow"); the box under the list explains each. On a short terminal the box shortens to the explanation, so the list keeps its rows.
 - Config view, General tab: the opening line and each group's description fit 80 columns instead of being cut off.
+- The demo has a Proxmox VE cluster of hosts: `H` in the demo lists its nodes, one of which cannot be reached. The demo container's command now passes `COLORTERM`, so a terminal with full colour shows the theme's own colours.
+
+### Fixed
+
+- When fstui could not start because of its configuration, the reason could be a file it had ignored (for example one others can write), which it did not say. It now lists such files with the error.
 
 ## [0.8.6] - 2026-11-20
 

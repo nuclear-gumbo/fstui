@@ -2,7 +2,7 @@
 
 fstui has ten views, numbered 0 to 9; the number keys switch between them. Lists move with `j` and `k` (or the arrows), `enter` opens the selected item's detail, and `h` and `l` switch the detail's tabs. `?` lists every key of the current view; [keys.md](keys.md) has them all.
 
-Data is read again in the background: by default pools every 5 seconds, datasets every 15, the ARC every second while shown (`refresh:` in [configuration.md](configuration.md#reference)). After a slow read, fstui waits at least four times as long as it took before the next (`limits.slow_read_factor`). The status bar shows the host, the mode, whether fstui runs as root, and how old the data is. `r` reads now. `b` switches every size between IEC units (`1.5 GiB`) and exact bytes.
+Data is read again in the background: by default pools every 5 seconds, datasets every 15, the ARC every second while shown (`refresh:` in [configuration.md](configuration.md#reference)). After a slow read, fstui waits at least four times as long as it took before the next (`limits.slow_read_factor`). The status bar shows the host, the mode, whether fstui runs as root, and how old the data is. `H` lists other hosts and switches to one ([remote.md](remote.md)). `r` reads now. `b` switches every size between IEC units (`1.5 GiB`) and exact bytes.
 
 ## 0 Dashboard
 

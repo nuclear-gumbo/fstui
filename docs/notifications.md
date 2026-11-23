@@ -16,6 +16,8 @@ Every change shows the file it writes as a diff first. The rest of this page is 
 
 Nothing is sent until something on the system runs the checks. The usual way is `fstui watch` as a service (systemd, or OpenRC's supervise-daemon): it checks every pool every `notifications.watch_interval` (5 minutes) and sends a new kernel event within `notifications.watch_events` (15 seconds). Where a service is not wanted, a timer or cron job runs `fstui check`, which checks once and exits. The Schedules tab of view 9 writes either, and the Notifications tab says which one runs, or that nothing does. Both share what was sent, so switching from one to the other sends nothing twice. Run either as root to see kernel events and pool history. Neither changes anything on the pools. `fstui watch` reads the configuration again for every check, checks at once on SIGHUP, logs only checks that sent or failed, and refuses to start while another `fstui watch` of the same user runs.
 
+Other machines can be checked from this one over SSH: `notifications.hosts` lists them by name ([remote.md](remote.md#notifications)).
+
 A monitor on the host cannot tell you that the host itself went down. For that, set `notifications.heartbeat_url` to a Healthchecks check or an Uptime Kuma push monitor: every check that read the pools requests it, and the service warns you when the requests stop.
 
 ## Channels

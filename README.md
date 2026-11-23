@@ -37,6 +37,10 @@ fstui tells you when a pool needs attention: a pool that is not ONLINE, a device
 
 They are sent by `fstui watch`, a service that fstui sets up for you on systemd or OpenRC (or `fstui check` from a timer or cron job), so nothing has to be run by hand. The Config view (`9`) shows whether it runs, and sets it up when it does not. An optional heartbeat URL lets a service such as Healthchecks warn you when the host itself goes down. Setting it up: [docs/notifications.md](docs/notifications.md).
 
+## Other hosts
+
+fstui shows the pools of other machines over SSH, read-only, with your own keys and `~/.ssh/config`: `fstui --host pve1`, or `H` to switch. On a Proxmox VE node it finds the cluster's other nodes, and `fstui watch` can check every host for one set of notifications. Setting it up: [docs/remote.md](docs/remote.md).
+
 ## Requirements
 
 - Linux with OpenZFS 2.3 or newer, userland and kernel module. fstui refuses older versions and names the one it found.
@@ -80,6 +84,7 @@ sudo fstui check      check every pool once and send notifications, for a timer 
 - [docs/keys.md](docs/keys.md): every key
 - [docs/changes.md](docs/changes.md): write mode, confirmations, saved plans, the audit log, changes without root
 - [docs/notifications.md](docs/notifications.md): getting notified: channels, alerts, the notification service
+- [docs/remote.md](docs/remote.md): other hosts over SSH and Proxmox VE clusters
 - [docs/configuration.md](docs/configuration.md): every setting, drop-in files, themes, keys, schedules
 - [docs/troubleshooting.md](docs/troubleshooting.md): messages and what to do about them
 - [docs/codebase.md](docs/codebase.md) and [CONTRIBUTING.md](CONTRIBUTING.md): how the code is put together, and how to change it

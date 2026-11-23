@@ -20,7 +20,8 @@ type Host struct {
 	Destination string
 }
 
-// Remote is how fstui connects to hosts (docs/design/remote.md).
+// Remote is how fstui connects to hosts: the timeouts and the shared
+// connection ssh is given (docs/remote.md).
 type Remote struct {
 	ConnectTimeout time.Duration // connecting and the key exchange
 	AliveInterval  time.Duration // how often an idle connection is checked

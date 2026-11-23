@@ -14,6 +14,7 @@
 | `esc`, `q` | Back; quit at the top |
 | `ctrl+c` | Quit |
 | `?` | Help |
+| `H` | Other hosts: list them and switch to one ([remote.md](remote.md)) |
 | `r` | Read now |
 | `b` | Exact byte counts or IEC units |
 | `a` | Changes for the selection |

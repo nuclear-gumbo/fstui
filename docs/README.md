@@ -9,6 +9,7 @@
 | Look up a key | [keys.md](keys.md) |
 | Change pools and datasets, save a change for later, read the audit log | [changes.md](changes.md) |
 | Get notified when a pool needs attention | [notifications.md](notifications.md) |
+| Look at the pools of other machines, a Proxmox VE cluster | [remote.md](remote.md) |
 | Configure it: settings, drop-ins, themes, keys, schedules | [configuration.md](configuration.md) |
 | Understand a message | [troubleshooting.md](troubleshooting.md) |
 

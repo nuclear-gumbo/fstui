@@ -68,6 +68,18 @@ Only one `fstui watch` runs per user; the message names the process that holds `
 
 A schedule names the fstui that writes it and runs it as root, so fstui refuses while its own file, or a directory above it, belongs to someone other than root or can be written by others. Install fstui under `/usr` (for example `/usr/local/bin/fstui`, owned by root, mode 0755) and change the schedule from that copy.
 
+## `could not be reached: ssh: ...`
+
+ssh itself failed before anything ran on the host: the message after `ssh:` is OpenSSH's. Run `ssh DESTINATION true` with the same destination. A password, passphrase or host-key question means fstui cannot log in: use a key or your agent, and accept the host key yourself once after checking it ([remote.md](remote.md#setting-up-a-host)).
+
+## `the login shell on the host does not quote as a POSIX shell`
+
+The user's login shell on the host changed fstui's test string, so commands would not arrive as fstui built them. Give that user a POSIX shell (sh, bash, dash or zsh).
+
+## `zfs, zpool: not found in a system directory that only root can change`
+
+On that host, the tool is missing, or it or a directory above it can be written by someone other than root. fstui applies the same rule as on this machine.
+
 ## Colours or box characters look wrong
 
 - `NO_COLOR` set to anything turns colours off.
