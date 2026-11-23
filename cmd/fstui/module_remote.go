@@ -170,11 +170,19 @@ func hostLister(current string) *ui.HostLister {
 	}
 }
 
+// maxNodes bounds the nodes taken from one cluster's file: each is read
+// over ssh at once when listed, and a file the cluster's root controls
+// could name thousands. hosts: allows as many.
+const maxNodes = 64
+
 // nodes are the cluster's nodes other than this one and the hosts
 // already listed, reached as user@node, or by address when byIP.
 func nodes(m pve.Members, cfg config.Config, user, current string, byIP bool) []ui.HostEntry {
 	var out []ui.HostEntry
 	for _, n := range m.Nodes {
+		if len(out) == maxNodes {
+			break
+		}
 		if _, listed := cfg.HostNamed(n.Name); listed || n.Name == m.Self || n.Name == config.LocalHost {
 			continue
 		}
