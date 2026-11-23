@@ -70,6 +70,8 @@ const (
 	FilterClass    Action = "filter_class"
 	SavedFilter    Action = "saved_filter"
 	Follow         Action = "follow"
+	// Hosts lists the other hosts and switches to one (remote module).
+	Hosts Action = "hosts"
 )
 
 type def struct {
@@ -121,6 +123,7 @@ var defaults = map[Action]def{
 	FilterClass:    {[]string{"c"}, "next class"},
 	SavedFilter:    {[]string{"f"}, "next saved filter"},
 	Follow:         {[]string{"F"}, "follow the newest"},
+	Hosts:          {[]string{"H"}, "other hosts"},
 }
 
 // current is the map in use; Configure replaces it once at startup.

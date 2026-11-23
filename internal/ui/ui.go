@@ -223,6 +223,7 @@ type Options struct {
 	StartView int              // view number to show first (fstui --dashboard: 10); 0 for the first
 	NoBlink   bool             // a typing cursor does not blink (config: ui.cursor_blink)
 	Actions   Actions          // the write module's changes; nil without it
+	Hosts     *HostLister      // the other hosts H lists; nil without the remote module
 }
 
 // Model is the root Bubble Tea model.
@@ -237,6 +238,26 @@ type Model struct {
 	display Display
 	dark    bool // the terminal's background, once it has answered
 	modal   Modal
+	next    *HostEntry // the host to show next, once the program ends
+}
+
+// switchHost ends the program so that it starts again on the chosen
+// host, unless a change is running.
+func (m Model) switchHost(msg SwitchHostMsg) (tea.Model, tea.Cmd) {
+	if m.modal != nil && m.modal.Busy() {
+		return m, nil
+	}
+	m.next = &msg.Host
+	return m, tea.Quit
+}
+
+// Next is the host the user chose in the host list, if the program
+// ended for that.
+func (m Model) Next() (HostEntry, bool) {
+	if m.next == nil {
+		return HostEntry{}, false
+	}
+	return *m.next, true
 }
 
 // New returns the root model. Until the terminal reports its background,
@@ -324,6 +345,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case OpenModalMsg:
 		m.modal = msg.Modal
 		return m, nil
+	case SwitchHostMsg:
+		return m.switchHost(msg)
 	case ModeMsg:
 		m.session.Mode = msg.Mode
 		return m, nil
@@ -350,6 +373,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m.click(msg)
 	}
+	return m.broadcast(msg)
+}
+
+// broadcast gives a message to the modal and to every screen: replies
+// to reads and ticks find their screen this way.
+func (m Model) broadcast(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := make([]tea.Cmd, 0, len(m.screens)+1)
 	if m.modal != nil {
 		var cmd tea.Cmd
@@ -386,6 +415,10 @@ func (m Model) key(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, keys.Get(keys.Bytes)):
 		m.display.Exact = !m.display.Exact
 		return m, nil
+	case m.opts.Hosts != nil && key.Matches(msg, keys.Get(keys.Hosts)):
+		modal, cmd := openHosts(*m.opts.Hosts)
+		m.modal = modal
+		return m, cmd
 	case m.claimed(msg):
 	case key.Matches(msg, keys.Get(keys.Actions), keys.Get(keys.WriteMode), keys.Get(keys.NewSnapshot)):
 		if next, cmd, ok := m.actionKey(msg); ok {
