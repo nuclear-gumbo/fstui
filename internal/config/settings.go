@@ -160,6 +160,7 @@ var custom = map[string]setter{
 	"notifications.templates": setTemplates,
 	"notifications.alerts":    setAlerts,
 	"hosts":                   setHosts,
+	"notifications.hosts":     setNotifyHosts,
 }
 
 var specByPath = func() map[string]Spec {

@@ -119,6 +119,10 @@ func schema() obj {
 			},
 		},
 	}
+	section("notifications")["hosts"] = obj{
+		"description": "Hosts fstui check and fstui watch look at, by name from hosts:; local is this machine. Unset: this machine only.",
+		"oneOf":       []any{obj{"type": "string", "pattern": hostLabel.String()}, obj{"type": "array", "items": obj{"type": "string", "pattern": hostLabel.String()}}},
+	}
 	section("notifications")["channels"] = obj{
 		"description": "Where fstui check and watch send. Secrets go in secrets.yaml. A list in a later file replaces this one.",
 		"type":        "array",
@@ -244,6 +248,7 @@ keys: {select: [enter, space], left: h}
 colors: {accent: "#7C9CB4", warn: {dark: "#D2B26E", light: "#86651F"}}
 notifications:
   repeat: 24h
+  hosts: [local, pve1]
   channels:
     - {name: phone, type: ntfy, url: "https://ntfy.example.org", topic: zfs, min_severity: warning}
   templates:
@@ -280,6 +285,7 @@ hosts:
 		"hosts: [{name: x, destination: \"-oProxyCommand=sh\"}]\n",
 		"hosts: [{name: X, destination: x}]\n",
 		"hosts: [{name: x, destination: x, port: 22}]\n",
+		"notifications: {hosts: [PVE1]}\n",
 	} {
 		_, problems := Parse("bad.yaml", []byte(bad))
 		errs := validate(schema(), yamlValue(t, bad), "")

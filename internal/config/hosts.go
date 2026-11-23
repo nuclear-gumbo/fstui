@@ -91,3 +91,40 @@ func (c Config) HostNamed(name string) (Host, bool) {
 	}
 	return Host{}, false
 }
+
+// setNotifyHosts reads notifications.hosts: a name or a list of names.
+// Whether each names a host is checked when the hosts are known (every
+// file read), by CheckedHosts.
+func setNotifyHosts(_ *applier, c *Config, n *yaml.Node) error {
+	names, err := stringList(n)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		if !hostLabel.MatchString(name) {
+			return fmt.Errorf("%q: want host names from hosts:, or %s for this machine", name, LocalHost)
+		}
+	}
+	c.Notifications.Hosts = names
+	return nil
+}
+
+// CheckedHosts are the hosts fstui check looks at, local first, and a
+// problem for each name that is neither local nor a listed host.
+func (c Config) CheckedHosts() (local bool, hosts []Host, problems []string) {
+	if len(c.Notifications.Hosts) == 0 {
+		return true, nil, nil
+	}
+	for _, name := range c.Notifications.Hosts {
+		if name == LocalHost {
+			local = true
+			continue
+		}
+		if h, ok := c.HostNamed(name); ok {
+			hosts = append(hosts, h)
+		} else {
+			problems = append(problems, fmt.Sprintf("notifications.hosts: no host named %q under hosts:", name))
+		}
+	}
+	return local, hosts, problems
+}

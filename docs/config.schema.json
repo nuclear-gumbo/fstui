@@ -609,6 +609,22 @@
           "pattern": "^[A-Za-z0-9._-]{0,64}$",
           "type": "string"
         },
+        "hosts": {
+          "description": "Hosts fstui check and fstui watch look at, by name from hosts:; local is this machine. Unset: this machine only.",
+          "oneOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+              "type": "string"
+            },
+            {
+              "items": {
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
         "repeat": {
           "default": "24h",
           "description": "While a problem lasts, send it again after this long; 0 sends it once, 0 to 720h.",

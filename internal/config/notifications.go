@@ -41,6 +41,9 @@ type Notifications struct {
 	// HeartbeatURL is requested after every check that read the pools,
 	// so a service outside the host notices when the checks stop.
 	HeartbeatURL string
+	// Hosts are the hosts fstui check and fstui watch look at, by name:
+	// LocalHost and names from hosts:. Nil is this machine only.
+	Hosts []string
 	// Templates are the user's own alert templates; Alerts turn templates
 	// on (alerts.go). No alerts: ActiveAlerts gives the defaults.
 	Templates []Template

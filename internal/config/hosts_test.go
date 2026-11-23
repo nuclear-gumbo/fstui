@@ -43,3 +43,21 @@ func TestHostsDefaults(t *testing.T) {
 		t.Errorf("defaults: %+v %+v", d.Hosts, d.Remote)
 	}
 }
+
+func TestCheckedHosts(t *testing.T) {
+	c, problems := Parse("c.yaml", []byte("hosts: [{name: pve1, destination: pve1}]\nnotifications: {hosts: [pve1, local, pve9]}\n"))
+	if len(problems) != 0 {
+		t.Fatal(problems)
+	}
+	local, hosts, missing := c.CheckedHosts()
+	if !local || len(hosts) != 1 || hosts[0].Name != "pve1" || len(missing) != 1 || !strings.Contains(missing[0], "pve9") {
+		t.Errorf("local %v hosts %v missing %v", local, hosts, missing)
+	}
+	if local, hosts, _ := Default().CheckedHosts(); !local || hosts != nil {
+		t.Error("by default only this machine is checked")
+	}
+	one, _ := Parse("c.yaml", []byte("hosts: [{name: pve1, destination: pve1}]\nnotifications: {hosts: pve1}\n"))
+	if local, hosts, _ := one.CheckedHosts(); local || len(hosts) != 1 {
+		t.Error("a single name checks that host only")
+	}
+}
