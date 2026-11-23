@@ -4,6 +4,10 @@ All notable changes to fstui are listed here. The format follows [Keep a Changel
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-22
+
+fstui looks at other machines: their pools over SSH, read-only, with your own keys and SSH configuration, chosen with `--host` or `H`, or kept in the Config view's new Hosts tab. On a Proxmox VE node it finds the cluster's other nodes, and `fstui watch` can check every host for one set of notifications. Changes on other hosts come in 0.9.1. Tested with OpenZFS 2.3.9 on Debian 13, over SSH to the same machine, and against the files of a Proxmox VE 9.2 cluster (OpenZFS 2.4.4).
+
 ### Added
 
 - Other hosts over SSH, read-only: `hosts:` in `config.yaml` names them, `fstui --host NAME` opens one, and `H` lists them and switches. fstui uses the OpenSSH client with your keys, agent and `~/.ssh/config`, never asks for a password or a new host key, and checks each host's shell and its `zfs`, `zpool` and `env` before reading it. See `docs/remote.md`.
