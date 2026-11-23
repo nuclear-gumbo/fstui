@@ -161,14 +161,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	// Choosing another host in the host list ends the program; it starts
 	// again on that host, so every view is built for it as at start-up.
-	choice := ui.HostEntry{Name: *host}
-	for {
-		code, next := start(stderr, *superuser, *dashboard, choice, wf)
-		if next == nil {
-			return code
-		}
-		choice = *next
-	}
+	return runHosts(stderr, *superuser, *dashboard, ui.HostEntry{Name: *host}, wf)
 }
 
 // optionList formats the options as GNU tools do. pflag's own list marks
@@ -186,8 +179,37 @@ func optionList(fs *pflag.FlagSet) string {
 }
 
 // start loads the config, opens every compiled-in backend and runs the UI.
-func start(stderr io.Writer, superuserFlag, dashboard bool, choice ui.HostEntry, wf *writeFlags) (int, *ui.HostEntry) {
-	var notices []string
+// runHosts runs the interface on choice, and again on each host chosen
+// in the host list.
+func runHosts(stderr io.Writer, superuser, dashboard bool, choice ui.HostEntry, wf *writeFlags) int {
+	// A host that cannot be opened after a switch leaves fstui on the one
+	// it came from, saying why.
+	var carried []string
+	var previous *ui.HostEntry
+	for {
+		code, next, openErr := start(stderr, superuser, dashboard, choice, wf, carried)
+		carried = nil
+		switch {
+		case openErr != nil && previous != nil:
+			first, _, _ := strings.Cut(openErr.Error(), "\n")
+			carried = []string{fmt.Sprintf("Could not show %s: %s", choice.Name, first)}
+			choice, previous = *previous, nil
+		case openErr != nil:
+			return report(stderr, exitFailed, "fstui: %v\n", openErr)
+		case next == nil:
+			return code
+		default:
+			from := choice
+			choice, previous = *next, &from
+		}
+	}
+}
+
+// start runs the interface on the chosen host. It returns the next
+// host chosen in the host list, if any, or why the host could not be
+// opened (the caller reports it or goes back).
+func start(stderr io.Writer, superuserFlag, dashboard bool, choice ui.HostEntry, wf *writeFlags, carried []string) (int, *ui.HostEntry, error) {
+	notices := carried
 	user, err := config.UserFile()
 	if err != nil {
 		notices = append(notices, err.Error()+"; settings cannot be saved this session")
@@ -211,9 +233,7 @@ func start(stderr io.Writer, superuserFlag, dashboard bool, choice ui.HostEntry,
 	notices = append(notices, hostNotices(cfg, choice.Name, wf)...)
 	backends, host, priv, err := openBackends(cfg, choice)
 	if err != nil {
-		// What the status bar would have said may be the reason, such as
-		// a config file ignored because others can write it.
-		return report(stderr, exitFailed, "fstui: %v\n%s", err, noticeLines(notices)), nil
+		return 0, nil, withNotices(err, notices)
 	}
 	if backends.cleanup != nil {
 		defer backends.cleanup()
@@ -244,9 +264,9 @@ func start(stderr io.Writer, superuserFlag, dashboard bool, choice ui.HostEntry,
 	})
 	next, err := runProgram(m, profile)
 	if err != nil {
-		return report(stderr, exitFailed, "fstui: %v\n", err), nil
+		return report(stderr, exitFailed, "fstui: %v\n", err), nil, nil
 	}
-	return 0, next
+	return 0, next, nil
 }
 
 // runProgram runs the interface until it ends, and returns the host the
@@ -262,6 +282,16 @@ func runProgram(m ui.Model, profile colorprofile.Profile) (*ui.HostEntry, error)
 		}
 	}
 	return nil, nil
+}
+
+// withNotices adds what the status bar would have said to an error that
+// ends fstui before it starts: it may be the reason, such as a config
+// file ignored because others can write it.
+func withNotices(err error, notices []string) error {
+	if len(notices) == 0 {
+		return err
+	}
+	return fmt.Errorf("%w\n%s", err, strings.TrimSuffix(noticeLines(notices), "\n"))
 }
 
 // noticeLines lists notices, one per line, for stderr.
