@@ -46,3 +46,7 @@ notifications:
 ```
 
 Each host's messages name it ("pve1: tank is DEGRADED"), and what was sent is kept per host. A host that cannot be reached is sent once as a problem of its own, and again when it is back. The heartbeat URL is requested once per check, not per host. See [notifications.md](notifications.md).
+
+## Without other hosts
+
+A build with the tag `fstui_noremote` (Gentoo USE flag `remote` off) leaves all of this out and never runs `ssh`: [install.md](install.md#without-other-hosts).
