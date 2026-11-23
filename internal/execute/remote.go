@@ -34,6 +34,11 @@ type Host struct {
 	// Paths are the absolute paths of the tools on the host, as the
 	// probe found and checked them. A tool not here is not run.
 	Paths map[Tool]string
+	// HostKeyAlias and KnownHostsFile reach a Proxmox VE node the way
+	// the cluster does (PVE::SSHInfo): by address, with the host key
+	// looked up under the node's name in the node's own file. Empty
+	// leaves both to the user's ssh configuration.
+	HostKeyAlias, KnownHostsFile string
 }
 
 // SSH is the OpenSSH client, resolved like every other tool.
@@ -154,7 +159,11 @@ func (h Host) options() ([]string, error) {
 	if err := checkControlDir(h.ControlDir); err != nil {
 		return nil, err
 	}
-	return []string{
+	extra, err := h.keyOptions()
+	if err != nil {
+		return nil, err
+	}
+	return append([]string{
 		"-T", "-e", "none",
 		// No password, passphrase or host key question can appear
 		// inside the interface, and an unknown or changed host key is
@@ -166,7 +175,26 @@ func (h Host) options() ([]string, error) {
 		"-o", "ControlMaster=auto",
 		"-o", "ControlPath=" + filepath.Join(h.ControlDir, "%C"),
 		"-o", "ControlPersist=" + seconds(h.Persist),
-	}, nil
+	}, extra...), nil
+}
+
+// keyOptions are HostKeyAlias and the known-hosts file, checked like the
+// destination and the control directory: ssh reads both as config values.
+func (h Host) keyOptions() ([]string, error) {
+	var out []string
+	if h.HostKeyAlias != "" {
+		if err := CheckDestination(h.HostKeyAlias); err != nil || strings.Contains(h.HostKeyAlias, "@") {
+			return nil, fmt.Errorf("host key alias %q %w", h.HostKeyAlias, ErrDestination)
+		}
+		out = append(out, "-o", "HostKeyAlias="+h.HostKeyAlias)
+	}
+	if h.KnownHostsFile != "" {
+		if !filepath.IsAbs(h.KnownHostsFile) || strings.ContainsAny(h.KnownHostsFile, "%~\"' \t\n") {
+			return nil, fmt.Errorf("known hosts file %q %w", h.KnownHostsFile, ErrControlDir)
+		}
+		out = append(out, "-o", "UserKnownHostsFile="+h.KnownHostsFile, "-o", "GlobalKnownHostsFile=none")
+	}
+	return out, nil
 }
 
 // seconds writes d as whole seconds, at least one: ssh reads 0 as "no

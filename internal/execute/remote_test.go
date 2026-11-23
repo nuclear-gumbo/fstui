@@ -208,3 +208,32 @@ func TestEnvFor(t *testing.T) {
 		t.Errorf("ssh env %q changed the fixed one %q", s, env)
 	}
 }
+
+// A Proxmox node is reached as the cluster reaches it; the alias and
+// the file are refused if ssh could read them as something else.
+func TestKeyOptions(t *testing.T) {
+	h := testHost(map[Tool]string{ZFS: "/usr/sbin/zfs", RemoteEnv: "/usr/bin/env"})
+	h.Destination, h.HostKeyAlias, h.KnownHostsFile = "root@192.0.2.12", "pve2", "/etc/pve/nodes/pve2/ssh_known_hosts"
+	w, err := h.Wrap(Argv{Tool: ZFS})
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := strings.Join(w.Args(), " ")
+	if !strings.Contains(args, "-o HostKeyAlias=pve2 -o UserKnownHostsFile=/etc/pve/nodes/pve2/ssh_known_hosts -o GlobalKnownHostsFile=none -- root@192.0.2.12") {
+		t.Errorf("args %s", args)
+	}
+	for _, bad := range []Host{
+		{HostKeyAlias: "-x"},
+		{HostKeyAlias: "a@b"},
+		{HostKeyAlias: "a b"},
+		{KnownHostsFile: "relative"},
+		{KnownHostsFile: "/a b"},
+		{KnownHostsFile: "/x/%h"},
+	} {
+		b := testHost(nil)
+		b.HostKeyAlias, b.KnownHostsFile = bad.HostKeyAlias, bad.KnownHostsFile
+		if _, err := b.Exit(); err == nil {
+			t.Errorf("%+v accepted", bad)
+		}
+	}
+}
