@@ -143,7 +143,7 @@ func (h *Hosts) key(msg tea.KeyPressMsg) tea.Cmd {
 		cmd, done := h.review.key(msg, &h.message)
 		if done {
 			if cmd != nil {
-				h.edit = nil
+				h.saved()
 			}
 			h.review = nil
 		}
@@ -286,6 +286,17 @@ func (h *Hosts) toggle(name string) {
 	}
 	h.startEdit().checked = next
 	h.message = ""
+}
+
+// saved takes what was just written as the tab's settings: the screen
+// is drawn again before the Config view reads the file back, and the
+// cursor may be on the host just added.
+func (h *Hosts) saved() {
+	h.cfg.Hosts = h.edit.hosts
+	if h.edit.checked != nil {
+		h.cfg.Notifications.Hosts = h.edit.checked
+	}
+	h.edit = nil
 }
 
 // stage writes the new file to a private temporary file for review.

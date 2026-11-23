@@ -4,6 +4,10 @@ All notable changes to fstui are listed here. The format follows [Keep a Changel
 
 ## [Unreleased]
 
+### Fixed
+
+- Config view: adding a host, a second notification channel or an alert of your own crashed fstui as the saved file was shown (hosts in 0.9.0, channels since 0.8.0, your own alerts since 0.8.1). The tab now shows what it wrote at once.
+
 ## [0.9.0] - 2026-11-22
 
 fstui looks at other machines: their pools over SSH, read-only, with your own keys and SSH configuration, chosen with `--host` or `H`, or kept in the Config view's new Hosts tab. On a Proxmox VE node it finds the cluster's other nodes, and `fstui watch` can check every host for one set of notifications. Changes on other hosts come in 0.9.1. Tested with OpenZFS 2.3.9 on Debian 13, over SSH to the same machine, and against the files of a Proxmox VE 9.2 cluster (OpenZFS 2.4.4).

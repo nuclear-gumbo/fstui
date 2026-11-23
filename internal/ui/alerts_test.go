@@ -79,6 +79,7 @@ func written(t *testing.T, a *Alerts, file string) config.Config {
 	if cmd := a.Update(k("w")); cmd == nil {
 		t.Fatalf("w wrote nothing: %s %v", a.message, a.review.problems)
 	}
+	view(a, 110) // drawn before the saved settings come back, as in fstui
 	data, err := os.ReadFile(file)
 	if err != nil {
 		t.Fatal(err)

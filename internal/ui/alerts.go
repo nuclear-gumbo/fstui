@@ -216,6 +216,11 @@ func (a *Alerts) key(msg tea.KeyPressMsg) tea.Cmd {
 		cmd, done := a.review.key(msg, &a.message)
 		if done {
 			if cmd != nil {
+				// The screen is drawn again before the Config view reads
+				// the file back, and the cursor may be on an alert just
+				// added.
+				e := a.book.edit
+				a.book.cfg.Notifications.Alerts, a.book.cfg.Notifications.Templates = e.alerts, e.templates
 				a.book.edit = nil
 			}
 			a.review = nil

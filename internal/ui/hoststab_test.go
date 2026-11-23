@@ -57,6 +57,7 @@ func write(t *testing.T, h *Hosts, file string) config.Config {
 	if cmd := h.Update(k("w")); cmd == nil {
 		t.Fatalf("w wrote nothing: %s", h.message)
 	}
+	h.Render(asciiDisplay(false), 100, 30) // drawn before the saved settings come back, as in fstui
 	b, err := os.ReadFile(file)
 	if err != nil {
 		t.Fatal(err)

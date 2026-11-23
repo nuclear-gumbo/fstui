@@ -195,3 +195,22 @@ func TestChannelFormKeys(t *testing.T) {
 		t.Error("ctrl+enter did not finish the form with its edits")
 	}
 }
+
+// After w, the tab is drawn before the saved settings come back; the
+// channel just added, under the cursor, is drawn with them (0.8 crashed
+// here when a second channel was added).
+func TestAddSecondChannel(t *testing.T) {
+	n, _ := editTab(t)
+	n.cfg.Notifications.Channels = []config.Channel{{Name: "one", Type: "webhook", URL: "https://w"}}
+	n.Update(k("a"))
+	typeInto(t, n, "Name", "two")
+	typeInto(t, n, "Server", "https://ntfy.example.org")
+	typeInto(t, n, "Topic", "zfs")
+	finish(n)
+	if n.Update(k("w")) == nil {
+		t.Fatalf("w wrote nothing: %s", n.message)
+	}
+	if out := ansi.Strip(n.Render(asciiDisplay(false), 100, 30)); !strings.Contains(out, "two") {
+		t.Errorf("the new channel is not shown:\n%s", out)
+	}
+}

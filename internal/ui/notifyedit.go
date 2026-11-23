@@ -179,6 +179,9 @@ func (n *Notifications) reviewKey(msg tea.KeyPressMsg) tea.Cmd {
 			n.message = err.Error()
 			return nil
 		}
+		// The screen is drawn again before the Config view reads the file
+		// back, and the cursor may be on the channel just added.
+		n.cfg.Notifications.Channels = n.edit.channels
 		n.edit, n.message = nil, "Saved "+r.file+"; the previous version is "+config.Backup(r.file)+"."
 		return func() tea.Msg { return savedMsg{} }
 	case key.Matches(msg, keys.Get(keys.Cancel)) || key.Matches(msg, keys.Get(keys.Back)):
