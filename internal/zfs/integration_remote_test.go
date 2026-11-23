@@ -81,7 +81,19 @@ func TestIntegrationRemoteReads(t *testing.T) {
 	pool := testpool.New(t, "mirror", 2)
 	pool.CreateFilesystem("data")
 	pool.Snapshot("data", "first")
+	spaced := pool.CreateFilesystem("with space:and colon")
 	ctx := context.Background()
+
+	// A name the remote shell would split or read is passed as one word.
+	ds, err := name.ParseDataset(spaced)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lp, err1 := local.DatasetProperties(ctx, ds)
+	rp, err2 := remote.DatasetProperties(ctx, ds)
+	if err1 != nil || err2 != nil || lp.Name != rp.Name || len(lp.Properties) != len(rp.Properties) {
+		t.Errorf("%q: local %v, remote %v", spaced, err1, err2)
+	}
 
 	lo, err1 := local.Overviews(ctx)
 	ro, err2 := remote.Overviews(ctx)
